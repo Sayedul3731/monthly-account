@@ -30,6 +30,11 @@ export class User {
   password?: string;
 
   @ApiHideProperty()
+  @Exclude()
+  @Prop({ type: String, select: false, default: null })
+  refreshToken?: string | null;
+
+  @ApiHideProperty()
   @Prop({ type: Types.ObjectId, ref: AppRole.name, required: true })
   roleId!: Types.ObjectId;
 

@@ -7,9 +7,15 @@ export class LoginDto {
   @MaxLength(255)
   email: string;
 
-  @ApiProperty({ example: 'S3curePass!', minLength: 8, maxLength: 72 })
+  @ApiProperty({
+    description:
+      'SHA-256 hex digest of the plaintext password (client-side). Compared against the bcrypt-hashed digest stored on the user.',
+    example: 'a3f5b8c1d2e4f60718293a4b5c6d7e8f90123456789abcdef0123456789abcde',
+    minLength: 64,
+    maxLength: 64,
+  })
   @IsString()
-  @MinLength(8)
-  @MaxLength(72)
+  @MinLength(64)
+  @MaxLength(64)
   password: string;
 }

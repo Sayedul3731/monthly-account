@@ -1,16 +1,12 @@
 services:
-  postgres:
-    image: postgres:16-alpine
+  mongo:
+    image: mongo:7
     container_name: monthly_account_db
     restart: unless-stopped
     ports:
-      - '5432:5432'
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: monthly_account
+      - '27017:27017'
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mongo_data:/var/lib/mongodb
 
 volumes:
-  postgres_data:
+  mongo_data:

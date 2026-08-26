@@ -56,6 +56,37 @@ export class UsersService {
       .exec();
   }
 
+  /**
+   * Looks up a user by id including the stored refresh-token hash.
+   * Not exposed via the controller.
+   */
+  findByIdWithRefreshToken(id: string): Promise<UserDocument | null> {
+    return this.userModel
+      .findOne(notDeleted({ _id: id }))
+      .select('+refreshToken')
+      .populate('role')
+      .exec();
+  }
+
+  async setRefreshToken(
+    id: string,
+    hashedRefreshToken: string,
+  ): Promise<void> {
+    const result = await this.userModel
+      .updateOne(notDeleted({ _id: id }), { refreshToken: hashedRefreshToken })
+      .exec();
+
+    if (!result.matchedCount) {
+      throw new NotFoundException(`User ${id} not found`);
+    }
+  }
+
+  async clearRefreshToken(id: string): Promise<void> {
+    await this.userModel
+      .updateOne(notDeleted({ _id: id }), { refreshToken: null })
+      .exec();
+  }
+
   async create(dto: CreateUserDto): Promise<UserDocument> {
     await this.ensureEmailAvailable(dto.email);
     const roleId = dto.roleId ?? (await this.getDefaultRoleId());
@@ -81,6 +112,7 @@ export class UsersService {
     if (dto.name !== undefined) user.name = dto.name;
     if (dto.password !== undefined) {
       user.password = await bcrypt.hash(dto.password, SALT_ROUNDS);
+      user.refreshToken = null;
     }
     const roleChanged =
       dto.roleId !== undefined && dto.roleId !== user.roleId.toString();
