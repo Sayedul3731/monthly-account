@@ -3,31 +3,39 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
-import { Repository } from 'typeorm';
-import { DefaultRole } from '../roles/app-role.entity';
+import { Model, Types } from 'mongoose';
+import { notDeleted } from '../common/schemas/schema.helpers';
+import { DefaultRole } from '../roles/app-role.schema';
 import { RolesService } from '../roles/roles.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { User } from './user.entity';
+import { User, UserDocument } from './user.schema';
 
 const SALT_ROUNDS = 10;
 
 @Injectable()
 export class UsersService {
   constructor(
-    @InjectRepository(User)
-    private readonly usersRepository: Repository<User>,
+    @InjectModel(User.name)
+    private readonly userModel: Model<UserDocument>,
     private readonly rolesService: RolesService,
   ) {}
 
   findAll(): Promise<User[]> {
-    return this.usersRepository.find({ order: { name: 'ASC' } });
+    return this.userModel
+      .find(notDeleted())
+      .populate('role')
+      .sort({ name: 1 })
+      .exec();
   }
 
-  async findOne(id: string): Promise<User> {
-    const user = await this.usersRepository.findOne({ where: { id } });
+  async findOne(id: string): Promise<UserDocument> {
+    const user = await this.userModel
+      .findOne(notDeleted({ _id: id }))
+      .populate('role')
+      .exec();
 
     if (!user) {
       throw new NotFoundException(`User ${id} not found`);
@@ -40,27 +48,29 @@ export class UsersService {
    * Looks up a user by email including the hashed password, for use during
    * authentication. Not exposed via the controller.
    */
-  findByEmail(email: string): Promise<User | null> {
-    return this.usersRepository.findOne({ where: { email } });
+  findByEmail(email: string): Promise<UserDocument | null> {
+    return this.userModel
+      .findOne(notDeleted({ email }))
+      .select('+password')
+      .populate('role')
+      .exec();
   }
 
-  async create(dto: CreateUserDto): Promise<User> {
+  async create(dto: CreateUserDto): Promise<UserDocument> {
     await this.ensureEmailAvailable(dto.email);
     const roleId = dto.roleId ?? (await this.getDefaultRoleId());
 
-    const user = this.usersRepository.create({
+    const user = await this.userModel.create({
       name: dto.name,
       email: dto.email,
       password: await bcrypt.hash(dto.password, SALT_ROUNDS),
-      roleId,
+      roleId: new Types.ObjectId(roleId),
     });
-    const saved = await this.usersRepository.save(user);
 
-    // Reload so the eager `role` relation reflects the assigned roleId.
-    return this.findOne(saved.id);
+    return this.findOne(user.id);
   }
 
-  async update(id: string, dto: UpdateUserDto): Promise<User> {
+  async update(id: string, dto: UpdateUserDto): Promise<UserDocument> {
     const user = await this.findOne(id);
 
     if (dto.email !== undefined && dto.email !== user.email) {
@@ -72,25 +82,29 @@ export class UsersService {
     if (dto.password !== undefined) {
       user.password = await bcrypt.hash(dto.password, SALT_ROUNDS);
     }
-    const roleChanged = dto.roleId !== undefined && dto.roleId !== user.roleId;
-    if (dto.roleId !== undefined) user.roleId = dto.roleId;
+    const roleChanged =
+      dto.roleId !== undefined && dto.roleId !== user.roleId.toString();
+    if (dto.roleId !== undefined) {
+      user.roleId = new Types.ObjectId(dto.roleId);
+    }
 
-    const saved = await this.usersRepository.save(user);
+    await user.save();
 
-    // Reload so the eager `role` relation reflects the new roleId, if changed.
-    return roleChanged ? this.findOne(saved.id) : saved;
+    return roleChanged ? this.findOne(user.id) : user.populate('role');
   }
 
   async remove(id: string): Promise<void> {
-    const result = await this.usersRepository.softDelete(id);
+    const result = await this.userModel
+      .updateOne(notDeleted({ _id: id }), { deletedAt: new Date() })
+      .exec();
 
-    if (!result.affected) {
+    if (!result.matchedCount) {
       throw new NotFoundException(`User ${id} not found`);
     }
   }
 
   private async ensureEmailAvailable(email: string): Promise<void> {
-    const existing = await this.usersRepository.findOne({ where: { email } });
+    const existing = await this.userModel.findOne(notDeleted({ email })).exec();
 
     if (existing) {
       throw new ConflictException(`Email ${email} is already in use`);

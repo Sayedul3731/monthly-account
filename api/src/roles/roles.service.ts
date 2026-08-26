@@ -5,9 +5,10 @@ import {
   NotFoundException,
   OnModuleInit,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { AppRole, DefaultRole } from './app-role.entity';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { notDeleted } from '../common/schemas/schema.helpers';
+import { AppRole, AppRoleDocument, DefaultRole } from './app-role.schema';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 
@@ -21,8 +22,8 @@ export class RolesService implements OnModuleInit {
   private readonly logger = new Logger(RolesService.name);
 
   constructor(
-    @InjectRepository(AppRole)
-    private readonly rolesRepository: Repository<AppRole>,
+    @InjectModel(AppRole.name)
+    private readonly roleModel: Model<AppRoleDocument>,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -30,11 +31,11 @@ export class RolesService implements OnModuleInit {
   }
 
   findAll(): Promise<AppRole[]> {
-    return this.rolesRepository.find({ order: { name: 'ASC' } });
+    return this.roleModel.find(notDeleted()).sort({ name: 1 }).exec();
   }
 
-  async findOne(id: string): Promise<AppRole> {
-    const role = await this.rolesRepository.findOne({ where: { id } });
+  async findOne(id: string): Promise<AppRoleDocument> {
+    const role = await this.roleModel.findOne(notDeleted({ _id: id })).exec();
 
     if (!role) {
       throw new NotFoundException(`Role ${id} not found`);
@@ -43,22 +44,20 @@ export class RolesService implements OnModuleInit {
     return role;
   }
 
-  findByName(name: string): Promise<AppRole | null> {
-    return this.rolesRepository.findOne({ where: { name } });
+  findByName(name: string): Promise<AppRoleDocument | null> {
+    return this.roleModel.findOne(notDeleted({ name })).exec();
   }
 
-  async create(dto: CreateRoleDto): Promise<AppRole> {
+  async create(dto: CreateRoleDto): Promise<AppRoleDocument> {
     await this.ensureNameAvailable(dto.name);
 
-    const role = this.rolesRepository.create({
+    return this.roleModel.create({
       name: dto.name,
       description: dto.description ?? null,
     });
-
-    return this.rolesRepository.save(role);
   }
 
-  async update(id: string, dto: UpdateRoleDto): Promise<AppRole> {
+  async update(id: string, dto: UpdateRoleDto): Promise<AppRoleDocument> {
     const role = await this.findOne(id);
 
     if (dto.name !== undefined && dto.name !== role.name) {
@@ -68,13 +67,15 @@ export class RolesService implements OnModuleInit {
 
     if (dto.description !== undefined) role.description = dto.description;
 
-    return this.rolesRepository.save(role);
+    return role.save();
   }
 
   async remove(id: string): Promise<void> {
-    const result = await this.rolesRepository.softDelete(id);
+    const result = await this.roleModel
+      .updateOne(notDeleted({ _id: id }), { deletedAt: new Date() })
+      .exec();
 
-    if (!result.affected) {
+    if (!result.matchedCount) {
       throw new NotFoundException(`Role ${id} not found`);
     }
   }
@@ -92,12 +93,10 @@ export class RolesService implements OnModuleInit {
       const existing = await this.findByName(name);
 
       if (!existing) {
-        await this.rolesRepository.save(
-          this.rolesRepository.create({
-            name,
-            description: DEFAULT_ROLE_DESCRIPTIONS[name],
-          }),
-        );
+        await this.roleModel.create({
+          name,
+          description: DEFAULT_ROLE_DESCRIPTIONS[name],
+        });
         this.logger.log(`Seeded default role "${name}"`);
       }
     }

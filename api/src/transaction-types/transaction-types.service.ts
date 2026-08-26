@@ -3,27 +3,34 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { notDeleted } from '../common/schemas/schema.helpers';
 import { CreateTransactionTypeDto } from './dto/create-transaction-type.dto';
 import { UpdateTransactionTypeDto } from './dto/update-transaction-type.dto';
-import { TransactionTypeEntity } from './transaction-type.entity';
+import {
+  TransactionTypeDocument,
+  TransactionTypeEntity,
+} from './transaction-type.schema';
 
 @Injectable()
 export class TransactionTypesService {
   constructor(
-    @InjectRepository(TransactionTypeEntity)
-    private readonly transactionTypesRepository: Repository<TransactionTypeEntity>,
+    @InjectModel(TransactionTypeEntity.name)
+    private readonly transactionTypeModel: Model<TransactionTypeDocument>,
   ) {}
 
   findAll(): Promise<TransactionTypeEntity[]> {
-    return this.transactionTypesRepository.find({ order: { name: 'ASC' } });
+    return this.transactionTypeModel
+      .find(notDeleted())
+      .sort({ name: 1 })
+      .exec();
   }
 
-  async findOne(id: string): Promise<TransactionTypeEntity> {
-    const transactionType = await this.transactionTypesRepository.findOne({
-      where: { id },
-    });
+  async findOne(id: string): Promise<TransactionTypeDocument> {
+    const transactionType = await this.transactionTypeModel
+      .findOne(notDeleted({ _id: id }))
+      .exec();
 
     if (!transactionType) {
       throw new NotFoundException(`Transaction type ${id} not found`);
@@ -32,22 +39,22 @@ export class TransactionTypesService {
     return transactionType;
   }
 
-  async create(dto: CreateTransactionTypeDto): Promise<TransactionTypeEntity> {
+  async create(
+    dto: CreateTransactionTypeDto,
+  ): Promise<TransactionTypeDocument> {
     await this.ensureNameAvailable(dto.name);
 
-    const transactionType = this.transactionTypesRepository.create({
+    return this.transactionTypeModel.create({
       name: dto.name,
       label: dto.label,
       icon: dto.icon ?? '',
     });
-
-    return this.transactionTypesRepository.save(transactionType);
   }
 
   async update(
     id: string,
     dto: UpdateTransactionTypeDto,
-  ): Promise<TransactionTypeEntity> {
+  ): Promise<TransactionTypeDocument> {
     const transactionType = await this.findOne(id);
 
     if (dto.name !== undefined && dto.name !== transactionType.name) {
@@ -58,13 +65,15 @@ export class TransactionTypesService {
     if (dto.label !== undefined) transactionType.label = dto.label;
     if (dto.icon !== undefined) transactionType.icon = dto.icon;
 
-    return this.transactionTypesRepository.save(transactionType);
+    return transactionType.save();
   }
 
   async remove(id: string): Promise<void> {
-    const result = await this.transactionTypesRepository.softDelete(id);
+    const result = await this.transactionTypeModel
+      .updateOne(notDeleted({ _id: id }), { deletedAt: new Date() })
+      .exec();
 
-    if (!result.affected) {
+    if (!result.matchedCount) {
       throw new NotFoundException(`Transaction type ${id} not found`);
     }
   }
@@ -73,9 +82,9 @@ export class TransactionTypesService {
     name: string,
     excludeId?: string,
   ): Promise<void> {
-    const existing = await this.transactionTypesRepository.findOne({
-      where: { name },
-    });
+    const existing = await this.transactionTypeModel
+      .findOne(notDeleted({ name }))
+      .exec();
 
     if (existing && existing.id !== excludeId) {
       throw new ConflictException(`Transaction type "${name}" already exists`);

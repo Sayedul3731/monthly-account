@@ -6,7 +6,6 @@ import {
   HttpCode,
   HttpStatus,
   Param,
-  ParseUUIDPipe,
   Patch,
   Post,
 } from '@nestjs/common';
@@ -20,7 +19,8 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { AppRole, DefaultRole } from './app-role.entity';
+import { ParseObjectIdPipe } from '../common/pipes/parse-object-id.pipe';
+import { AppRole, DefaultRole } from './app-role.schema';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { RolesService } from './roles.service';
@@ -40,10 +40,10 @@ export class RolesController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get a role by ID' })
-  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiParam({ name: 'id' })
   @ApiOkResponse({ type: AppRole })
   @ApiNotFoundResponse({ description: 'Role not found' })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  findOne(@Param('id', ParseObjectIdPipe) id: string) {
     return this.rolesService.findOne(id);
   }
 
@@ -58,10 +58,13 @@ export class RolesController {
   @Patch(':id')
   @Roles(DefaultRole.ADMIN)
   @ApiOperation({ summary: 'Update a role (admin only)' })
-  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiParam({ name: 'id' })
   @ApiOkResponse({ type: AppRole })
   @ApiNotFoundResponse({ description: 'Role not found' })
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateRoleDto) {
+  update(
+    @Param('id', ParseObjectIdPipe) id: string,
+    @Body() dto: UpdateRoleDto,
+  ) {
     return this.rolesService.update(id, dto);
   }
 
@@ -69,10 +72,10 @@ export class RolesController {
   @Roles(DefaultRole.ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a role (admin only)' })
-  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiParam({ name: 'id' })
   @ApiNoContentResponse({ description: 'Role deleted' })
   @ApiNotFoundResponse({ description: 'Role not found' })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
+  remove(@Param('id', ParseObjectIdPipe) id: string) {
     return this.rolesService.remove(id);
   }
 }

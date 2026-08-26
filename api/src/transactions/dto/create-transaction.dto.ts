@@ -5,24 +5,22 @@ import {
   IsNotEmpty,
   IsNumber,
   IsString,
-  IsUUID,
+  IsMongoId,
   MaxLength,
   Min,
 } from 'class-validator';
 
 export class CreateTransactionDto {
   @ApiProperty({
-    format: 'uuid',
     description: 'ID from GET /transaction-types',
   })
-  @IsUUID()
+  @IsMongoId()
   transactionTypeId: string;
 
   @ApiProperty({
-    format: 'uuid',
     description: 'ID from GET /categories',
   })
-  @IsUUID()
+  @IsMongoId()
   categoryId: string;
 
   @ApiProperty({ example: 49.99, minimum: 0.01 })

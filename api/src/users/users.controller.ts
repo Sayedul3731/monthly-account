@@ -6,7 +6,6 @@ import {
   HttpCode,
   HttpStatus,
   Param,
-  ParseUUIDPipe,
   Patch,
   Post,
 } from '@nestjs/common';
@@ -20,10 +19,11 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { DefaultRole } from '../roles/app-role.entity';
+import { ParseObjectIdPipe } from '../common/pipes/parse-object-id.pipe';
+import { DefaultRole } from '../roles/app-role.schema';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { User } from './user.entity';
+import { User } from './user.schema';
 import { UsersService } from './users.service';
 
 @ApiTags('users')
@@ -42,10 +42,10 @@ export class UsersController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get a user by ID' })
-  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiParam({ name: 'id' })
   @ApiOkResponse({ type: User })
   @ApiNotFoundResponse({ description: 'User not found' })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  findOne(@Param('id', ParseObjectIdPipe) id: string) {
     return this.usersService.findOne(id);
   }
 
@@ -58,20 +58,23 @@ export class UsersController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update a user' })
-  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiParam({ name: 'id' })
   @ApiOkResponse({ type: User })
   @ApiNotFoundResponse({ description: 'User not found' })
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateUserDto) {
+  update(
+    @Param('id', ParseObjectIdPipe) id: string,
+    @Body() dto: UpdateUserDto,
+  ) {
     return this.usersService.update(id, dto);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a user' })
-  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiParam({ name: 'id' })
   @ApiNoContentResponse({ description: 'User deleted' })
   @ApiNotFoundResponse({ description: 'User not found' })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
+  remove(@Param('id', ParseObjectIdPipe) id: string) {
     return this.usersService.remove(id);
   }
 }

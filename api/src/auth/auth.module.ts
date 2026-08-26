@@ -22,9 +22,9 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       useFactory: (config: ConfigService): JwtModuleOptions => ({
         secret: config.get<string>('jwt.secret'),
         signOptions: {
-          expiresIn: config.get<string>(
-            'jwt.expiresIn',
-          ) as NonNullable<JwtModuleOptions['signOptions']>['expiresIn'],
+          expiresIn: config.get<string>('jwt.expiresIn') as NonNullable<
+            JwtModuleOptions['signOptions']
+          >['expiresIn'],
         },
       }),
     }),

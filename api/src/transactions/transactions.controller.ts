@@ -6,7 +6,6 @@ import {
   HttpCode,
   HttpStatus,
   Param,
-  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -21,10 +20,11 @@ import {
 } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/jwt-payload.interface';
+import { ParseObjectIdPipe } from '../common/pipes/parse-object-id.pipe';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { TransactionQueryDto } from './dto/transaction-query.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
-import { Transaction } from './transaction.entity';
+import { Transaction } from './transaction.schema';
 import { TransactionsService } from './transactions.service';
 
 @ApiTags('transactions')
@@ -60,11 +60,11 @@ export class TransactionsController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get a transaction by ID' })
-  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiParam({ name: 'id' })
   @ApiOkResponse({ type: Transaction })
   @ApiNotFoundResponse({ description: 'Transaction not found' })
   findOne(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseObjectIdPipe) id: string,
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.transactionsService.findOne(id, user.userId);
@@ -82,11 +82,11 @@ export class TransactionsController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update a transaction' })
-  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiParam({ name: 'id' })
   @ApiOkResponse({ type: Transaction })
   @ApiNotFoundResponse({ description: 'Transaction not found' })
   update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseObjectIdPipe) id: string,
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: UpdateTransactionDto,
   ) {
@@ -96,11 +96,11 @@ export class TransactionsController {
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a transaction' })
-  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiParam({ name: 'id' })
   @ApiNoContentResponse({ description: 'Transaction deleted' })
   @ApiNotFoundResponse({ description: 'Transaction not found' })
   remove(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseObjectIdPipe) id: string,
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.transactionsService.remove(id, user.userId);

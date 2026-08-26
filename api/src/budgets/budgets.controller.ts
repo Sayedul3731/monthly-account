@@ -6,7 +6,6 @@ import {
   HttpCode,
   HttpStatus,
   Param,
-  ParseUUIDPipe,
   Post,
   Query,
 } from '@nestjs/common';
@@ -17,8 +16,9 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import { ParseObjectIdPipe } from '../common/pipes/parse-object-id.pipe';
 import { BudgetQueryDto, UpsertBudgetDto } from './dto/upsert-budget.dto';
-import { Budget } from './budget.entity';
+import { Budget } from './budget.schema';
 import { BudgetsService } from './budgets.service';
 
 @ApiTags('budgets')
@@ -43,9 +43,9 @@ export class BudgetsController {
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a budget' })
-  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiParam({ name: 'id' })
   @ApiNoContentResponse({ description: 'Budget deleted' })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
+  remove(@Param('id', ParseObjectIdPipe) id: string) {
     return this.budgetsService.remove(id);
   }
 }

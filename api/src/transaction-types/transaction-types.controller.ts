@@ -6,7 +6,6 @@ import {
   HttpCode,
   HttpStatus,
   Param,
-  ParseUUIDPipe,
   Patch,
   Post,
 } from '@nestjs/common';
@@ -18,9 +17,10 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import { ParseObjectIdPipe } from '../common/pipes/parse-object-id.pipe';
 import { CreateTransactionTypeDto } from './dto/create-transaction-type.dto';
 import { UpdateTransactionTypeDto } from './dto/update-transaction-type.dto';
-import { TransactionTypeEntity } from './transaction-type.entity';
+import { TransactionTypeEntity } from './transaction-type.schema';
 import { TransactionTypesService } from './transaction-types.service';
 
 @ApiTags('transaction-types')
@@ -39,10 +39,10 @@ export class TransactionTypesController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get a transaction type by ID' })
-  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiParam({ name: 'id' })
   @ApiOkResponse({ type: TransactionTypeEntity })
   @ApiNotFoundResponse({ description: 'Transaction type not found' })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  findOne(@Param('id', ParseObjectIdPipe) id: string) {
     return this.transactionTypesService.findOne(id);
   }
 
@@ -55,11 +55,11 @@ export class TransactionTypesController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update a transaction type' })
-  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiParam({ name: 'id' })
   @ApiOkResponse({ type: TransactionTypeEntity })
   @ApiNotFoundResponse({ description: 'Transaction type not found' })
   update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseObjectIdPipe) id: string,
     @Body() dto: UpdateTransactionTypeDto,
   ) {
     return this.transactionTypesService.update(id, dto);
@@ -68,10 +68,10 @@ export class TransactionTypesController {
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a transaction type' })
-  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiParam({ name: 'id' })
   @ApiNoContentResponse({ description: 'Transaction type deleted' })
   @ApiNotFoundResponse({ description: 'Transaction type not found' })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
+  remove(@Param('id', ParseObjectIdPipe) id: string) {
     return this.transactionTypesService.remove(id);
   }
 }

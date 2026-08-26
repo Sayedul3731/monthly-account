@@ -4,7 +4,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  IsUUID,
+  IsMongoId,
   MaxLength,
   MinLength,
 } from 'class-validator';
@@ -28,10 +28,9 @@ export class CreateUserDto {
   password: string;
 
   @ApiPropertyOptional({
-    format: 'uuid',
     description: 'Role to assign. Defaults to the "user" role if omitted.',
   })
   @IsOptional()
-  @IsUUID()
+  @IsMongoId()
   roleId?: string;
 }

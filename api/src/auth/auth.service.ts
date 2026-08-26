@@ -1,7 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
-import { User } from '../users/user.entity';
+import { User, UserDocument } from '../users/user.schema';
 import { UsersService } from '../users/users.service';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { LoginDto } from './dto/login.dto';
@@ -27,20 +27,31 @@ export class AuthService {
   async login(dto: LoginDto): Promise<AuthResponseDto> {
     const user = await this.usersService.findByEmail(dto.email);
 
-    if (!user || !(await bcrypt.compare(dto.password, user.password))) {
+    if (
+      !user?.password ||
+      !(await bcrypt.compare(dto.password, user.password))
+    ) {
       throw new UnauthorizedException('Invalid email or password');
     }
 
     return this.buildAuthResponse(user);
   }
 
-  private buildAuthResponse(user: User): AuthResponseDto {
+  private buildAuthResponse(user: UserDocument): AuthResponseDto {
+    if (!user.role?.name) {
+      throw new UnauthorizedException('User role is not loaded');
+    }
+
     const accessToken = this.jwtService.sign({
       sub: user.id,
       email: user.email,
       role: user.role.name,
     });
 
-    return { accessToken, user };
+    const userJson = user.toJSON() as User;
+    // password may be present when loaded via findByEmail (+password)
+    Reflect.deleteProperty(userJson, 'password');
+
+    return { accessToken, user: userJson };
   }
 }

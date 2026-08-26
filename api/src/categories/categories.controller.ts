@@ -6,7 +6,6 @@ import {
   HttpCode,
   HttpStatus,
   Param,
-  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -19,8 +18,9 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import { ParseObjectIdPipe } from '../common/pipes/parse-object-id.pipe';
 import { CategoriesService } from './categories.service';
-import { Category } from './category.entity';
+import { Category } from './category.schema';
 import { CategoryQueryDto } from './dto/category-query.dto';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
@@ -39,10 +39,10 @@ export class CategoriesController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get a category by ID' })
-  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiParam({ name: 'id' })
   @ApiOkResponse({ type: Category })
   @ApiNotFoundResponse({ description: 'Category not found' })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  findOne(@Param('id', ParseObjectIdPipe) id: string) {
     return this.categoriesService.findOne(id);
   }
 
@@ -55,11 +55,11 @@ export class CategoriesController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update a category' })
-  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiParam({ name: 'id' })
   @ApiOkResponse({ type: Category })
   @ApiNotFoundResponse({ description: 'Category not found' })
   update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseObjectIdPipe) id: string,
     @Body() dto: UpdateCategoryDto,
   ) {
     return this.categoriesService.update(id, dto);
@@ -68,10 +68,10 @@ export class CategoriesController {
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a category' })
-  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiParam({ name: 'id' })
   @ApiNoContentResponse({ description: 'Category deleted' })
   @ApiNotFoundResponse({ description: 'Category not found' })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
+  remove(@Param('id', ParseObjectIdPipe) id: string) {
     return this.categoriesService.remove(id);
   }
 }
