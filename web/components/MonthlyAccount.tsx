@@ -1,12 +1,16 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   fetchBudgets,
   fetchTransactions,
+  logoutUser,
   type Budget,
 } from "@/lib/api";
+import { getAccessToken, getStoredUser } from "@/lib/auth";
 import {
   formatCurrency,
   formatMonthLabel,
@@ -32,6 +36,7 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 export default function MonthlyAccount() {
+  const router = useRouter();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,6 +45,31 @@ export default function MonthlyAccount() {
   const [month, setMonth] = useState(today.getMonth());
   const [tab, setTab] = useState<Tab>("overview");
   const [editing, setEditing] = useState<Transaction | null>(null);
+  const [signedIn, setSignedIn] = useState(false);
+  const [userName, setUserName] = useState<string | null>(null);
+  const [signingOut, setSigningOut] = useState(false);
+
+  useEffect(() => {
+    const token = getAccessToken();
+    const user = getStoredUser();
+    setSignedIn(Boolean(token));
+    setUserName(user?.name ?? null);
+  }, []);
+
+  async function handleSignOut() {
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      await logoutUser();
+      setSignedIn(false);
+      setUserName(null);
+      setTransactions([]);
+      setBudgets([]);
+      router.push("/login");
+    } finally {
+      setSigningOut(false);
+    }
+  }
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -116,45 +146,91 @@ export default function MonthlyAccount() {
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
-      <header className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Image
-            src="/logo.png"
-            alt="My Account logo"
-            width={40}
-            height={40}
-            className="h-10 w-10 rounded-xl object-contain"
-            priority
-          />
-          <div>
-            <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
-              Monthly Tracker
-            </p>
-            <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">
-              My Account
-            </h1>
+      <header className="mb-6 space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Image
+              src="/logo.png"
+              alt="My Account logo"
+              width={40}
+              height={40}
+              className="h-10 w-10 rounded-xl object-contain"
+              priority
+            />
+            <div>
+              <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                Monthly Tracker
+              </p>
+              <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">
+                My Account
+              </h1>
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-2 text-sm">
+            {signedIn ? (
+              <>
+                <Link
+                  href="/profile"
+                  className="hidden max-w-[8rem] truncate rounded-lg px-2.5 py-1.5 font-medium text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900 sm:inline dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"
+                  title="View profile"
+                >
+                  {userName ?? "Profile"}
+                </Link>
+                <Link
+                  href="/profile"
+                  className="rounded-lg px-3 py-1.5 font-medium text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900 sm:hidden dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white"
+                >
+                  Profile
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  disabled={signingOut}
+                  className="rounded-lg px-3 py-1.5 font-medium text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900 disabled:opacity-60 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white"
+                >
+                  {signingOut ? "Signing out…" : "Sign out"}
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="rounded-lg px-3 py-1.5 font-medium text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white"
+                >
+                  Sign in
+                </Link>
+                <Link
+                  href="/register"
+                  className="rounded-lg bg-emerald-600 px-3 py-1.5 font-semibold text-white transition hover:bg-emerald-700"
+                >
+                  Sign up
+                </Link>
+              </>
+            )}
           </div>
         </div>
-        <div className="flex items-center gap-1 rounded-full border border-zinc-200 bg-white p-1 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <button
-            type="button"
-            onClick={() => changeMonth(-1)}
-            className="rounded-full p-2 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-white"
-            aria-label="Previous month"
-          >
-            <ChevronLeft />
-          </button>
-          <span className="min-w-[9rem] px-2 text-center text-sm font-semibold text-zinc-800 dark:text-zinc-100">
-            {formatMonthLabel(year, month)}
-          </span>
-          <button
-            type="button"
-            onClick={() => changeMonth(1)}
-            className="rounded-full p-2 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-white"
-            aria-label="Next month"
-          >
-            <ChevronRight />
-          </button>
+        <div className="flex justify-end">
+          <div className="flex items-center gap-1 rounded-full border border-zinc-200 bg-white p-1 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <button
+              type="button"
+              onClick={() => changeMonth(-1)}
+              className="rounded-full p-2 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-white"
+              aria-label="Previous month"
+            >
+              <ChevronLeft />
+            </button>
+            <span className="min-w-[9rem] px-2 text-center text-sm font-semibold text-zinc-800 dark:text-zinc-100">
+              {formatMonthLabel(year, month)}
+            </span>
+            <button
+              type="button"
+              onClick={() => changeMonth(1)}
+              className="rounded-full p-2 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-white"
+              aria-label="Next month"
+            >
+              <ChevronRight />
+            </button>
+          </div>
         </div>
       </header>
 

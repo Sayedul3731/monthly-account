@@ -1,4 +1,14 @@
+import {
+  clearAuthSession,
+  getAccessToken,
+  getRefreshToken,
+  setAuthSession,
+  updateStoredUser,
+  type AuthResponse,
+  type AuthUser,
+} from "./auth";
 import type { Transaction, TransactionType } from "./finance";
+import { hashPasswordForTransport } from "./password";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
@@ -27,18 +37,130 @@ type UpsertBudgetInput = {
   amount: number;
 };
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...init?.headers,
-    },
-  });
+type RegisterInput = {
+  name: string;
+  email: string;
+  password: string;
+};
+
+type LoginInput = {
+  email: string;
+  password: string;
+};
+
+type UpdateProfileInput = {
+  name?: string;
+  email?: string;
+  password?: string;
+};
+
+function normalizeAuthUser(raw: AuthUser): AuthUser {
+  return {
+    id: raw.id,
+    name: raw.name,
+    email: raw.email,
+    role: raw.role
+      ? { id: raw.role.id, name: raw.role.name }
+      : undefined,
+    createdAt:
+      raw.createdAt != null ? String(raw.createdAt) : undefined,
+    updatedAt:
+      raw.updatedAt != null ? String(raw.updatedAt) : undefined,
+  };
+}
+
+function applyAuthSession(data: AuthResponse): AuthUser {
+  const user = normalizeAuthUser(data.user);
+  setAuthSession(data.accessToken, user, data.refreshToken);
+  return user;
+}
+
+async function parseErrorMessage(response: Response): Promise<string> {
+  const text = await response.text();
+  if (!text) return `Request failed (${response.status})`;
+
+  try {
+    const body = JSON.parse(text) as { message?: string | string[] };
+    if (Array.isArray(body.message)) return body.message.join(". ");
+    if (typeof body.message === "string") return body.message;
+  } catch {
+    // response was not JSON
+  }
+
+  return text;
+}
+
+function toApiError(err: unknown): Error {
+  if (err instanceof TypeError) {
+    return new Error(
+      "Cannot reach the API. Make sure it is running and NEXT_PUBLIC_API_URL is correct.",
+    );
+  }
+  if (err instanceof Error) return err;
+  return new Error("Request failed");
+}
+
+async function refreshAccessToken(): Promise<boolean> {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) return false;
+
+  try {
+    const response = await fetch(`${API_URL}/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken }),
+    });
+
+    if (!response.ok) {
+      clearAuthSession();
+      return false;
+    }
+
+    const data = (await response.json()) as AuthResponse;
+    applyAuthSession(data);
+    return true;
+  } catch {
+    clearAuthSession();
+    return false;
+  }
+}
+
+async function request<T>(
+  path: string,
+  init?: RequestInit,
+  retryOnUnauthorized = true,
+): Promise<T> {
+  let response: Response;
+
+  try {
+    const token = getAccessToken();
+    response = await fetch(`${API_URL}${path}`, {
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...init?.headers,
+      },
+    });
+  } catch (err) {
+    throw toApiError(err);
+  }
+
+  if (
+    response.status === 401 &&
+    retryOnUnauthorized &&
+    path !== "/auth/login" &&
+    path !== "/auth/register" &&
+    path !== "/auth/refresh"
+  ) {
+    const refreshed = await refreshAccessToken();
+    if (refreshed) {
+      return request<T>(path, init, false);
+    }
+  }
 
   if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || `Request failed (${response.status})`);
+    throw new Error(await parseErrorMessage(response));
   }
 
   if (response.status === 204) {
@@ -46,6 +168,65 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   return response.json() as Promise<T>;
+}
+
+export async function registerUser(input: RegisterInput): Promise<AuthUser> {
+  const data = await request<AuthResponse>("/auth/register", {
+    method: "POST",
+    body: JSON.stringify({
+      name: input.name.trim(),
+      email: input.email.trim().toLowerCase(),
+      password: await hashPasswordForTransport(input.password),
+    }),
+  });
+  return applyAuthSession(data);
+}
+
+export async function loginUser(input: LoginInput): Promise<AuthUser> {
+  const data = await request<AuthResponse>("/auth/login", {
+    method: "POST",
+    body: JSON.stringify({
+      email: input.email.trim().toLowerCase(),
+      password: await hashPasswordForTransport(input.password),
+    }),
+  });
+  return applyAuthSession(data);
+}
+
+export async function logoutUser(): Promise<void> {
+  try {
+    await request<void>("/auth/logout", { method: "POST" }, false);
+  } catch {
+    // Always clear local session even if the API call fails
+  } finally {
+    clearAuthSession();
+  }
+}
+
+export async function fetchMe(): Promise<AuthUser> {
+  const data = await request<AuthUser>("/auth/me");
+  const user = normalizeAuthUser(data);
+  updateStoredUser(user);
+  return user;
+}
+
+export async function updateProfile(
+  input: UpdateProfileInput,
+): Promise<AuthUser> {
+  const body: Record<string, string> = {};
+  if (input.name !== undefined) body.name = input.name.trim();
+  if (input.email !== undefined) body.email = input.email.trim().toLowerCase();
+  if (input.password !== undefined) {
+    body.password = await hashPasswordForTransport(input.password);
+  }
+
+  const data = await request<AuthUser>("/auth/me", {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+  const user = normalizeAuthUser(data);
+  updateStoredUser(user);
+  return user;
 }
 
 function normalizeTransaction(raw: Transaction): Transaction {
