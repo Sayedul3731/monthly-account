@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEmail,
+  IsEnum,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -8,6 +9,7 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
+import { BillingInterval } from '../../memberships/billing-interval.enum';
 
 export class CreateUserDto {
   @ApiProperty({ example: 'Jane Doe', maxLength: 100 })
@@ -39,4 +41,20 @@ export class CreateUserDto {
   @IsOptional()
   @IsMongoId()
   roleId?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Membership to assign. Defaults to the free membership if omitted.',
+  })
+  @IsOptional()
+  @IsMongoId()
+  membershipId?: string;
+
+  @ApiPropertyOptional({
+    enum: BillingInterval,
+    description: 'Required when assigning a paid membership.',
+  })
+  @IsOptional()
+  @IsEnum(BillingInterval)
+  billingInterval?: BillingInterval;
 }

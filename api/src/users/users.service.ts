@@ -1,12 +1,18 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
 import { Model, Types } from 'mongoose';
 import { notDeleted } from '../common/schemas/schema.helpers';
+import { BillingInterval } from '../memberships/billing-interval.enum';
+import { MembershipType } from '../memberships/membership-type.enum';
+import { MembershipsService } from '../memberships/memberships.service';
 import { DefaultRole } from '../roles/app-role.schema';
 import { RolesService } from '../roles/roles.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -14,19 +20,27 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { User, UserDocument } from './user.schema';
 
 const SALT_ROUNDS = 10;
+const USER_POPULATE = ['role', 'membership'] as const;
 
 @Injectable()
-export class UsersService {
+export class UsersService implements OnModuleInit {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     @InjectModel(User.name)
     private readonly userModel: Model<UserDocument>,
     private readonly rolesService: RolesService,
+    private readonly membershipsService: MembershipsService,
   ) {}
+
+  async onModuleInit(): Promise<void> {
+    await this.ensureDefaultMembershipsAssigned();
+  }
 
   findAll(): Promise<User[]> {
     return this.userModel
       .find(notDeleted())
-      .populate('role')
+      .populate([...USER_POPULATE])
       .sort({ name: 1 })
       .exec();
   }
@@ -34,7 +48,7 @@ export class UsersService {
   async findOne(id: string): Promise<UserDocument> {
     const user = await this.userModel
       .findOne(notDeleted({ _id: id }))
-      .populate('role')
+      .populate([...USER_POPULATE])
       .exec();
 
     if (!user) {
@@ -52,7 +66,7 @@ export class UsersService {
     return this.userModel
       .findOne(notDeleted({ email }))
       .select('+password')
-      .populate('role')
+      .populate([...USER_POPULATE])
       .exec();
   }
 
@@ -64,7 +78,7 @@ export class UsersService {
     return this.userModel
       .findOne(notDeleted({ _id: id }))
       .select('+refreshToken')
-      .populate('role')
+      .populate([...USER_POPULATE])
       .exec();
   }
 
@@ -90,12 +104,21 @@ export class UsersService {
   async create(dto: CreateUserDto): Promise<UserDocument> {
     await this.ensureEmailAvailable(dto.email);
     const roleId = dto.roleId ?? (await this.getDefaultRoleId());
+    const membershipId =
+      dto.membershipId ?? (await this.getDefaultMembershipId());
+    const membership = await this.membershipsService.findOne(membershipId);
+    const billingInterval = this.resolveBillingInterval(
+      membership.type,
+      dto.billingInterval,
+    );
 
     const user = await this.userModel.create({
       name: dto.name,
       email: dto.email,
       password: await bcrypt.hash(dto.password, SALT_ROUNDS),
       roleId: new Types.ObjectId(roleId),
+      membershipId: new Types.ObjectId(membershipId),
+      billingInterval,
     });
 
     return this.findOne(user.id);
@@ -120,9 +143,31 @@ export class UsersService {
       user.roleId = new Types.ObjectId(dto.roleId);
     }
 
+    const membershipChanged =
+      dto.membershipId !== undefined &&
+      dto.membershipId !== user.membershipId?.toString();
+    const intervalChanged =
+      dto.billingInterval !== undefined &&
+      dto.billingInterval !== user.billingInterval;
+
+    if (dto.membershipId !== undefined || dto.billingInterval !== undefined) {
+      const membership = await this.membershipsService.findOne(
+        dto.membershipId ?? user.membershipId.toString(),
+      );
+      user.membershipId = new Types.ObjectId(
+        dto.membershipId ?? user.membershipId.toString(),
+      );
+      user.billingInterval = this.resolveBillingInterval(
+        membership.type,
+        dto.billingInterval ?? user.billingInterval,
+      );
+    }
+
     await user.save();
 
-    return roleChanged ? this.findOne(user.id) : user.populate('role');
+    return roleChanged || membershipChanged || intervalChanged
+      ? this.findOne(user.id)
+      : user.populate([...USER_POPULATE]);
   }
 
   async remove(id: string): Promise<void> {
@@ -153,5 +198,58 @@ export class UsersService {
     }
 
     return role.id;
+  }
+
+  private resolveBillingInterval(
+    membershipType: MembershipType,
+    interval?: BillingInterval | null,
+  ): BillingInterval | null {
+    if (membershipType === MembershipType.FREE) {
+      return null;
+    }
+
+    if (
+      interval === BillingInterval.MONTHLY ||
+      interval === BillingInterval.YEARLY
+    ) {
+      return interval;
+    }
+
+    throw new BadRequestException(
+      'Paid membership requires monthly or yearly billing',
+    );
+  }
+
+  private async getDefaultMembershipId(): Promise<string> {
+    const membership = await this.membershipsService.findByType(
+      MembershipType.FREE,
+    );
+
+    if (!membership) {
+      throw new NotFoundException(
+        `Default membership "${MembershipType.FREE}" is not seeded`,
+      );
+    }
+
+    return membership.id;
+  }
+
+  private async ensureDefaultMembershipsAssigned(): Promise<void> {
+    const membershipId = await this.getDefaultMembershipId();
+    const result = await this.userModel
+      .updateMany(
+        {
+          deletedAt: null,
+          $or: [{ membershipId: { $exists: false } }, { membershipId: null }],
+        },
+        { $set: { membershipId: new Types.ObjectId(membershipId) } },
+      )
+      .exec();
+
+    if (result.modifiedCount) {
+      this.logger.log(
+        `Assigned free membership to ${result.modifiedCount} existing user(s)`,
+      );
+    }
   }
 }

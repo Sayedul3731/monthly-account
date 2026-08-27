@@ -177,6 +177,12 @@ export default function MonthlyAccount() {
                   {userName ?? "Profile"}
                 </Link>
                 <Link
+                  href="/membership"
+                  className="hidden rounded-lg px-2.5 py-1.5 font-medium text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900 sm:inline dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"
+                >
+                  Membership
+                </Link>
+                <Link
                   href="/profile"
                   className="rounded-lg px-3 py-1.5 font-medium text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900 sm:hidden dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white"
                 >

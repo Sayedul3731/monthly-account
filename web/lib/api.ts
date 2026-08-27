@@ -75,11 +75,39 @@ type LoginInput = {
   password: string;
 };
 
+export type MembershipType = "free" | "paid";
+export type BillingInterval = "monthly" | "yearly";
+
 type UpdateProfileInput = {
   name?: string;
   email?: string;
   password?: string;
+  membershipId?: string;
+  billingInterval?: BillingInterval | null;
 };
+
+export type Membership = {
+  id: string;
+  name: string;
+  type: MembershipType;
+  description: string | null;
+  monthlyPrice: number;
+  yearlyPrice: number;
+};
+
+function normalizeMembership(
+  raw: AuthUser["membership"] | Membership | undefined,
+): AuthUser["membership"] | undefined {
+  if (!raw?.id) return undefined;
+  return {
+    id: raw.id,
+    name: raw.name,
+    type: raw.type === "paid" ? "paid" : "free",
+    monthlyPrice: Number(raw.monthlyPrice ?? 0),
+    yearlyPrice: Number(raw.yearlyPrice ?? 0),
+    description: raw.description ?? null,
+  };
+}
 
 function normalizeAuthUser(raw: AuthUser): AuthUser {
   return {
@@ -89,6 +117,13 @@ function normalizeAuthUser(raw: AuthUser): AuthUser {
     role: raw.role
       ? { id: raw.role.id, name: raw.role.name }
       : undefined,
+    billingInterval:
+      raw.billingInterval === "yearly"
+        ? "yearly"
+        : raw.billingInterval === "monthly"
+          ? "monthly"
+          : null,
+    membership: normalizeMembership(raw.membership),
     createdAt:
       raw.createdAt != null ? String(raw.createdAt) : undefined,
     updatedAt:
@@ -246,6 +281,10 @@ export async function updateProfile(
   if (input.password !== undefined) {
     body.password = await hashPasswordForTransport(input.password);
   }
+  if (input.membershipId !== undefined) body.membershipId = input.membershipId;
+  if (input.billingInterval !== undefined && input.billingInterval !== null) {
+    body.billingInterval = input.billingInterval;
+  }
 
   const data = await request<AuthUser>("/auth/me", {
     method: "PATCH",
@@ -306,6 +345,20 @@ function normalizeBudget(raw: Budget): Budget {
     ...raw,
     amount: Number(raw.amount),
   };
+}
+
+export async function fetchMemberships(
+  type?: MembershipType,
+): Promise<Membership[]> {
+  const params = type ? `?type=${type}` : "";
+  return request<Membership[]>(`/memberships${params}`);
+}
+
+export async function updateMembership(
+  membershipId: string,
+  billingInterval?: BillingInterval,
+): Promise<AuthUser> {
+  return updateProfile({ membershipId, billingInterval });
 }
 
 export async function fetchTransactions(

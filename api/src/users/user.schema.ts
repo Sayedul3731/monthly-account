@@ -7,6 +7,8 @@ import {
 import { Exclude } from 'class-transformer';
 import { HydratedDocument, Types } from 'mongoose';
 import { baseSchemaOptions } from '../common/schemas/schema.helpers';
+import { BillingInterval } from '../memberships/billing-interval.enum';
+import { Membership } from '../memberships/membership.schema';
 import { AppRole } from '../roles/app-role.schema';
 
 export type UserDocument = HydratedDocument<User>;
@@ -41,6 +43,21 @@ export class User {
   @ApiProperty({ type: AppRole })
   role?: AppRole;
 
+  @ApiHideProperty()
+  @Prop({ type: Types.ObjectId, ref: Membership.name, required: true })
+  membershipId!: Types.ObjectId;
+
+  @ApiProperty({ type: Membership })
+  membership?: Membership;
+
+  @ApiPropertyOptional({
+    enum: BillingInterval,
+    nullable: true,
+    description: 'Billing interval for a paid membership. Null on the free plan.',
+  })
+  @Prop({ type: String, enum: BillingInterval, default: null })
+  billingInterval!: BillingInterval | null;
+
   @ApiProperty({ format: 'date-time' })
   createdAt!: Date;
 
@@ -57,6 +74,13 @@ export const UserSchema = SchemaFactory.createForClass(User);
 UserSchema.virtual('role', {
   ref: AppRole.name,
   localField: 'roleId',
+  foreignField: '_id',
+  justOne: true,
+});
+
+UserSchema.virtual('membership', {
+  ref: Membership.name,
+  localField: 'membershipId',
   foreignField: '_id',
   justOne: true,
 });

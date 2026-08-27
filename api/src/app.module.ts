@@ -8,6 +8,7 @@ import configuration from './config/configuration';
 import { ENV_FILE_PATH } from './config/env.loader';
 import { BudgetsModule } from './budgets/budgets.module';
 import { CategoriesModule } from './categories/categories.module';
+import { MembershipsModule } from './memberships/memberships.module';
 import { RolesModule } from './roles/roles.module';
 import { TransactionTypesModule } from './transaction-types/transaction-types.module';
 import { TransactionsModule } from './transactions/transactions.module';
@@ -33,6 +34,7 @@ import { UsersModule } from './users/users.module';
     BudgetsModule,
     UsersModule,
     CategoriesModule,
+    MembershipsModule,
     TransactionTypesModule,
     RolesModule,
     AuthModule,

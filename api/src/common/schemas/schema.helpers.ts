@@ -18,6 +18,7 @@ export function documentToJson(
 
   for (const key of [
     'roleId',
+    'membershipId',
     'userId',
     'categoryId',
     'transactionTypeId',

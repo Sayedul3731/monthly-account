@@ -51,6 +51,16 @@ function roleLabel(role?: AuthUser["role"]): string {
   return role.name.charAt(0).toUpperCase() + role.name.slice(1);
 }
 
+function membershipLabel(
+  membership?: AuthUser["membership"],
+  billingInterval?: AuthUser["billingInterval"],
+): string {
+  if (!membership?.name) return "Free";
+  if (membership.type !== "paid") return membership.name;
+  const cadence = billingInterval === "yearly" ? "yearly" : "monthly";
+  return `${membership.name} (${cadence})`;
+}
+
 export default function ProfilePage() {
   const router = useRouter();
   const formId = useId();
@@ -319,6 +329,12 @@ export default function ProfilePage() {
                 <span className="rounded-full bg-white/15 px-2.5 py-1 font-medium ring-1 ring-white/20">
                   {roleLabel(user.role)}
                 </span>
+                <Link
+                  href="/membership"
+                  className="rounded-full bg-white/15 px-2.5 py-1 font-medium ring-1 ring-white/20 transition hover:bg-white/25"
+                >
+                  {membershipLabel(user.membership, user.billingInterval)} plan
+                </Link>
                 <span className="text-emerald-50/80">
                   Member since {formatMemberSince(user.createdAt)}
                 </span>
@@ -563,6 +579,26 @@ export default function ProfilePage() {
               )}
             </button>
           </form>
+        </section>
+
+        <section className="mb-6 rounded-2xl border border-zinc-200/80 bg-white/90 p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.04)] backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-900/90 dark:shadow-[0_1px_2px_rgba(0,0,0,0.2),0_8px_24px_rgba(0,0,0,0.25)] sm:p-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-white">
+                Membership
+              </h3>
+              <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                You are on the {membershipLabel(user.membership, user.billingInterval)} plan.
+                Paid is $1 / month or $6 / year.
+              </p>
+            </div>
+            <Link
+              href="/membership"
+              className="rounded-xl bg-emerald-600 px-4 py-2.5 text-center text-sm font-semibold text-white transition hover:bg-emerald-700"
+            >
+              View plans
+            </Link>
+          </div>
         </section>
 
         <section className="rounded-2xl border border-zinc-200/80 bg-white/90 p-6 dark:border-zinc-800 dark:bg-zinc-900/90 sm:p-8">

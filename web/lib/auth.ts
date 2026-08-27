@@ -1,8 +1,19 @@
+export type BillingInterval = "monthly" | "yearly";
+
 export type AuthUser = {
   id: string;
   name: string;
   email: string;
   role?: { id: string; name: string };
+  billingInterval?: BillingInterval | null;
+  membership?: {
+    id: string;
+    name: string;
+    type: "free" | "paid";
+    monthlyPrice: number;
+    yearlyPrice: number;
+    description?: string | null;
+  };
   createdAt?: string;
   updatedAt?: string;
 };

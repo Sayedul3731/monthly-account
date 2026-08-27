@@ -73,6 +73,8 @@ export class AuthService {
       name: dto.name,
       email: dto.email,
       password: dto.password,
+      membershipId: dto.membershipId,
+      billingInterval: dto.billingInterval,
     });
     return this.toPublicUser(user);
   }
