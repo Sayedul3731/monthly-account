@@ -20,6 +20,7 @@ import {
 } from '@nestjs/swagger';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ParseObjectIdPipe } from '../common/pipes/parse-object-id.pipe';
+import { asPlain } from '../common/schemas/schema.helpers';
 import { DefaultRole } from '../roles/app-role.schema';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -46,14 +47,14 @@ export class UsersController {
   @ApiOkResponse({ type: User })
   @ApiNotFoundResponse({ description: 'User not found' })
   findOne(@Param('id', ParseObjectIdPipe) id: string) {
-    return this.usersService.findOne(id);
+    return this.usersService.findOne(id).then((user) => asPlain<User>(user));
   }
 
   @Post()
   @ApiOperation({ summary: 'Create a user' })
   @ApiOkResponse({ type: User })
-  create(@Body() dto: CreateUserDto) {
-    return this.usersService.create(dto);
+  async create(@Body() dto: CreateUserDto) {
+    return asPlain<User>(await this.usersService.create(dto));
   }
 
   @Patch(':id')
@@ -61,11 +62,11 @@ export class UsersController {
   @ApiParam({ name: 'id' })
   @ApiOkResponse({ type: User })
   @ApiNotFoundResponse({ description: 'User not found' })
-  update(
+  async update(
     @Param('id', ParseObjectIdPipe) id: string,
     @Body() dto: UpdateUserDto,
   ) {
-    return this.usersService.update(id, dto);
+    return asPlain<User>(await this.usersService.update(id, dto));
   }
 
   @Delete(':id')

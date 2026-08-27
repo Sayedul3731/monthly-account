@@ -70,3 +70,7 @@ export function clearAuthSession(): void {
   localStorage.removeItem(REFRESH_TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
 }
+
+export function isAdmin(user: AuthUser | null | undefined): boolean {
+  return user?.role?.name?.toLowerCase() === "admin";
+}

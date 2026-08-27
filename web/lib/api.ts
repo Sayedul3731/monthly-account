@@ -95,6 +95,68 @@ export type Membership = {
   yearlyPrice: number;
 };
 
+export type AppRole = {
+  id: string;
+  name: string;
+  description: string | null;
+};
+
+export type AdminUser = {
+  id: string;
+  name: string;
+  email: string;
+  roleId: string;
+  membershipId: string;
+  billingInterval: BillingInterval | null;
+  role?: { id: string; name: string };
+  membership?: Membership;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+type CreateUserInput = {
+  name: string;
+  email: string;
+  password: string;
+  roleId?: string;
+  membershipId?: string;
+  billingInterval?: BillingInterval;
+};
+
+type UpdateUserInput = {
+  name?: string;
+  email?: string;
+  password?: string;
+  roleId?: string;
+  membershipId?: string;
+  billingInterval?: BillingInterval | null;
+};
+
+type RoleInput = {
+  name: string;
+  description?: string | null;
+};
+
+type MembershipPlanInput = {
+  name: string;
+  type: MembershipType;
+  description?: string | null;
+  monthlyPrice?: number;
+  yearlyPrice?: number;
+};
+
+type CategoryInput = {
+  name: string;
+  type: TransactionType;
+  icon?: string;
+};
+
+type TransactionTypeInput = {
+  name: string;
+  label: string;
+  icon?: string;
+};
+
 function normalizeMembership(
   raw: AuthUser["membership"] | Membership | undefined,
 ): AuthUser["membership"] | undefined {
@@ -307,6 +369,95 @@ function nestedString(value: unknown, key: string): string {
   return "";
 }
 
+function extractId(value: unknown): string {
+  if (typeof value === "string" && value) return value;
+  if (isRecord(value)) {
+    if (typeof value.id === "string" && value.id) return value.id;
+    if (value._id != null) return String(value._id);
+  }
+  return "";
+}
+
+function asIsoString(value: unknown): string | undefined {
+  if (value == null) return undefined;
+  if (typeof value === "string") return value;
+  if (value instanceof Date) return value.toISOString();
+  return String(value);
+}
+
+function normalizeRole(raw: unknown): AppRole | undefined {
+  if (!isRecord(raw)) return undefined;
+  const id = extractId(raw);
+  if (!id) return undefined;
+  return {
+    id,
+    name: typeof raw.name === "string" ? raw.name : "",
+    description:
+      typeof raw.description === "string" ? raw.description : null,
+  };
+}
+
+function normalizeAdminUser(raw: unknown): AdminUser {
+  const record = isRecord(raw) ? raw : {};
+  const role = normalizeRole(record.role);
+  const membership = isRecord(record.membership)
+    ? normalizeMembershipRecord(record.membership)
+    : undefined;
+
+  const billing =
+    record.billingInterval === "yearly"
+      ? "yearly"
+      : record.billingInterval === "monthly"
+        ? "monthly"
+        : null;
+
+  return {
+    id: extractId(record.id ?? record._id),
+    name: typeof record.name === "string" ? record.name : "",
+    email: typeof record.email === "string" ? record.email : "",
+    roleId: extractId(record.roleId) || role?.id || "",
+    membershipId: extractId(record.membershipId) || membership?.id || "",
+    billingInterval: billing,
+    role: role ? { id: role.id, name: role.name } : undefined,
+    membership,
+    createdAt: asIsoString(record.createdAt),
+    updatedAt: asIsoString(record.updatedAt),
+  };
+}
+
+function normalizeMembershipRecord(raw: unknown): Membership {
+  const record = isRecord(raw) ? raw : {};
+  return {
+    id: extractId(record.id ?? record._id),
+    name: typeof record.name === "string" ? record.name : "",
+    type: record.type === "paid" ? "paid" : "free",
+    description:
+      typeof record.description === "string" ? record.description : null,
+    monthlyPrice: Number(record.monthlyPrice ?? 0),
+    yearlyPrice: Number(record.yearlyPrice ?? 0),
+  };
+}
+
+function normalizeCategory(raw: unknown): ApiCategory {
+  const record = isRecord(raw) ? raw : {};
+  return {
+    id: extractId(record.id ?? record._id),
+    name: typeof record.name === "string" ? record.name : "",
+    type: record.type === "income" ? "income" : "expense",
+    icon: typeof record.icon === "string" ? record.icon : "",
+  };
+}
+
+function normalizeTransactionType(raw: unknown): ApiTransactionType {
+  const record = isRecord(raw) ? raw : {};
+  return {
+    id: extractId(record.id ?? record._id),
+    name: typeof record.name === "string" ? record.name : "",
+    label: typeof record.label === "string" ? record.label : "",
+    icon: typeof record.icon === "string" ? record.icon : "",
+  };
+}
+
 type RawTransaction = {
   id: string;
   amount: number;
@@ -351,7 +502,8 @@ export async function fetchMemberships(
   type?: MembershipType,
 ): Promise<Membership[]> {
   const params = type ? `?type=${type}` : "";
-  return request<Membership[]>(`/memberships${params}`);
+  const data = await request<unknown[]>(`/memberships${params}`);
+  return data.map(normalizeMembershipRecord);
 }
 
 export async function updateMembership(
@@ -359,6 +511,203 @@ export async function updateMembership(
   billingInterval?: BillingInterval,
 ): Promise<AuthUser> {
   return updateProfile({ membershipId, billingInterval });
+}
+
+export async function fetchUsers(): Promise<AdminUser[]> {
+  const data = await request<unknown[]>("/users");
+  return data.map(normalizeAdminUser);
+}
+
+export async function createUser(input: CreateUserInput): Promise<AdminUser> {
+  const body: Record<string, string> = {
+    name: input.name.trim(),
+    email: input.email.trim().toLowerCase(),
+    password: await hashPasswordForTransport(input.password),
+  };
+  if (input.roleId) body.roleId = input.roleId;
+  if (input.membershipId) body.membershipId = input.membershipId;
+  if (input.billingInterval) body.billingInterval = input.billingInterval;
+
+  const data = await request<unknown>("/users", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+  return normalizeAdminUser(data);
+}
+
+export async function updateUser(
+  id: string,
+  input: UpdateUserInput,
+): Promise<AdminUser> {
+  const body: Record<string, string> = {};
+  if (input.name !== undefined) body.name = input.name.trim();
+  if (input.email !== undefined) body.email = input.email.trim().toLowerCase();
+  if (input.password !== undefined) {
+    body.password = await hashPasswordForTransport(input.password);
+  }
+  if (input.roleId !== undefined) body.roleId = input.roleId;
+  if (input.membershipId !== undefined) body.membershipId = input.membershipId;
+  if (input.billingInterval !== undefined && input.billingInterval !== null) {
+    body.billingInterval = input.billingInterval;
+  }
+
+  const data = await request<unknown>(`/users/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+  return normalizeAdminUser(data);
+}
+
+export async function deleteUser(id: string): Promise<void> {
+  await request<void>(`/users/${id}`, { method: "DELETE" });
+}
+
+export async function fetchRoles(): Promise<AppRole[]> {
+  const data = await request<unknown[]>("/roles");
+  return data
+    .map(normalizeRole)
+    .filter((role): role is AppRole => Boolean(role));
+}
+
+export async function createRole(input: RoleInput): Promise<AppRole> {
+  const data = await request<unknown>("/roles", {
+    method: "POST",
+    body: JSON.stringify({
+      name: input.name.trim(),
+      description: input.description?.trim() || undefined,
+    }),
+  });
+  const role = normalizeRole(data);
+  if (!role) throw new Error("Failed to create role");
+  return role;
+}
+
+export async function updateRole(
+  id: string,
+  input: RoleInput,
+): Promise<AppRole> {
+  const data = await request<unknown>(`/roles/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      name: input.name.trim(),
+      description: input.description?.trim() || null,
+    }),
+  });
+  const role = normalizeRole(data);
+  if (!role) throw new Error("Failed to update role");
+  return role;
+}
+
+export async function deleteRole(id: string): Promise<void> {
+  await request<void>(`/roles/${id}`, { method: "DELETE" });
+}
+
+export async function createMembershipPlan(
+  input: MembershipPlanInput,
+): Promise<Membership> {
+  const data = await request<unknown>("/memberships", {
+    method: "POST",
+    body: JSON.stringify({
+      name: input.name.trim(),
+      type: input.type,
+      description: input.description?.trim() || undefined,
+      monthlyPrice: input.monthlyPrice ?? 0,
+      yearlyPrice: input.yearlyPrice ?? 0,
+    }),
+  });
+  return normalizeMembershipRecord(data);
+}
+
+export async function updateMembershipPlan(
+  id: string,
+  input: Partial<MembershipPlanInput>,
+): Promise<Membership> {
+  const body: Record<string, string | number | null> = {};
+  if (input.name !== undefined) body.name = input.name.trim();
+  if (input.type !== undefined) body.type = input.type;
+  if (input.description !== undefined) {
+    body.description = input.description?.trim() || null;
+  }
+  if (input.monthlyPrice !== undefined) body.monthlyPrice = input.monthlyPrice;
+  if (input.yearlyPrice !== undefined) body.yearlyPrice = input.yearlyPrice;
+
+  const data = await request<unknown>(`/memberships/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+  return normalizeMembershipRecord(data);
+}
+
+export async function deleteMembershipPlan(id: string): Promise<void> {
+  await request<void>(`/memberships/${id}`, { method: "DELETE" });
+}
+
+export async function createCategory(
+  input: CategoryInput,
+): Promise<ApiCategory> {
+  const data = await request<unknown>("/categories", {
+    method: "POST",
+    body: JSON.stringify({
+      name: input.name.trim(),
+      type: input.type,
+      icon: input.icon?.trim() || undefined,
+    }),
+  });
+  return normalizeCategory(data);
+}
+
+export async function updateCategory(
+  id: string,
+  input: Partial<CategoryInput>,
+): Promise<ApiCategory> {
+  const body: Record<string, string> = {};
+  if (input.name !== undefined) body.name = input.name.trim();
+  if (input.type !== undefined) body.type = input.type;
+  if (input.icon !== undefined) body.icon = input.icon.trim();
+
+  const data = await request<unknown>(`/categories/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+  return normalizeCategory(data);
+}
+
+export async function deleteCategory(id: string): Promise<void> {
+  await request<void>(`/categories/${id}`, { method: "DELETE" });
+}
+
+export async function createTransactionType(
+  input: TransactionTypeInput,
+): Promise<ApiTransactionType> {
+  const data = await request<unknown>("/transaction-types", {
+    method: "POST",
+    body: JSON.stringify({
+      name: input.name.trim(),
+      label: input.label.trim(),
+      icon: input.icon?.trim() || undefined,
+    }),
+  });
+  return normalizeTransactionType(data);
+}
+
+export async function updateTransactionType(
+  id: string,
+  input: Partial<TransactionTypeInput>,
+): Promise<ApiTransactionType> {
+  const body: Record<string, string> = {};
+  if (input.name !== undefined) body.name = input.name.trim();
+  if (input.label !== undefined) body.label = input.label.trim();
+  if (input.icon !== undefined) body.icon = input.icon.trim();
+
+  const data = await request<unknown>(`/transaction-types/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+  return normalizeTransactionType(data);
+}
+
+export async function deleteTransactionType(id: string): Promise<void> {
+  await request<void>(`/transaction-types/${id}`, { method: "DELETE" });
 }
 
 export async function fetchTransactions(

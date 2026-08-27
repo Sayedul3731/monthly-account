@@ -8,6 +8,7 @@ import { fetchMe, logoutUser, updateProfile } from "@/lib/api";
 import {
   clearAuthSession,
   getAccessToken,
+  isAdmin,
   type AuthUser,
 } from "@/lib/auth";
 import { ChevronLeft, EyeIcon, EyeOffIcon, SpinnerIcon } from "./icons";
@@ -301,13 +302,23 @@ export default function ProfilePage() {
               </h1>
             </div>
           </div>
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white"
-          >
-            <ChevronLeft />
-            <span className="hidden sm:inline">Back</span>
-          </Link>
+          <div className="flex shrink-0 items-center gap-2">
+            {isAdmin(user) && (
+              <Link
+                href="/admin"
+                className="rounded-lg px-3 py-1.5 text-sm font-medium text-emerald-700 transition hover:bg-emerald-50 hover:text-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/40 dark:hover:text-emerald-300"
+              >
+                Admin
+              </Link>
+            )}
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white"
+            >
+              <ChevronLeft />
+              <span className="hidden sm:inline">Back</span>
+            </Link>
+          </div>
         </header>
 
         <section className="mb-6 overflow-hidden rounded-2xl border border-zinc-200/80 bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 p-6 text-white shadow-sm sm:p-8">
@@ -600,6 +611,28 @@ export default function ProfilePage() {
             </Link>
           </div>
         </section>
+
+        {isAdmin(user) && (
+          <section className="mb-6 rounded-2xl border border-zinc-200/80 bg-white/90 p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.04)] backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-900/90 dark:shadow-[0_1px_2px_rgba(0,0,0,0.2),0_8px_24px_rgba(0,0,0,0.25)] sm:p-8">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-white">
+                  Admin
+                </h3>
+                <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                  Manage users, roles, memberships, categories, and transaction
+                  types.
+                </p>
+              </div>
+              <Link
+                href="/admin"
+                className="rounded-xl bg-emerald-600 px-4 py-2.5 text-center text-sm font-semibold text-white transition hover:bg-emerald-700"
+              >
+                Open admin panel
+              </Link>
+            </div>
+          </section>
+        )}
 
         <section className="rounded-2xl border border-zinc-200/80 bg-white/90 p-6 dark:border-zinc-800 dark:bg-zinc-900/90 sm:p-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

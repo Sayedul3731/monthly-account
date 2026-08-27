@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { notDeleted } from '../common/schemas/schema.helpers';
+import { asPlain, asPlainList, notDeleted } from '../common/schemas/schema.helpers';
 import { AppRole, AppRoleDocument, DefaultRole } from './app-role.schema';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
@@ -30,8 +30,9 @@ export class RolesService implements OnModuleInit {
     await this.ensureDefaultRoles();
   }
 
-  findAll(): Promise<AppRole[]> {
-    return this.roleModel.find(notDeleted()).sort({ name: 1 }).exec();
+  async findAll(): Promise<AppRole[]> {
+    const docs = await this.roleModel.find(notDeleted()).sort({ name: 1 }).exec();
+    return asPlainList<AppRole>(docs);
   }
 
   async findOne(id: string): Promise<AppRoleDocument> {
@@ -48,16 +49,17 @@ export class RolesService implements OnModuleInit {
     return this.roleModel.findOne(notDeleted({ name })).exec();
   }
 
-  async create(dto: CreateRoleDto): Promise<AppRoleDocument> {
+  async create(dto: CreateRoleDto): Promise<AppRole> {
     await this.ensureNameAvailable(dto.name);
 
-    return this.roleModel.create({
+    const role = await this.roleModel.create({
       name: dto.name,
       description: dto.description ?? null,
     });
+    return asPlain<AppRole>(role);
   }
 
-  async update(id: string, dto: UpdateRoleDto): Promise<AppRoleDocument> {
+  async update(id: string, dto: UpdateRoleDto): Promise<AppRole> {
     const role = await this.findOne(id);
 
     if (dto.name !== undefined && dto.name !== role.name) {
@@ -67,7 +69,7 @@ export class RolesService implements OnModuleInit {
 
     if (dto.description !== undefined) role.description = dto.description;
 
-    return role.save();
+    return asPlain<AppRole>(await role.save());
   }
 
   async remove(id: string): Promise<void> {

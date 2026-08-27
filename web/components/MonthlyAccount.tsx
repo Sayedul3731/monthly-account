@@ -10,7 +10,7 @@ import {
   logoutUser,
   type Budget,
 } from "@/lib/api";
-import { getAccessToken, getStoredUser } from "@/lib/auth";
+import { getAccessToken, getStoredUser, isAdmin } from "@/lib/auth";
 import {
   formatCurrency,
   formatMonthLabel,
@@ -45,16 +45,10 @@ export default function MonthlyAccount() {
   const [month, setMonth] = useState(today.getMonth());
   const [tab, setTab] = useState<Tab>("overview");
   const [editing, setEditing] = useState<Transaction | null>(null);
-  const [signedIn, setSignedIn] = useState(false);
-  const [userName, setUserName] = useState<string | null>(null);
+  const [signedIn, setSignedIn] = useState(() => Boolean(getAccessToken()));
+  const [userName, setUserName] = useState(() => getStoredUser()?.name ?? null);
+  const [adminUser, setAdminUser] = useState(() => isAdmin(getStoredUser()));
   const [signingOut, setSigningOut] = useState(false);
-
-  useEffect(() => {
-    const token = getAccessToken();
-    const user = getStoredUser();
-    setSignedIn(Boolean(token));
-    setUserName(user?.name ?? null);
-  }, []);
 
   async function handleSignOut() {
     if (signingOut) return;
@@ -63,6 +57,7 @@ export default function MonthlyAccount() {
       await logoutUser();
       setSignedIn(false);
       setUserName(null);
+      setAdminUser(false);
       setTransactions([]);
       setBudgets([]);
       router.push("/login");
@@ -182,6 +177,14 @@ export default function MonthlyAccount() {
                 >
                   Membership
                 </Link>
+                {adminUser && (
+                  <Link
+                    href="/admin"
+                    className="rounded-lg px-2.5 py-1.5 font-medium text-emerald-700 transition hover:bg-emerald-50 hover:text-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/40 dark:hover:text-emerald-300"
+                  >
+                    Admin
+                  </Link>
+                )}
                 <Link
                   href="/profile"
                   className="rounded-lg px-3 py-1.5 font-medium text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900 sm:hidden dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white"

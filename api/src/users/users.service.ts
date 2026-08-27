@@ -9,7 +9,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
 import { Model, Types } from 'mongoose';
-import { notDeleted } from '../common/schemas/schema.helpers';
+import { asPlainList, notDeleted } from '../common/schemas/schema.helpers';
 import { BillingInterval } from '../memberships/billing-interval.enum';
 import { MembershipType } from '../memberships/membership-type.enum';
 import { MembershipsService } from '../memberships/memberships.service';
@@ -37,12 +37,14 @@ export class UsersService implements OnModuleInit {
     await this.ensureDefaultMembershipsAssigned();
   }
 
-  findAll(): Promise<User[]> {
-    return this.userModel
+  async findAll(): Promise<User[]> {
+    const docs = await this.userModel
       .find(notDeleted())
       .populate([...USER_POPULATE])
       .sort({ name: 1 })
       .exec();
+
+    return asPlainList<User>(docs);
   }
 
   async findOne(id: string): Promise<UserDocument> {
