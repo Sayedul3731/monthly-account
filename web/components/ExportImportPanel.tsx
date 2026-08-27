@@ -118,7 +118,7 @@ export default function ExportImportPanel({
           type="button"
           onClick={() => fileRef.current?.click()}
           disabled={importing}
-          className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+          className="rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-deep disabled:opacity-60"
         >
           {importing ? "Importing..." : "Choose file to import"}
         </button>

@@ -3,8 +3,8 @@ import AuthLayout from "@/components/AuthLayout";
 import LoginForm from "@/components/LoginForm";
 
 export const metadata: Metadata = {
-  title: "Sign in · My Monthly Account",
-  description: "Sign in to My Monthly Account to manage your finances.",
+  title: "Sign in · AyBey",
+  description: "Sign in to AyBey to manage your finances.",
 };
 
 export default function LoginPage() {

@@ -7,14 +7,14 @@ import {
 } from "@/lib/finance";
 
 const BAR_COLORS = [
+  "bg-brand",
+  "bg-gold",
   "bg-rose-500",
-  "bg-orange-500",
+  "bg-teal-600",
   "bg-amber-500",
-  "bg-emerald-500",
-  "bg-teal-500",
-  "bg-cyan-500",
+  "bg-sky-600",
   "bg-violet-500",
-  "bg-fuchsia-500",
+  "bg-stone-500",
 ];
 
 type Props = {
@@ -27,9 +27,11 @@ export default function CategoryChart({ transactions }: Props) {
 
   if (expenses.length === 0 && income.length === 0) {
     return (
-      <p className="py-8 text-center text-sm text-zinc-500">
-        Add transactions to see category breakdown.
-      </p>
+      <div className="py-6 text-center">
+        <p className="text-sm text-zinc-500">
+          Add transactions to see how this month breaks down.
+        </p>
+      </div>
     );
   }
 
@@ -79,7 +81,7 @@ function BreakdownPanel({
               <span
                 className={`font-medium tabular-nums ${
                   tone === "income"
-                    ? "text-emerald-600 dark:text-emerald-400"
+                    ? "text-brand dark:text-gold"
                     : "text-rose-600 dark:text-rose-400"
                 }`}
               >

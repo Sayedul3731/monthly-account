@@ -131,7 +131,7 @@ export default function BudgetPanel({
             <div className="h-2.5 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
               <div
                 className={`h-full rounded-full transition-all ${
-                  overallProgress >= 100 ? "bg-rose-500" : "bg-emerald-500"
+                  overallProgress >= 100 ? "bg-rose-500" : "bg-brand"
                 }`}
                 style={{ width: `${overallProgress}%` }}
               />
@@ -161,13 +161,13 @@ export default function BudgetPanel({
                 placeholder="Overall budget"
                 value={overallAmount}
                 onChange={(e) => setOverallAmount(e.target.value)}
-                className="w-full rounded-xl border border-zinc-200 bg-zinc-50 py-2.5 pl-8 pr-4 text-sm outline-none focus:border-emerald-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                className="w-full rounded-xl border border-zinc-200 bg-zinc-50 py-2.5 pl-8 pr-4 text-sm outline-none focus:border-brand dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
               />
             </div>
             <button
               type="submit"
               disabled={saving === "__overall__"}
-              className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+              className="rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-deep disabled:opacity-60"
             >
               Set
             </button>
@@ -222,7 +222,7 @@ export default function BudgetPanel({
                   <div className="h-2 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
                     <div
                       className={`h-full rounded-full ${
-                        progress >= 100 ? "bg-rose-500" : "bg-teal-500"
+                        progress >= 100 ? "bg-rose-500" : "bg-gold"
                       }`}
                       style={{ width: `${progress}%` }}
                     />
@@ -251,7 +251,7 @@ export default function BudgetPanel({
                             [cat]: e.target.value,
                           }))
                         }
-                        className="w-full rounded-lg border border-zinc-200 bg-zinc-50 py-2 pl-7 pr-3 text-sm outline-none focus:border-emerald-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                        className="w-full rounded-lg border border-zinc-200 bg-zinc-50 py-2 pl-7 pr-3 text-sm outline-none focus:border-brand dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
                       />
                     </div>
                     <button

@@ -1,12 +1,12 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   fetchMe,
   fetchMemberships,
+  logoutUser,
   updateMembership,
   type BillingInterval,
   type Membership,
@@ -14,9 +14,11 @@ import {
 import {
   clearAuthSession,
   getAccessToken,
+  isAdmin,
   type AuthUser,
 } from "@/lib/auth";
 import { formatCurrency } from "@/lib/finance";
+import AppHeader from "./AppHeader";
 import { ChevronLeft, SpinnerIcon } from "./icons";
 
 function membershipLabel(membership?: AuthUser["membership"]): string {
@@ -62,6 +64,7 @@ export default function MembershipsPage() {
   const [switchingKey, setSwitchingKey] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [signingOut, setSigningOut] = useState(false);
 
   useEffect(() => {
     if (!getAccessToken()) {
@@ -99,6 +102,17 @@ export default function MembershipsPage() {
       cancelled = true;
     };
   }, [router]);
+
+  async function handleSignOut() {
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      await logoutUser();
+      router.push("/login");
+    } finally {
+      setSigningOut(false);
+    }
+  }
 
   async function handleSelect(
     plan: Membership,
@@ -163,42 +177,30 @@ export default function MembershipsPage() {
   const currentId = user.membership?.id;
 
   return (
-    <div className="relative min-h-full overflow-hidden bg-zinc-50 dark:bg-zinc-950">
+    <div className="relative min-h-full overflow-x-hidden bg-zinc-50 dark:bg-zinc-950">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_40%_at_50%_-10%,rgba(16,185,129,0.12),transparent)] dark:bg-[radial-gradient(ellipse_70%_40%_at_50%_-10%,rgba(16,185,129,0.1),transparent)]"
       />
 
-      <div className="relative mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
-        <header className="mb-8 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <Link href="/" className="shrink-0">
-              <Image
-                src="/logo.png"
-                alt="My Account logo"
-                width={40}
-                height={40}
-                className="h-10 w-10 rounded-xl object-contain"
-                priority
-              />
-            </Link>
-            <div>
-              <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                Account settings
-              </p>
-              <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">
-                Membership
-              </h1>
-            </div>
-          </div>
-          <Link
-            href="/profile"
-            className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white"
-          >
-            <ChevronLeft />
-            <span className="hidden sm:inline">Profile</span>
-          </Link>
-        </header>
+      <div className="relative">
+        <AppHeader
+          signedIn
+          user={{ name: user.name, email: user.email }}
+          isAdmin={isAdmin(user)}
+          signingOut={signingOut}
+          onSignOut={handleSignOut}
+        />
+
+        <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
+        <div className="mb-6">
+          <h1 className="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl dark:text-white">
+            Membership
+          </h1>
+          <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
+            Choose a plan that fits how you use the app
+          </p>
+        </div>
 
         <section className="mb-6 overflow-hidden rounded-2xl border border-zinc-200/80 bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 p-6 text-white shadow-sm sm:p-8">
           <p className="text-sm font-medium text-emerald-100">Current plan</p>
@@ -372,6 +374,7 @@ export default function MembershipsPage() {
             </table>
           </div>
         </section>
+        </div>
       </div>
     </div>
   );

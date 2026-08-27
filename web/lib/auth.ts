@@ -24,9 +24,9 @@ export type AuthResponse = {
   user: AuthUser;
 };
 
-const ACCESS_TOKEN_KEY = "monthly_account_access_token";
-const REFRESH_TOKEN_KEY = "monthly_account_refresh_token";
-const USER_KEY = "monthly_account_user";
+const ACCESS_TOKEN_KEY = "aybey_access_token";
+const REFRESH_TOKEN_KEY = "aybey_refresh_token";
+const USER_KEY = "aybey_user";
 
 export function getAccessToken(): string | null {
   if (typeof window === "undefined") return null;

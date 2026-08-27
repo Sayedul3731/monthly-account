@@ -1,7 +1,7 @@
 services:
   mongo:
     image: mongo:7
-    container_name: monthly_account_db
+    container_name: aybey_db
     restart: unless-stopped
     ports:
       - '27017:27017'

@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -11,6 +10,7 @@ import {
   isAdmin,
   type AuthUser,
 } from "@/lib/auth";
+import AppHeader from "./AppHeader";
 import AdminOverview from "./admin/AdminOverview";
 import CategoriesAdmin from "./admin/CategoriesAdmin";
 import MembershipsAdmin from "./admin/MembershipsAdmin";
@@ -134,52 +134,31 @@ export default function AdminPanel() {
   }
 
   return (
-    <div className="relative min-h-full overflow-hidden bg-zinc-50 dark:bg-zinc-950">
+    <div className="relative min-h-full overflow-x-hidden bg-zinc-50 dark:bg-zinc-950">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_40%_at_50%_-10%,rgba(16,185,129,0.12),transparent)] dark:bg-[radial-gradient(ellipse_70%_40%_at_50%_-10%,rgba(16,185,129,0.1),transparent)]"
       />
 
-      <div className="relative mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
-        <header className="mb-6 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <Link href="/" className="shrink-0">
-              <Image
-                src="/logo.png"
-                alt="My Account logo"
-                width={40}
-                height={40}
-                className="h-10 w-10 rounded-xl object-contain"
-                priority
-              />
-            </Link>
-            <div>
-              <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                Administration
-              </p>
-              <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">
-                Admin panel
-              </h1>
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-2 text-sm">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 font-medium text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white"
-            >
-              <ChevronLeft />
-              <span className="hidden sm:inline">Account</span>
-            </Link>
-            <button
-              type="button"
-              onClick={handleSignOut}
-              disabled={signingOut}
-              className="rounded-lg px-3 py-1.5 font-medium text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900 disabled:opacity-60 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white"
-            >
-              {signingOut ? "Signing out…" : "Sign out"}
-            </button>
-          </div>
-        </header>
+      <div className="relative">
+        <AppHeader
+          signedIn
+          user={{ name: user.name, email: user.email }}
+          isAdmin
+          signingOut={signingOut}
+          onSignOut={handleSignOut}
+          wide
+        />
+
+        <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
+        <div className="mb-6">
+          <h1 className="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl dark:text-white">
+            Admin
+          </h1>
+          <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
+            Users, roles, plans, and catalogs
+          </p>
+        </div>
 
         <nav className="mb-6 flex gap-1 overflow-x-auto rounded-xl border border-zinc-200 bg-white p-1 dark:border-zinc-800 dark:bg-zinc-900">
           {TABS.map(({ id, label }) => (
@@ -235,6 +214,7 @@ export default function AdminPanel() {
         {tab === "types" && (
           <TransactionTypesAdmin onError={handleError} />
         )}
+        </div>
       </div>
     </div>
   );

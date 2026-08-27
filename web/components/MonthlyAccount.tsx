@@ -1,7 +1,5 @@
 "use client";
 
-import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -17,22 +15,30 @@ import {
   summarize,
   type Transaction,
 } from "@/lib/finance";
-import BudgetPanel from "./BudgetPanel";
+import AppHeader from "./AppHeader";
+// import BudgetPanel from "./BudgetPanel";
 import CategoryChart from "./CategoryChart";
-import ExportImportPanel from "./ExportImportPanel";
-import { ChevronLeft, ChevronRight } from "./icons";
+// import ExportImportPanel from "./ExportImportPanel";
+import {
+  CalendarIcon,
+  ChevronLeft,
+  ChevronRight,
+  TrendDownIcon,
+  TrendUpIcon,
+  WalletIcon,
+} from "./icons";
 import TransactionForm from "./TransactionForm";
 import TransactionList from "./TransactionList";
 
 const today = new Date();
 
-type Tab = "overview" | "transactions" | "budgets" | "data";
+type Tab = "overview" | "transactions"; // | "budgets" | "data";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "overview", label: "Overview" },
   { id: "transactions", label: "Transactions" },
-  { id: "budgets", label: "Budgets" },
-  { id: "data", label: "Export / Import" },
+  // { id: "budgets", label: "Budgets" },
+  // { id: "data", label: "Export / Import" },
 ];
 
 export default function MonthlyAccount() {
@@ -45,9 +51,11 @@ export default function MonthlyAccount() {
   const [month, setMonth] = useState(today.getMonth());
   const [tab, setTab] = useState<Tab>("overview");
   const [editing, setEditing] = useState<Transaction | null>(null);
-  const [signedIn, setSignedIn] = useState(() => Boolean(getAccessToken()));
-  const [userName, setUserName] = useState(() => getStoredUser()?.name ?? null);
-  const [adminUser, setAdminUser] = useState(() => isAdmin(getStoredUser()));
+  const [signedIn, setSignedIn] = useState(false);
+  const [sessionUser, setSessionUser] = useState<ReturnType<
+    typeof getStoredUser
+  >>(null);
+  const [authReady, setAuthReady] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
 
   async function handleSignOut() {
@@ -56,8 +64,7 @@ export default function MonthlyAccount() {
     try {
       await logoutUser();
       setSignedIn(false);
-      setUserName(null);
-      setAdminUser(false);
+      setSessionUser(null);
       setTransactions([]);
       setBudgets([]);
       router.push("/login");
@@ -65,6 +72,12 @@ export default function MonthlyAccount() {
       setSigningOut(false);
     }
   }
+
+  useEffect(() => {
+    setSignedIn(Boolean(getAccessToken()));
+    setSessionUser(getStoredUser());
+    setAuthReady(true);
+  }, []);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -96,6 +109,29 @@ export default function MonthlyAccount() {
 
   const expenseShare =
     stats.income > 0 ? Math.min((stats.expenses / stats.income) * 100, 100) : 0;
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const isCurrentMonth =
+    year === today.getFullYear() && month === today.getMonth();
+  const elapsedDays = isCurrentMonth ? today.getDate() : daysInMonth;
+  const monthProgress = (elapsedDays / daysInMonth) * 100;
+  const daysLeft = isCurrentMonth ? Math.max(daysInMonth - today.getDate(), 0) : 0;
+
+  const overallBudget = budgets.find((budget) => !budget.category);
+  const budgetRemaining = overallBudget
+    ? overallBudget.amount - stats.expenses
+    : null;
+
+  const recentTransactions = useMemo(
+    () =>
+      [...transactions]
+        .sort(
+          (a, b) =>
+            new Date(b.date).getTime() - new Date(a.date).getTime(),
+        )
+        .slice(0, 4),
+    [transactions],
+  );
 
   function changeMonth(delta: number) {
     setEditing(null);
@@ -131,119 +167,75 @@ export default function MonthlyAccount() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  const header = (
+    <AppHeader
+      signedIn={signedIn}
+      user={
+        sessionUser
+          ? { name: sessionUser.name, email: sessionUser.email }
+          : null
+      }
+      isAdmin={isAdmin(sessionUser)}
+      signingOut={signingOut}
+      onSignOut={handleSignOut}
+      ready={authReady}
+    />
+  );
+
   if (loading) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
-      </div>
+      <>
+        {header}
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand border-t-transparent" />
+        </div>
+      </>
     );
   }
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
-      <header className="mb-6 space-y-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <Image
-              src="/logo.png"
-              alt="My Account logo"
-              width={40}
-              height={40}
-              className="h-10 w-10 rounded-xl object-contain"
-              priority
-            />
-            <div>
-              <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                Monthly Tracker
-              </p>
-              <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">
-                My Account
-              </h1>
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-2 text-sm">
-            {signedIn ? (
-              <>
-                <Link
-                  href="/profile"
-                  className="hidden max-w-[8rem] truncate rounded-lg px-2.5 py-1.5 font-medium text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900 sm:inline dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"
-                  title="View profile"
-                >
-                  {userName ?? "Profile"}
-                </Link>
-                <Link
-                  href="/membership"
-                  className="hidden rounded-lg px-2.5 py-1.5 font-medium text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900 sm:inline dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"
-                >
-                  Membership
-                </Link>
-                {adminUser && (
-                  <Link
-                    href="/admin"
-                    className="rounded-lg px-2.5 py-1.5 font-medium text-emerald-700 transition hover:bg-emerald-50 hover:text-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/40 dark:hover:text-emerald-300"
-                  >
-                    Admin
-                  </Link>
-                )}
-                <Link
-                  href="/profile"
-                  className="rounded-lg px-3 py-1.5 font-medium text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900 sm:hidden dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white"
-                >
-                  Profile
-                </Link>
-                <button
-                  type="button"
-                  onClick={handleSignOut}
-                  disabled={signingOut}
-                  className="rounded-lg px-3 py-1.5 font-medium text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900 disabled:opacity-60 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white"
-                >
-                  {signingOut ? "Signing out…" : "Sign out"}
-                </button>
-              </>
-            ) : (
-              <>
-                <Link
-                  href="/login"
-                  className="rounded-lg px-3 py-1.5 font-medium text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white"
-                >
-                  Sign in
-                </Link>
-                <Link
-                  href="/register"
-                  className="rounded-lg bg-emerald-600 px-3 py-1.5 font-semibold text-white transition hover:bg-emerald-700"
-                >
-                  Sign up
-                </Link>
-              </>
-            )}
-          </div>
+    <>
+      {header}
+      <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
+      <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gold">
+            Monthly ledger
+          </p>
+          <h1 className="mt-1 text-xl font-semibold tracking-tight text-brand sm:text-2xl dark:text-white">
+            My Account
+          </h1>
+          <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
+            Income, expenses, and budgets for this month
+          </p>
         </div>
-        <div className="flex justify-end">
-          <div className="flex items-center gap-1 rounded-full border border-zinc-200 bg-white p-1 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <button
-              type="button"
-              onClick={() => changeMonth(-1)}
-              className="rounded-full p-2 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-white"
-              aria-label="Previous month"
-            >
-              <ChevronLeft />
-            </button>
-            <span className="min-w-[9rem] px-2 text-center text-sm font-semibold text-zinc-800 dark:text-zinc-100">
-              {formatMonthLabel(year, month)}
-            </span>
-            <button
-              type="button"
-              onClick={() => changeMonth(1)}
-              className="rounded-full p-2 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-white"
-              aria-label="Next month"
-            >
-              <ChevronRight />
-            </button>
-          </div>
+        <div className="flex items-center gap-1 self-start rounded-full border border-brand/15 bg-white p-1 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:self-auto">
+          <button
+            type="button"
+            onClick={() => changeMonth(-1)}
+            className="rounded-full p-2 text-brand/70 transition hover:bg-brand/5 hover:text-brand dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"
+            aria-label="Previous month"
+          >
+            <ChevronLeft />
+          </button>
+          <span
+            className="min-w-[9rem] px-2 text-center text-sm font-semibold text-brand dark:text-zinc-100"
+            aria-live="polite"
+          >
+            {formatMonthLabel(year, month)}
+          </span>
+          <button
+            type="button"
+            onClick={() => changeMonth(1)}
+            className="rounded-full p-2 text-brand/70 transition hover:bg-brand/5 hover:text-brand dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"
+            aria-label="Next month"
+          >
+            <ChevronRight />
+          </button>
         </div>
       </header>
 
-      <nav className="mb-6 flex gap-1 overflow-x-auto rounded-xl border border-zinc-200 bg-white p-1 dark:border-zinc-800 dark:bg-zinc-900">
+      <nav className="mb-6 flex gap-1 overflow-x-auto rounded-xl border border-brand/10 bg-white p-1 dark:border-zinc-800 dark:bg-zinc-900">
         {TABS.map(({ id, label }) => (
           <button
             key={id}
@@ -251,8 +243,8 @@ export default function MonthlyAccount() {
             onClick={() => setTab(id)}
             className={`shrink-0 rounded-lg px-3 py-2 text-sm font-medium transition ${
               tab === id
-                ? "bg-emerald-600 text-white shadow-sm"
-                : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                ? "bg-brand text-white shadow-sm shadow-brand/20"
+                : "text-zinc-600 hover:bg-brand/5 hover:text-brand dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"
             }`}
           >
             {label}
@@ -275,31 +267,48 @@ export default function MonthlyAccount() {
 
       {tab === "overview" && (
         <div className="space-y-6">
-          <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 p-6 text-white shadow-xl shadow-emerald-500/20">
-            <div className="pointer-events-none absolute -right-8 -top-8 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
-            <div className="pointer-events-none absolute -bottom-10 -left-6 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
+          <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand via-brand to-brand-deep p-6 text-white shadow-xl shadow-brand/25">
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-gold/40 via-gold to-gold/40" />
+            <div className="pointer-events-none absolute -right-10 -top-12 h-44 w-44 rounded-full bg-gold/15 blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-16 -left-10 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
+            <div className="pointer-events-none absolute right-6 top-8 hidden h-24 w-24 rounded-full border border-gold/20 sm:block" />
 
-            <p className="text-sm font-medium text-emerald-100">Net Balance</p>
-            <p className="mt-1 text-4xl font-bold tracking-tight sm:text-5xl">
-              {formatCurrency(stats.balance)}
-            </p>
-            <p className="mt-2 text-sm text-emerald-100/90">
-              {stats.balance >= 0
-                ? "You're in the green"
-                : "Spending exceeds income"}
-            </p>
+            <div className="relative flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gold">
+                  {formatMonthLabel(year, month)} statement
+                </p>
+                <p className="mt-3 text-sm font-medium text-white/70">
+                  Net balance
+                </p>
+                <p className="mt-1 text-4xl font-bold tracking-tight sm:text-5xl">
+                  {formatCurrency(stats.balance)}
+                </p>
+              </div>
+              <span
+                className={`mt-1 shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${
+                  stats.balance >= 0
+                    ? "border-gold/40 bg-gold/15 text-gold"
+                    : "border-rose-300/40 bg-rose-400/15 text-rose-100"
+                }`}
+              >
+                {stats.balance >= 0 ? "In surplus" : "In deficit"}
+              </span>
+            </div>
 
-            <div className="mt-6 grid grid-cols-2 gap-3">
-              <div className="rounded-2xl bg-white/15 px-4 py-3 backdrop-blur-sm">
-                <p className="text-xs font-medium uppercase tracking-wide text-emerald-100">
+            <div className="relative mt-6 grid grid-cols-2 gap-3">
+              <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 backdrop-blur-sm">
+                <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-white/70">
+                  <TrendUpIcon className="text-gold" />
                   Income
                 </p>
                 <p className="mt-1 text-lg font-semibold">
                   {formatCurrency(stats.income)}
                 </p>
               </div>
-              <div className="rounded-2xl bg-white/15 px-4 py-3 backdrop-blur-sm">
-                <p className="text-xs font-medium uppercase tracking-wide text-emerald-100">
+              <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 backdrop-blur-sm">
+                <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-white/70">
+                  <TrendDownIcon className="text-rose-200" />
                   Expenses
                 </p>
                 <p className="mt-1 text-lg font-semibold">
@@ -308,30 +317,155 @@ export default function MonthlyAccount() {
               </div>
             </div>
 
+            <div className="relative mt-5">
+              <div className="mb-1.5 flex justify-between text-xs text-white/70">
+                <span className="flex items-center gap-1.5">
+                  <CalendarIcon />
+                  {isCurrentMonth
+                    ? `Day ${elapsedDays} of ${daysInMonth}`
+                    : `${daysInMonth} days in month`}
+                </span>
+                <span>
+                  {isCurrentMonth ? `${daysLeft} days left` : "Closed month"}
+                </span>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-white/15">
+                <div
+                  className="h-full rounded-full bg-gold transition-all duration-500"
+                  style={{ width: `${monthProgress}%` }}
+                />
+              </div>
+            </div>
+
             {stats.income > 0 && (
-              <div className="mt-5">
-                <div className="mb-1.5 flex justify-between text-xs text-emerald-100">
+              <div className="relative mt-4">
+                <div className="mb-1.5 flex justify-between text-xs text-white/70">
                   <span>Spent of income</span>
                   <span>{expenseShare.toFixed(0)}%</span>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-white/20">
+                <div className="h-1.5 overflow-hidden rounded-full bg-white/15">
                   <div
-                    className="h-full rounded-full bg-white transition-all duration-500"
+                    className="h-full rounded-full bg-white/80 transition-all duration-500"
                     style={{ width: `${expenseShare}%` }}
                   />
                 </div>
-                <p className="mt-2 text-xs text-emerald-100/80">
-                  Savings rate: {stats.savingsRate.toFixed(0)}%
+                <p className="mt-2 text-xs text-white/60">
+                  Savings rate {stats.savingsRate.toFixed(0)}%
                 </p>
               </div>
             )}
           </section>
 
-          <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <h2 className="mb-4 text-base font-semibold text-zinc-900 dark:text-white">
+          <div className="grid grid-cols-3 gap-3">
+            <div className="rounded-2xl border border-brand/10 bg-white p-3.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                Saved
+              </p>
+              <p className="mt-1 text-base font-semibold tabular-nums text-brand dark:text-white">
+                {stats.income > 0 ? `${stats.savingsRate.toFixed(0)}%` : "—"}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-brand/10 bg-white p-3.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                Activity
+              </p>
+              <p className="mt-1 text-base font-semibold tabular-nums text-brand dark:text-white">
+                {transactions.length}
+                <span className="ml-1 text-xs font-medium text-zinc-400">
+                  tx
+                </span>
+              </p>
+            </div>
+            <div className="rounded-2xl border border-brand/10 bg-white p-3.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                Budget
+              </p>
+              <p className="mt-1 text-base font-semibold tabular-nums text-brand dark:text-white">
+                {budgetRemaining === null
+                  ? "None"
+                  : formatCurrency(budgetRemaining)}
+              </p>
+            </div>
+          </div>
+
+          <section className="rounded-2xl border border-brand/10 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <h2 className="mb-4 text-base font-semibold text-brand dark:text-white">
               Category breakdown
             </h2>
             <CategoryChart transactions={transactions} />
+          </section>
+
+          <section className="rounded-2xl border border-brand/10 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-base font-semibold text-brand dark:text-white">
+                Recent activity
+              </h2>
+              {transactions.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setTab("transactions")}
+                  className="text-sm font-medium text-brand hover:text-brand-deep dark:text-gold"
+                >
+                  View all
+                </button>
+              )}
+            </div>
+
+            {recentTransactions.length === 0 ? (
+              <div className="py-6 text-center">
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/5 text-brand">
+                  <WalletIcon />
+                </div>
+                <p className="font-medium text-zinc-700 dark:text-zinc-300">
+                  No activity this month
+                </p>
+                <p className="mt-1 text-sm text-zinc-500">
+                  Start the ledger with an income or expense.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setTab("transactions")}
+                  className="mt-4 inline-flex items-center justify-center rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-brand/20 transition hover:bg-brand-deep"
+                >
+                  Add a transaction
+                </button>
+              </div>
+            ) : (
+              <ul className="divide-y divide-brand/5 dark:divide-zinc-800">
+                {recentTransactions.map((entry) => (
+                  <li
+                    key={entry.id}
+                    className="flex items-center gap-3 py-3 first:pt-0 last:pb-0"
+                  >
+                    <span
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-base ${
+                        entry.type === "income"
+                          ? "bg-brand/10"
+                          : "bg-rose-50 dark:bg-rose-950/40"
+                      }`}
+                    >
+                      {entry.categoryIcon || "📌"}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-zinc-900 dark:text-white">
+                        {entry.description}
+                      </p>
+                      <p className="text-xs text-zinc-500">{entry.category}</p>
+                    </div>
+                    <p
+                      className={`shrink-0 text-sm font-semibold tabular-nums ${
+                        entry.type === "income"
+                          ? "text-brand"
+                          : "text-rose-600 dark:text-rose-400"
+                      }`}
+                    >
+                      {entry.type === "income" ? "+" : "-"}
+                      {formatCurrency(entry.amount)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
         </div>
       )}
@@ -358,6 +492,7 @@ export default function MonthlyAccount() {
         </div>
       )}
 
+      {/*
       {tab === "budgets" && (
         <BudgetPanel
           year={year}
@@ -378,6 +513,8 @@ export default function MonthlyAccount() {
           onError={setError}
         />
       )}
+      */}
     </div>
+    </>
   );
 }

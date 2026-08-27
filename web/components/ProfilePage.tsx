@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useState } from "react";
@@ -11,6 +10,7 @@ import {
   isAdmin,
   type AuthUser,
 } from "@/lib/auth";
+import AppHeader from "./AppHeader";
 import { ChevronLeft, EyeIcon, EyeOffIcon, SpinnerIcon } from "./icons";
 
 const MIN_PASSWORD_LENGTH = 8;
@@ -274,52 +274,30 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="relative min-h-full overflow-hidden bg-zinc-50 dark:bg-zinc-950">
+    <div className="relative min-h-full overflow-x-hidden bg-zinc-50 dark:bg-zinc-950">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_40%_at_50%_-10%,rgba(16,185,129,0.12),transparent)] dark:bg-[radial-gradient(ellipse_70%_40%_at_50%_-10%,rgba(16,185,129,0.1),transparent)]"
       />
 
-      <div className="relative mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
-        <header className="mb-8 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <Link href="/" className="shrink-0">
-              <Image
-                src="/logo.png"
-                alt="My Account logo"
-                width={40}
-                height={40}
-                className="h-10 w-10 rounded-xl object-contain"
-                priority
-              />
-            </Link>
-            <div>
-              <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                Account settings
-              </p>
-              <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">
-                Your profile
-              </h1>
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            {isAdmin(user) && (
-              <Link
-                href="/admin"
-                className="rounded-lg px-3 py-1.5 text-sm font-medium text-emerald-700 transition hover:bg-emerald-50 hover:text-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/40 dark:hover:text-emerald-300"
-              >
-                Admin
-              </Link>
-            )}
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white"
-            >
-              <ChevronLeft />
-              <span className="hidden sm:inline">Back</span>
-            </Link>
-          </div>
-        </header>
+      <div className="relative">
+        <AppHeader
+          signedIn
+          user={{ name: user.name, email: user.email }}
+          isAdmin={isAdmin(user)}
+          signingOut={signingOut}
+          onSignOut={handleSignOut}
+        />
+
+        <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
+        <div className="mb-6">
+          <h1 className="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl dark:text-white">
+            Profile
+          </h1>
+          <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
+            Your account details, plan, and security
+          </p>
+        </div>
 
         <section className="mb-6 overflow-hidden rounded-2xl border border-zinc-200/80 bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 p-6 text-white shadow-sm sm:p-8">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
@@ -641,7 +619,7 @@ export default function ProfilePage() {
                 Session
               </h3>
               <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                Sign out of My Monthly Account on this device.
+                Sign out of AyBey on this device.
               </p>
             </div>
             <button
@@ -654,6 +632,7 @@ export default function ProfilePage() {
             </button>
           </div>
         </section>
+        </div>
       </div>
     </div>
   );

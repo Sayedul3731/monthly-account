@@ -11,7 +11,7 @@ export class AppController {
   @ApiOperation({ summary: 'Health check' })
   @ApiOkResponse({
     schema: {
-      example: { status: 'ok', service: 'monthly-account-api' },
+      example: { status: 'ok', service: 'aybey-api' },
     },
   })
   health() {
