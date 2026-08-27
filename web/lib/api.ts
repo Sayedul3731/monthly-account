@@ -7,20 +7,47 @@ import {
   type AuthResponse,
   type AuthUser,
 } from "./auth";
-import type { Transaction, TransactionType } from "./finance";
+import {
+  CATEGORY_ICONS,
+  toCalendarDate,
+  type Transaction,
+  type TransactionType,
+} from "./finance";
 import { hashPasswordForTransport } from "./password";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
-type CreateTransactionInput = {
+export type ApiCategory = {
+  id: string;
+  name: string;
+  type: TransactionType;
+  icon: string;
+};
+
+export type ApiTransactionType = {
+  id: string;
+  name: string;
+  label: string;
+  icon: string;
+};
+
+export type CreateTransactionInput = {
+  transactionTypeId: string;
+  categoryId: string;
+  amount: number;
+  description: string;
+  date: string;
+};
+
+type UpdateTransactionInput = Partial<CreateTransactionInput>;
+
+export type ImportTransactionInput = {
   type: TransactionType;
   amount: number;
   description: string;
   category: string;
   date: string;
 };
-
-type UpdateTransactionInput = Partial<CreateTransactionInput>;
 
 export type Budget = {
   id: string;
@@ -229,11 +256,48 @@ export async function updateProfile(
   return user;
 }
 
-function normalizeTransaction(raw: Transaction): Transaction {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function nestedString(value: unknown, key: string): string {
+  if (typeof value === "string") return value;
+  if (isRecord(value) && typeof value[key] === "string") {
+    return value[key];
+  }
+  return "";
+}
+
+type RawTransaction = {
+  id: string;
+  amount: number;
+  description: string;
+  date: string;
+  categoryId?: string;
+  transactionTypeId?: string;
+  category?: unknown;
+  transactionType?: unknown;
+  type?: TransactionType;
+};
+
+function normalizeTransaction(raw: RawTransaction): Transaction {
+  const typeName = nestedString(raw.transactionType, "name") || raw.type;
+  const categoryName = nestedString(raw.category, "name");
+
   return {
-    ...raw,
+    id: raw.id,
+    type: typeName === "income" ? "income" : "expense",
     amount: Number(raw.amount),
-    date: new Date(raw.date).toISOString(),
+    description: raw.description,
+    category: categoryName,
+    categoryId: raw.categoryId || nestedString(raw.category, "id"),
+    transactionTypeId:
+      raw.transactionTypeId || nestedString(raw.transactionType, "id"),
+    categoryIcon:
+      nestedString(raw.category, "icon") ||
+      CATEGORY_ICONS[categoryName] ||
+      "📌",
+    date: raw.date,
   };
 }
 
@@ -252,16 +316,30 @@ export async function fetchTransactions(
     year: String(year),
     month: String(month),
   });
-  const data = await request<Transaction[]>(`/transactions?${params}`);
+  const data = await request<RawTransaction[]>(`/transactions?${params}`);
   return data.map(normalizeTransaction);
+}
+
+export async function fetchCategories(
+  type?: TransactionType,
+): Promise<ApiCategory[]> {
+  const params = type ? `?type=${type}` : "";
+  return request<ApiCategory[]>(`/categories${params}`);
+}
+
+export async function fetchTransactionTypes(): Promise<ApiTransactionType[]> {
+  return request<ApiTransactionType[]>("/transaction-types");
 }
 
 export async function createTransaction(
   input: CreateTransactionInput,
 ): Promise<Transaction> {
-  const data = await request<Transaction>("/transactions", {
+  const data = await request<RawTransaction>("/transactions", {
     method: "POST",
-    body: JSON.stringify(input),
+    body: JSON.stringify({
+      ...input,
+      date: toCalendarDate(input.date),
+    }),
   });
   return normalizeTransaction(data);
 }
@@ -270,9 +348,12 @@ export async function updateTransaction(
   id: string,
   input: UpdateTransactionInput,
 ): Promise<Transaction> {
-  const data = await request<Transaction>(`/transactions/${id}`, {
+  const data = await request<RawTransaction>(`/transactions/${id}`, {
     method: "PATCH",
-    body: JSON.stringify(input),
+    body: JSON.stringify({
+      ...input,
+      date: input.date ? toCalendarDate(input.date) : undefined,
+    }),
   });
   return normalizeTransaction(data);
 }
@@ -308,11 +389,38 @@ export async function deleteBudget(id: string): Promise<void> {
 }
 
 export async function importTransactions(
-  items: CreateTransactionInput[],
+  items: ImportTransactionInput[],
 ): Promise<Transaction[]> {
+  const [types, categories] = await Promise.all([
+    fetchTransactionTypes(),
+    fetchCategories(),
+  ]);
+
   const results: Transaction[] = [];
   for (const item of items) {
-    results.push(await createTransaction(item));
+    const type = types.find((entry) => entry.name === item.type);
+    const category = categories.find(
+      (entry) => entry.name === item.category && entry.type === item.type,
+    );
+
+    if (!type) {
+      throw new Error(`Unknown transaction type "${item.type}"`);
+    }
+    if (!category) {
+      throw new Error(
+        `Unknown category "${item.category}" for type "${item.type}"`,
+      );
+    }
+
+    results.push(
+      await createTransaction({
+        transactionTypeId: type.id,
+        categoryId: category.id,
+        amount: item.amount,
+        description: item.description,
+        date: toCalendarDate(item.date),
+      }),
+    );
   }
   return results;
 }
@@ -341,7 +449,7 @@ export function downloadFile(content: string, filename: string, mime: string) {
   URL.revokeObjectURL(url);
 }
 
-export function parseImportJson(raw: string): CreateTransactionInput[] {
+export function parseImportJson(raw: string): ImportTransactionInput[] {
   const parsed = JSON.parse(raw) as unknown;
   if (!Array.isArray(parsed)) {
     throw new Error("Import file must be a JSON array of transactions");
@@ -361,17 +469,23 @@ export function parseImportJson(raw: string): CreateTransactionInput[] {
     }
 
     const record = item as Record<string, unknown>;
+    const categoryValue = record.category;
+    const categoryName =
+      typeof categoryValue === "string"
+        ? categoryValue
+        : nestedString(categoryValue, "name");
+
     return {
       type: record.type as TransactionType,
       amount: Number(record.amount),
       description: String(record.description),
-      category: String(record.category),
-      date: new Date(String(record.date)).toISOString(),
+      category: categoryName,
+      date: toCalendarDate(String(record.date)),
     };
   });
 }
 
-export function parseImportCsv(raw: string): CreateTransactionInput[] {
+export function parseImportCsv(raw: string): ImportTransactionInput[] {
   const lines = raw.trim().split(/\r?\n/);
   if (lines.length < 2) {
     throw new Error("CSV must include a header row and at least one transaction");
@@ -400,7 +514,7 @@ export function parseImportCsv(raw: string): CreateTransactionInput[] {
       amount: parseFloat(amount),
       description: cleanDescription,
       category,
-      date: new Date(date).toISOString(),
+      date: toCalendarDate(date),
     };
   });
 }

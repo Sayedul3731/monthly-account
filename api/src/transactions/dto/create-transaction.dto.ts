@@ -35,7 +35,11 @@ export class CreateTransactionDto {
   @MaxLength(255)
   description: string;
 
-  @ApiProperty({ example: '2026-06-15', format: 'date' })
+  @ApiProperty({
+    example: '2026-06-15',
+    format: 'date',
+    description: 'Calendar date (YYYY-MM-DD)',
+  })
   @IsDateString()
   date: string;
 }

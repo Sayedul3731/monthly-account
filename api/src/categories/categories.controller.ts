@@ -11,6 +11,7 @@ import {
   Query,
 } from '@nestjs/common';
 import {
+  ApiConflictResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -71,6 +72,7 @@ export class CategoriesController {
   @ApiParam({ name: 'id' })
   @ApiNoContentResponse({ description: 'Category deleted' })
   @ApiNotFoundResponse({ description: 'Category not found' })
+  @ApiConflictResponse({ description: 'Category is in use by transactions' })
   remove(@Param('id', ParseObjectIdPipe) id: string) {
     return this.categoriesService.remove(id);
   }

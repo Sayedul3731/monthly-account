@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  CATEGORY_ICONS,
   categoryBreakdown,
   formatCurrency,
   type Transaction,
@@ -74,7 +73,7 @@ function BreakdownPanel({
           <li key={item.category}>
             <div className="mb-1 flex items-center justify-between text-sm">
               <span className="flex items-center gap-1.5 text-zinc-700 dark:text-zinc-300">
-                <span>{CATEGORY_ICONS[item.category] ?? "📌"}</span>
+                <span>{item.icon}</span>
                 {item.category}
               </span>
               <span

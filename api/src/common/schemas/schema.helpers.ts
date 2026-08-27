@@ -52,3 +52,12 @@ export const notDeleted = <T extends Record<string, unknown>>(
   ...filter,
   deletedAt: null,
 });
+
+/** Apply schema toJSON transforms so Nest does not leak Mongoose internals. */
+export function asPlain<T>(doc: { toJSON: () => unknown }): T {
+  return doc.toJSON() as T;
+}
+
+export function asPlainList<T>(docs: Array<{ toJSON: () => unknown }>): T[] {
+  return docs.map((doc) => asPlain<T>(doc));
+}

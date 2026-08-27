@@ -10,6 +10,7 @@ import {
   Post,
 } from '@nestjs/common';
 import {
+  ApiConflictResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -71,6 +72,9 @@ export class TransactionTypesController {
   @ApiParam({ name: 'id' })
   @ApiNoContentResponse({ description: 'Transaction type deleted' })
   @ApiNotFoundResponse({ description: 'Transaction type not found' })
+  @ApiConflictResponse({
+    description: 'Transaction type is in use by transactions',
+  })
   remove(@Param('id', ParseObjectIdPipe) id: string) {
     return this.transactionTypesService.remove(id);
   }

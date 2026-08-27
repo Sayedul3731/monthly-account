@@ -6,6 +6,9 @@ export type Transaction = {
   amount: number;
   description: string;
   category: string;
+  categoryId: string;
+  transactionTypeId: string;
+  categoryIcon: string;
   date: string;
 };
 
@@ -86,6 +89,7 @@ export type CategoryBreakdown = {
   category: string;
   amount: number;
   percentage: number;
+  icon: string;
 };
 
 export function categoryBreakdown(
@@ -100,11 +104,19 @@ export function categoryBreakdown(
     return acc;
   }, {});
 
+  const icons = filtered.reduce<Record<string, string>>((acc, t) => {
+    if (!acc[t.category]) {
+      acc[t.category] = t.categoryIcon || CATEGORY_ICONS[t.category] || "📌";
+    }
+    return acc;
+  }, {});
+
   return Object.entries(byCategory)
     .map(([category, amount]) => ({
       category,
       amount,
       percentage: total > 0 ? (amount / total) * 100 : 0,
+      icon: icons[category] ?? "📌",
     }))
     .sort((a, b) => b.amount - a.amount);
 }
@@ -159,6 +171,20 @@ export function filterAndSortTransactions(
   });
 
   return result;
+}
+
+export function toCalendarDate(value: string): string {
+  const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (match) return match[1];
+  return toDateInputValue(new Date(value));
+}
+
+export function calendarYearMonth(value: string): { year: number; month: number } {
+  const day = toCalendarDate(value);
+  return {
+    year: Number(day.slice(0, 4)),
+    month: Number(day.slice(5, 7)) - 1,
+  };
 }
 
 export function toDateInputValue(date: Date): string {

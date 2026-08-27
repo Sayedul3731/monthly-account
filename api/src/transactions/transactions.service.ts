@@ -6,7 +6,12 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Category, CategoryDocument } from '../categories/category.schema';
-import { notDeleted } from '../common/schemas/schema.helpers';
+import { parseCalendarDate, utcMonthRange } from '../common/dates';
+import {
+  asPlain,
+  asPlainList,
+  notDeleted,
+} from '../common/schemas/schema.helpers';
 import {
   TransactionTypeDocument,
   TransactionTypeEntity,
@@ -36,47 +41,16 @@ export class TransactionsService {
     userId: string,
     year?: number,
     month?: number,
-  ): Promise<TransactionDocument[]> {
-    const filter: Record<string, unknown> = {
-      userId: new Types.ObjectId(userId),
-    };
-
-    if (year !== undefined && month !== undefined) {
-      filter.date = {
-        $gte: new Date(year, month, 1),
-        $lte: new Date(year, month + 1, 0, 23, 59, 59, 999),
-      };
-    }
-
-    return this.transactionModel
-      .find(notDeleted(filter))
-      .populate([...TRANSACTION_POPULATE])
-      .sort({ date: -1 })
-      .exec();
+  ): Promise<Transaction[]> {
+    const docs = await this.findDocuments(userId, year, month);
+    return asPlainList<Transaction>(docs);
   }
 
-  async findOne(id: string, userId: string): Promise<TransactionDocument> {
-    const transaction = await this.transactionModel
-      .findOne(
-        notDeleted({
-          _id: id,
-          userId: new Types.ObjectId(userId),
-        }),
-      )
-      .populate([...TRANSACTION_POPULATE])
-      .exec();
-
-    if (!transaction) {
-      throw new NotFoundException(`Transaction ${id} not found`);
-    }
-
-    return transaction;
+  async findOne(id: string, userId: string): Promise<Transaction> {
+    return asPlain<Transaction>(await this.getOwned(id, userId));
   }
 
-  async create(
-    userId: string,
-    dto: CreateTransactionDto,
-  ): Promise<TransactionDocument> {
+  async create(userId: string, dto: CreateTransactionDto): Promise<Transaction> {
     const [user, category, transactionType] = await Promise.all([
       this.findUser(userId),
       this.findCategory(dto.categoryId),
@@ -89,8 +63,8 @@ export class TransactionsService {
       categoryId: category._id,
       transactionTypeId: transactionType._id,
       amount: dto.amount,
-      description: dto.description,
-      date: new Date(dto.date),
+      description: dto.description.trim(),
+      date: parseCalendarDate(dto.date),
     });
 
     return this.findOne(transaction.id, userId);
@@ -100,8 +74,8 @@ export class TransactionsService {
     id: string,
     userId: string,
     dto: UpdateTransactionDto,
-  ): Promise<TransactionDocument> {
-    const transaction = await this.findOne(id, userId);
+  ): Promise<Transaction> {
+    const transaction = await this.getOwned(id, userId);
     const [category, transactionType] = await Promise.all([
       dto.categoryId
         ? this.findCategory(dto.categoryId)
@@ -128,8 +102,8 @@ export class TransactionsService {
     transaction.transactionTypeId = transactionType._id;
     if (dto.amount !== undefined) transaction.amount = dto.amount;
     if (dto.description !== undefined)
-      transaction.description = dto.description;
-    if (dto.date !== undefined) transaction.date = new Date(dto.date);
+      transaction.description = dto.description.trim();
+    if (dto.date !== undefined) transaction.date = parseCalendarDate(dto.date);
 
     await transaction.save();
 
@@ -172,6 +146,47 @@ export class TransactionsService {
       savingsRate: income > 0 ? ((income - expenses) / income) * 100 : 0,
       count: transactions.length,
     };
+  }
+
+  private async findDocuments(
+    userId: string,
+    year?: number,
+    month?: number,
+  ): Promise<TransactionDocument[]> {
+    const filter: Record<string, unknown> = {
+      userId: new Types.ObjectId(userId),
+    };
+
+    if (year !== undefined && month !== undefined) {
+      filter.date = utcMonthRange(year, month);
+    }
+
+    return this.transactionModel
+      .find(notDeleted(filter))
+      .populate([...TRANSACTION_POPULATE])
+      .sort({ date: -1 })
+      .exec();
+  }
+
+  private async getOwned(
+    id: string,
+    userId: string,
+  ): Promise<TransactionDocument> {
+    const transaction = await this.transactionModel
+      .findOne(
+        notDeleted({
+          _id: id,
+          userId: new Types.ObjectId(userId),
+        }),
+      )
+      .populate([...TRANSACTION_POPULATE])
+      .exec();
+
+    if (!transaction) {
+      throw new NotFoundException(`Transaction ${id} not found`);
+    }
+
+    return transaction;
   }
 
   private async findUser(id: string): Promise<UserDocument> {

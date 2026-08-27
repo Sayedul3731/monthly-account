@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { Transaction, TransactionSchema } from '../transactions/transaction.schema';
 import {
   TransactionTypeEntity,
   TransactionTypeSchema,
@@ -11,6 +12,7 @@ import { TransactionTypesService } from './transaction-types.service';
   imports: [
     MongooseModule.forFeature([
       { name: TransactionTypeEntity.name, schema: TransactionTypeSchema },
+      { name: Transaction.name, schema: TransactionSchema },
     ]),
   ],
   controllers: [TransactionTypesController],

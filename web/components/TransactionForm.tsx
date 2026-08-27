@@ -1,15 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   createTransaction,
+  fetchCategories,
+  fetchTransactionTypes,
   updateTransaction,
+  type ApiCategory,
+  type ApiTransactionType,
 } from "@/lib/api";
 import {
-  EXPENSE_CATEGORIES,
-  INCOME_CATEGORIES,
-  CATEGORY_ICONS,
+  calendarYearMonth,
   monthDateBounds,
+  toCalendarDate,
   toDateInputValue,
   type Transaction,
   type TransactionType,
@@ -22,7 +25,10 @@ type Props = {
   year: number;
   month: number;
   editing: Transaction | null;
-  onSaved: (transaction: Transaction, navigatedMonth?: { year: number; month: number }) => void;
+  onSaved: (
+    transaction: Transaction,
+    navigatedMonth?: { year: number; month: number },
+  ) => void;
   onCancelEdit: () => void;
   onError: (message: string) => void;
 };
@@ -39,8 +45,9 @@ export default function TransactionForm({
   const bounds = monthDateBounds(year, month);
   const defaultDate =
     mode === "edit" && editing
-      ? toDateInputValue(new Date(editing.date))
-      : bounds.max >= toDateInputValue(new Date()) && bounds.min <= toDateInputValue(new Date())
+      ? toCalendarDate(editing.date)
+      : bounds.max >= toDateInputValue(new Date()) &&
+          bounds.min <= toDateInputValue(new Date())
         ? toDateInputValue(new Date())
         : bounds.max;
 
@@ -51,21 +58,55 @@ export default function TransactionForm({
     editing ? String(editing.amount) : "",
   );
   const [description, setDescription] = useState(editing?.description ?? "");
-  const [category, setCategory] = useState(
-    editing?.category ??
-      (editing?.type === "income"
-        ? INCOME_CATEGORIES[0]
-        : EXPENSE_CATEGORIES[0]),
-  );
+  const [categoryId, setCategoryId] = useState(editing?.categoryId ?? "");
   const [date, setDate] = useState(defaultDate);
   const [submitting, setSubmitting] = useState(false);
+  const [categories, setCategories] = useState<ApiCategory[]>([]);
+  const [transactionTypes, setTransactionTypes] = useState<
+    ApiTransactionType[]
+  >([]);
+  const [lookupsReady, setLookupsReady] = useState(false);
 
-  const categories =
-    type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+  useEffect(() => {
+    let cancelled = false;
+
+    Promise.all([fetchCategories(), fetchTransactionTypes()])
+      .then(([nextCategories, nextTypes]) => {
+        if (cancelled) return;
+        setCategories(nextCategories);
+        setTransactionTypes(nextTypes);
+
+        if (!editing) {
+          const firstExpense = nextCategories.find(
+            (category) => category.type === "expense",
+          );
+          if (firstExpense) setCategoryId(firstExpense.id);
+        }
+        setLookupsReady(true);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        onError(
+          err instanceof Error
+            ? err.message
+            : "Failed to load categories",
+        );
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [editing, onError]);
+
+  const categoriesForType = useMemo(
+    () => categories.filter((category) => category.type === type),
+    [categories, type],
+  );
 
   function handleTypeChange(next: TransactionType) {
     setType(next);
-    setCategory(next === "income" ? INCOME_CATEGORIES[0] : EXPENSE_CATEGORIES[0]);
+    const first = categories.find((category) => category.type === next);
+    setCategoryId(first?.id ?? "");
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -74,15 +115,23 @@ export default function TransactionForm({
     const parsed = parseFloat(amount);
     if (!parsed || parsed <= 0 || !description.trim()) return;
 
+    const transactionType = transactionTypes.find(
+      (entry) => entry.name === type,
+    );
+    if (!transactionType || !categoryId) {
+      onError("Categories are still loading. Try again in a moment.");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
       const payload = {
-        type,
+        transactionTypeId: transactionType.id,
+        categoryId,
         amount: parsed,
         description: description.trim(),
-        category,
-        date: new Date(`${date}T12:00:00`).toISOString(),
+        date,
       };
 
       const entry =
@@ -90,9 +139,7 @@ export default function TransactionForm({
           ? await updateTransaction(editing.id, payload)
           : await createTransaction(payload);
 
-      const txDate = new Date(entry.date);
-      const txYear = txDate.getFullYear();
-      const txMonth = txDate.getMonth();
+      const { year: txYear, month: txMonth } = calendarYearMonth(entry.date);
 
       if (mode === "create") {
         setAmount("");
@@ -214,15 +261,24 @@ export default function TransactionForm({
             </label>
             <select
               id="category"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
               className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-zinc-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+              required
+              disabled={!lookupsReady}
             >
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {CATEGORY_ICONS[cat]} {cat}
+              {categoriesForType.length === 0 ? (
+                <option value="">
+                  {lookupsReady ? "No categories" : "Loading..."}
                 </option>
-              ))}
+              ) : (
+                categoriesForType.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.icon ? `${category.icon} ` : ""}
+                    {category.name}
+                  </option>
+                ))
+              )}
             </select>
           </div>
 
@@ -247,7 +303,7 @@ export default function TransactionForm({
 
         <button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || !lookupsReady || !categoryId}
           className={`w-full rounded-xl py-3.5 text-sm font-semibold text-white transition hover:opacity-90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 ${
             type === "income"
               ? "bg-emerald-600 hover:bg-emerald-700"

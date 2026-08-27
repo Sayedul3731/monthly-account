@@ -3,9 +3,6 @@
 import { useMemo, useState } from "react";
 import { deleteTransaction } from "@/lib/api";
 import {
-  CATEGORY_ICONS,
-  EXPENSE_CATEGORIES,
-  INCOME_CATEGORIES,
   filterAndSortTransactions,
   formatCurrency,
   type SortDirection,
@@ -35,8 +32,8 @@ export default function TransactionList({
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
   const allCategories = useMemo(
-    () => [...new Set([...INCOME_CATEGORIES, ...EXPENSE_CATEGORIES])],
-    [],
+    () => [...new Set(transactions.map((transaction) => transaction.category))],
+    [transactions],
   );
 
   const filtered = useMemo(
@@ -163,7 +160,7 @@ export default function TransactionList({
                     : "bg-rose-50 dark:bg-rose-950/50"
                 }`}
               >
-                {CATEGORY_ICONS[t.category] ?? "📌"}
+                {t.categoryIcon || "📌"}
               </div>
 
               <div className="min-w-0 flex-1">
@@ -176,6 +173,7 @@ export default function TransactionList({
                     month: "short",
                     day: "numeric",
                     year: "numeric",
+                    timeZone: "UTC",
                   }).format(new Date(t.date))}
                 </p>
               </div>
