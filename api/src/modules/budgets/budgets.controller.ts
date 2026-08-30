@@ -10,6 +10,7 @@ import {
   Query,
 } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiNoContentResponse,
   ApiOkResponse,
   ApiOperation,
@@ -22,6 +23,7 @@ import { Budget } from './budget.schema';
 import { BudgetsService } from './budgets.service';
 
 @ApiTags('budgets')
+@ApiBearerAuth()
 @Controller('budgets')
 export class BudgetsController {
   constructor(private readonly budgetsService: BudgetsService) {}

@@ -10,6 +10,7 @@ import {
   Post,
 } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiConflictResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
@@ -18,13 +19,16 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import { Roles } from '../../infrastructure/auth/decorators/roles.decorator';
 import { ParseObjectIdPipe } from '../../shared/pipes/parse-object-id.pipe';
+import { DefaultRole } from '../roles/app-role.schema';
 import { CreateTransactionTypeDto } from './dto/create-transaction-type.dto';
 import { UpdateTransactionTypeDto } from './dto/update-transaction-type.dto';
 import { TransactionTypeEntity } from './transaction-type.schema';
 import { TransactionTypesService } from './transaction-types.service';
 
 @ApiTags('transaction-types')
+@ApiBearerAuth()
 @Controller('transaction-types')
 export class TransactionTypesController {
   constructor(
@@ -48,6 +52,7 @@ export class TransactionTypesController {
   }
 
   @Post()
+  @Roles(DefaultRole.ADMIN)
   @ApiOperation({ summary: 'Create a transaction type' })
   @ApiOkResponse({ type: TransactionTypeEntity })
   create(@Body() dto: CreateTransactionTypeDto) {
@@ -55,6 +60,7 @@ export class TransactionTypesController {
   }
 
   @Patch(':id')
+  @Roles(DefaultRole.ADMIN)
   @ApiOperation({ summary: 'Update a transaction type' })
   @ApiParam({ name: 'id' })
   @ApiOkResponse({ type: TransactionTypeEntity })
@@ -67,6 +73,7 @@ export class TransactionTypesController {
   }
 
   @Delete(':id')
+  @Roles(DefaultRole.ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a transaction type' })
   @ApiParam({ name: 'id' })

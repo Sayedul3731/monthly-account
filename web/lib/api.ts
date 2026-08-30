@@ -13,8 +13,6 @@ import {
   type Transaction,
   type TransactionType,
 } from "./finance";
-import { hashPasswordForTransport } from "./password";
-
 const API_URL = (
   process.env.NEXT_PUBLIC_API_URL?.trim() || "http://localhost:3001"
 ).replace(/\/$/, "");
@@ -226,7 +224,9 @@ function toApiError(err: unknown): Error {
   return new Error("Request failed");
 }
 
-async function refreshAccessToken(): Promise<boolean> {
+let refreshPromise: Promise<boolean> | null = null;
+
+async function performTokenRefresh(): Promise<boolean> {
   const refreshToken = getRefreshToken();
   if (!refreshToken) return false;
 
@@ -249,6 +249,16 @@ async function refreshAccessToken(): Promise<boolean> {
     clearAuthSession();
     return false;
   }
+}
+
+function refreshAccessToken(): Promise<boolean> {
+  if (!refreshPromise) {
+    refreshPromise = performTokenRefresh().finally(() => {
+      refreshPromise = null;
+    });
+  }
+
+  return refreshPromise;
 }
 
 async function request<T>(
@@ -302,7 +312,7 @@ export async function registerUser(input: RegisterInput): Promise<AuthUser> {
     body: JSON.stringify({
       name: input.name.trim(),
       email: input.email.trim().toLowerCase(),
-      password: await hashPasswordForTransport(input.password),
+      password: input.password,
     }),
   });
   return applyAuthSession(data);
@@ -313,7 +323,7 @@ export async function loginUser(input: LoginInput): Promise<AuthUser> {
     method: "POST",
     body: JSON.stringify({
       email: input.email.trim().toLowerCase(),
-      password: await hashPasswordForTransport(input.password),
+      password: input.password,
     }),
   });
   return applyAuthSession(data);
@@ -343,7 +353,7 @@ export async function updateProfile(
   if (input.name !== undefined) body.name = input.name.trim();
   if (input.email !== undefined) body.email = input.email.trim().toLowerCase();
   if (input.password !== undefined) {
-    body.password = await hashPasswordForTransport(input.password);
+    body.password = input.password;
   }
   if (input.membershipId !== undefined) body.membershipId = input.membershipId;
   if (input.billingInterval !== undefined && input.billingInterval !== null) {
@@ -524,7 +534,7 @@ export async function createUser(input: CreateUserInput): Promise<AdminUser> {
   const body: Record<string, string> = {
     name: input.name.trim(),
     email: input.email.trim().toLowerCase(),
-    password: await hashPasswordForTransport(input.password),
+    password: input.password,
   };
   if (input.roleId) body.roleId = input.roleId;
   if (input.membershipId) body.membershipId = input.membershipId;
@@ -545,7 +555,7 @@ export async function updateUser(
   if (input.name !== undefined) body.name = input.name.trim();
   if (input.email !== undefined) body.email = input.email.trim().toLowerCase();
   if (input.password !== undefined) {
-    body.password = await hashPasswordForTransport(input.password);
+    body.password = input.password;
   }
   if (input.roleId !== undefined) body.roleId = input.roleId;
   if (input.membershipId !== undefined) body.membershipId = input.membershipId;

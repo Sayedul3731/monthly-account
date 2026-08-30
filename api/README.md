@@ -34,11 +34,14 @@ $ npm install
 ## Compile and run the project
 
 ```bash
-# development
+# development (watches source files and restarts automatically)
 $ npm run start
 
-# watch mode
+# explicit watch-mode alias
 $ npm run start:dev
+
+# development without watching
+$ npm run start:once
 
 # production mode
 $ npm run start:prod

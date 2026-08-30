@@ -11,6 +11,7 @@ import {
   Query,
 } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiConflictResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
@@ -19,7 +20,9 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import { Roles } from '../../infrastructure/auth/decorators/roles.decorator';
 import { ParseObjectIdPipe } from '../../shared/pipes/parse-object-id.pipe';
+import { DefaultRole } from '../roles/app-role.schema';
 import { CategoriesService } from './categories.service';
 import { Category } from './category.schema';
 import { CategoryQueryDto } from './dto/category-query.dto';
@@ -27,6 +30,7 @@ import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 
 @ApiTags('categories')
+@ApiBearerAuth()
 @Controller('categories')
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
@@ -48,6 +52,7 @@ export class CategoriesController {
   }
 
   @Post()
+  @Roles(DefaultRole.ADMIN)
   @ApiOperation({ summary: 'Create a category' })
   @ApiOkResponse({ type: Category })
   create(@Body() dto: CreateCategoryDto) {
@@ -55,6 +60,7 @@ export class CategoriesController {
   }
 
   @Patch(':id')
+  @Roles(DefaultRole.ADMIN)
   @ApiOperation({ summary: 'Update a category' })
   @ApiParam({ name: 'id' })
   @ApiOkResponse({ type: Category })
@@ -67,6 +73,7 @@ export class CategoriesController {
   }
 
   @Delete(':id')
+  @Roles(DefaultRole.ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a category' })
   @ApiParam({ name: 'id' })
