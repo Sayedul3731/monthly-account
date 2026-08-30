@@ -3,7 +3,7 @@ import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory, Reflector } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { AppModule } from './app.module';
+import { AppModule } from './app/app.module';
 
 // Node.js on Windows (v22–v24 LTS) can fail mongodb+srv SRV lookups with
 // querySrv ECONNREFUSED. Force public resolvers before Mongoose connects.
