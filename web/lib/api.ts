@@ -16,7 +16,7 @@ import {
 import { hashPasswordForTransport } from "./password";
 
 const API_URL = (
-  process.env.NEXT_PUBLIC_API_URL?.trim() || "/backend"
+  process.env.NEXT_PUBLIC_API_URL?.trim() || "http://localhost:3001"
 ).replace(/\/$/, "");
 
 export type ApiCategory = {

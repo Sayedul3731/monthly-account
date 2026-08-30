@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   fetchBudgets,
   fetchTransactions,
@@ -74,36 +74,47 @@ export default function MonthlyAccount() {
   }
 
   useEffect(() => {
-    setSignedIn(Boolean(getAccessToken()));
-    setSessionUser(getStoredUser());
-    setAuthReady(true);
+    const timeoutId = window.setTimeout(() => {
+      setSignedIn(Boolean(getAccessToken()));
+      setSessionUser(getStoredUser());
+      setAuthReady(true);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, []);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const [txData, budgetData] = await Promise.all([
-        fetchTransactions(year, month),
-        fetchBudgets(year, month),
-      ]);
-      setTransactions(txData);
-      setBudgets(budgetData);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to load data",
-      );
-      setTransactions([]);
-      setBudgets([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [year, month]);
-
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    let cancelled = false;
+
+    async function loadData() {
+      try {
+        const [txData, budgetData] = await Promise.all([
+          fetchTransactions(year, month),
+          fetchBudgets(year, month),
+        ]);
+        if (cancelled) return;
+
+        setTransactions(txData);
+        setBudgets(budgetData);
+      } catch (err) {
+        if (cancelled) return;
+
+        setError(
+          err instanceof Error ? err.message : "Failed to load data",
+        );
+        setTransactions([]);
+        setBudgets([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void loadData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [year, month]);
 
   const stats = useMemo(() => summarize(transactions), [transactions]);
 
@@ -135,6 +146,8 @@ export default function MonthlyAccount() {
 
   function changeMonth(delta: number) {
     setEditing(null);
+    setLoading(true);
+    setError(null);
     const next = new Date(year, month + delta, 1);
     setYear(next.getFullYear());
     setMonth(next.getMonth());
@@ -147,6 +160,8 @@ export default function MonthlyAccount() {
     setEditing(null);
 
     if (navigatedMonth) {
+      setLoading(true);
+      setError(null);
       setYear(navigatedMonth.year);
       setMonth(navigatedMonth.month);
       return;
