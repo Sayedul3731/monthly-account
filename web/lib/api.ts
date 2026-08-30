@@ -15,7 +15,9 @@ import {
 } from "./finance";
 import { hashPasswordForTransport } from "./password";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+const API_URL = (
+  process.env.NEXT_PUBLIC_API_URL?.trim() || "/backend"
+).replace(/\/$/, "");
 
 export type ApiCategory = {
   id: string;

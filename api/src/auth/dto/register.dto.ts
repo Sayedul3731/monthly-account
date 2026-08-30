@@ -21,13 +21,13 @@ export class RegisterDto {
 
   @ApiProperty({
     description:
-      'SHA-256 hex digest of the plaintext password (client-side). The API bcrypt-hashes this value before storage.',
-    example: 'a3f5b8c1d2e4f60718293a4b5c6d7e8f90123456789abcdef0123456789abcde',
-    minLength: 64,
+      'Plaintext password. The API bcrypt-hashes this value before storage.',
+    example: 'password123',
+    minLength: 8,
     maxLength: 64,
   })
   @IsString()
-  @MinLength(64)
+  @MinLength(8)
   @MaxLength(64)
   password: string;
 }

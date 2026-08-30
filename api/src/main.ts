@@ -27,9 +27,17 @@ async function bootstrap() {
   );
   const swaggerEnabled = nodeEnv !== 'production';
 
+  const productionOrigins = frontendUrl
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
   app.enableCors({
-    origin: frontendUrl,
+    // Reflect the page origin in development so localhost, 127.0.0.1, and
+    // LAN URLs (e.g. http://192.168.x.x:3000) can reach the API.
+    origin: nodeEnv === 'production' ? productionOrigins : true,
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
   app.useGlobalPipes(
