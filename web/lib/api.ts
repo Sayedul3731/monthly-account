@@ -723,14 +723,16 @@ export async function deleteTransactionType(id: string): Promise<void> {
 }
 
 export async function fetchTransactions(
-  year: number,
-  month: number,
+  year?: number,
+  month?: number,
 ): Promise<Transaction[]> {
-  const params = new URLSearchParams({
-    year: String(year),
-    month: String(month),
-  });
-  const data = await request<RawTransaction[]>(`/transactions?${params}`);
+  const params = new URLSearchParams();
+  if (year !== undefined && month !== undefined) {
+    params.set("year", String(year));
+    params.set("month", String(month));
+  }
+  const query = params.size ? `?${params}` : "";
+  const data = await request<RawTransaction[]>(`/transactions${query}`);
   return data.map(normalizeTransaction);
 }
 

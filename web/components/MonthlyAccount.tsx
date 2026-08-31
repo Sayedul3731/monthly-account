@@ -29,24 +29,27 @@ import {
 } from "./icons";
 import TransactionForm from "./TransactionForm";
 import TransactionList from "./TransactionList";
+import { useToast } from "@/components/ToastProvider";
+import CalendarView from "./CalendarView";
 
 const today = new Date();
 
-type Tab = "overview" | "transactions"; // | "budgets" | "data";
+type Tab = "overview" | "transactions" | "calendar"; // | "budgets" | "data";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "overview", label: "Overview" },
   { id: "transactions", label: "Transactions" },
+  { id: "calendar", label: "Calender View" },
   // { id: "budgets", label: "Budgets" },
   // { id: "data", label: "Export / Import" },
 ];
 
 export default function MonthlyAccount() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
   const [tab, setTab] = useState<Tab>("overview");
@@ -99,9 +102,10 @@ export default function MonthlyAccount() {
       } catch (err) {
         if (cancelled) return;
 
-        setError(
-          err instanceof Error ? err.message : "Failed to load data",
-        );
+        showToast(err instanceof Error ? err.message : "Failed to load data", {
+          kind: "error",
+          title: "Could not load account",
+        });
         setTransactions([]);
         setBudgets([]);
       } finally {
@@ -114,7 +118,7 @@ export default function MonthlyAccount() {
     return () => {
       cancelled = true;
     };
-  }, [year, month]);
+  }, [month, showToast, year]);
 
   const stats = useMemo(() => summarize(transactions), [transactions]);
 
@@ -147,7 +151,6 @@ export default function MonthlyAccount() {
   function changeMonth(delta: number) {
     setEditing(null);
     setLoading(true);
-    setError(null);
     const next = new Date(year, month + delta, 1);
     setYear(next.getFullYear());
     setMonth(next.getMonth());
@@ -157,11 +160,16 @@ export default function MonthlyAccount() {
     entry: Transaction,
     navigatedMonth?: { year: number; month: number },
   ) {
+    const wasEditing = Boolean(editing);
     setEditing(null);
+
+    showToast(
+      wasEditing ? "Transaction updated." : "Transaction added.",
+      { kind: "success" },
+    );
 
     if (navigatedMonth) {
       setLoading(true);
-      setError(null);
       setYear(navigatedMonth.year);
       setMonth(navigatedMonth.month);
       return;
@@ -224,7 +232,7 @@ export default function MonthlyAccount() {
             Income, expenses, and budgets for this month
           </p>
         </div>
-        <div className="flex items-center gap-1 self-start rounded-full border border-brand/15 bg-white p-1 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:self-auto">
+        {tab !== "calendar" && <div className="flex items-center gap-1 self-start rounded-full border border-brand/15 bg-white p-1 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:self-auto">
           <button
             type="button"
             onClick={() => changeMonth(-1)}
@@ -247,7 +255,7 @@ export default function MonthlyAccount() {
           >
             <ChevronRight />
           </button>
-        </div>
+        </div>}
       </header>
 
       <nav className="mb-6 flex gap-1 overflow-x-auto rounded-xl border border-brand/10 bg-white p-1 dark:border-zinc-800 dark:bg-zinc-900">
@@ -266,19 +274,6 @@ export default function MonthlyAccount() {
           </button>
         ))}
       </nav>
-
-      {error && (
-        <div className="mb-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-300">
-          {error}
-          <button
-            type="button"
-            onClick={() => setError(null)}
-            className="ml-3 font-medium underline"
-          >
-            Dismiss
-          </button>
-        </div>
-      )}
 
       {tab === "overview" && (
         <div className="space-y-6">
@@ -494,18 +489,21 @@ export default function MonthlyAccount() {
             editing={editing}
             onSaved={handleSaved}
             onCancelEdit={() => setEditing(null)}
-            onError={setError}
+            onError={(message) => showToast(message, { kind: "error" })}
           />
           <TransactionList
             transactions={transactions}
             onEdit={handleEdit}
-            onDeleted={(id) =>
-              setTransactions((prev) => prev.filter((t) => t.id !== id))
-            }
-            onError={setError}
+            onDeleted={(id) => {
+              setTransactions((prev) => prev.filter((t) => t.id !== id));
+              showToast("Transaction deleted.", { kind: "success" });
+            }}
+            onError={(message) => showToast(message, { kind: "error" })}
           />
         </div>
       )}
+
+      {tab === "calendar" && <CalendarView year={year} month={month} />}
 
       {/*
       {tab === "budgets" && (
