@@ -4,7 +4,7 @@ export type Transaction = {
   id: string;
   type: TransactionType;
   amount: number;
-  description: string;
+  description: string | null;
   category: string;
   categoryId: string;
   transactionTypeId: string;
@@ -140,7 +140,7 @@ export function filterAndSortTransactions(
     const q = options.search.trim().toLowerCase();
     result = result.filter(
       (t) =>
-        t.description.toLowerCase().includes(q) ||
+        (t.description ?? "").toLowerCase().includes(q) ||
         t.category.toLowerCase().includes(q),
     );
   }
@@ -167,7 +167,7 @@ export function filterAndSortTransactions(
     if (field === "amount") {
       return multiplier * (a.amount - b.amount);
     }
-    return multiplier * a.description.localeCompare(b.description);
+    return multiplier * (a.description ?? "").localeCompare(b.description ?? "");
   });
 
   return result;

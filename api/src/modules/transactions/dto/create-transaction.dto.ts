@@ -2,12 +2,12 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsDateString,
-  IsNotEmpty,
   IsNumber,
   IsString,
   IsMongoId,
   MaxLength,
   Min,
+  ValidateIf,
 } from 'class-validator';
 
 export class CreateTransactionDto {
@@ -29,11 +29,15 @@ export class CreateTransactionDto {
   @Min(0.01)
   amount: number;
 
-  @ApiProperty({ example: 'Weekly groceries', maxLength: 255 })
+  @ApiProperty({
+    example: 'Weekly groceries',
+    maxLength: 255,
+    nullable: true,
+  })
+  @ValidateIf((_object, value) => value !== null)
   @IsString()
-  @IsNotEmpty()
   @MaxLength(255)
-  description: string;
+  description: string | null;
 
   @ApiProperty({
     example: '2026-06-15',

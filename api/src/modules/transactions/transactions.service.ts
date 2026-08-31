@@ -63,7 +63,7 @@ export class TransactionsService {
       categoryId: category._id,
       transactionTypeId: transactionType._id,
       amount: dto.amount,
-      description: dto.description.trim(),
+      description: dto.description?.trim() || null,
       date: parseCalendarDate(dto.date),
     });
 
@@ -102,7 +102,7 @@ export class TransactionsService {
     transaction.transactionTypeId = transactionType._id;
     if (dto.amount !== undefined) transaction.amount = dto.amount;
     if (dto.description !== undefined)
-      transaction.description = dto.description.trim();
+      transaction.description = dto.description?.trim() || null;
     if (dto.date !== undefined) transaction.date = parseCalendarDate(dto.date);
 
     await transaction.save();

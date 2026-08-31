@@ -332,7 +332,7 @@ function TransactionRow({
 
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium text-zinc-900 dark:text-white">
-          {transaction.description}
+          {transaction.description || "No description"}
         </p>
         <p className="text-sm text-zinc-500">
           {transaction.category}
@@ -356,7 +356,7 @@ function TransactionRow({
           type="button"
           onClick={() => onEdit(transaction)}
           className="rounded-lg p-2 text-zinc-400 hover:bg-brand/5 hover:text-brand dark:hover:bg-zinc-800 dark:hover:text-gold"
-          aria-label={`Edit ${transaction.description}`}
+          aria-label={`Edit ${transaction.description || "transaction"}`}
         >
           <EditIcon />
         </button>
@@ -364,7 +364,7 @@ function TransactionRow({
           type="button"
           onClick={() => onDelete(transaction.id)}
           className="rounded-lg p-2 text-zinc-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/50 dark:hover:text-rose-400"
-          aria-label={`Delete ${transaction.description}`}
+          aria-label={`Delete ${transaction.description || "transaction"}`}
         >
           <TrashIcon />
         </button>

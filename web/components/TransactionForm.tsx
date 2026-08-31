@@ -116,7 +116,7 @@ export default function TransactionForm({
     e.preventDefault();
 
     const parsed = parseFloat(amount);
-    if (!parsed || parsed <= 0 || !description.trim()) return;
+    if (!parsed || parsed <= 0) return;
 
     const transactionType = transactionTypes.find(
       (entry) => entry.name === type,
@@ -133,7 +133,7 @@ export default function TransactionForm({
         transactionTypeId: transactionType.id,
         categoryId,
         amount: parsed,
-        description: description.trim(),
+        description: description.trim() || null,
         date,
       };
 
@@ -181,7 +181,7 @@ export default function TransactionForm({
       {mode === "edit" && (
         <div className="flex items-center justify-between gap-3 border-b border-gold/20 bg-gold/10 px-5 py-2.5">
           <p className="truncate text-sm font-medium text-brand dark:text-gold">
-            Editing {editing?.description}
+            Editing {editing?.description || "transaction"}
           </p>
           <button
             type="button"
@@ -317,7 +317,7 @@ export default function TransactionForm({
                 htmlFor="description"
                 className="mb-1.5 block text-sm font-medium text-zinc-600 dark:text-zinc-400"
               >
-                Description
+                Description (optional)
               </label>
               <input
                 id="description"
@@ -326,7 +326,6 @@ export default function TransactionForm({
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 className={fieldClass}
-                required
               />
             </div>
           </div>

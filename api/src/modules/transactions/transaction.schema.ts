@@ -42,9 +42,9 @@ export class Transaction {
   @Prop({ required: true })
   amount!: number;
 
-  @ApiProperty({ example: 'Weekly groceries' })
-  @Prop({ required: true, maxlength: 255 })
-  description!: string;
+  @ApiProperty({ example: 'Weekly groceries', nullable: true })
+  @Prop({ type: String, default: null, maxlength: 255 })
+  description!: string | null;
 
   @ApiProperty({ format: 'date-time' })
   @Prop({ required: true, type: Date })

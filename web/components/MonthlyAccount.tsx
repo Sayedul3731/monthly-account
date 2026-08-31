@@ -463,7 +463,7 @@ export default function MonthlyAccount() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-zinc-900 dark:text-white">
-                        {entry.description}
+                        {entry.description || "No description"}
                       </p>
                       <p className="text-xs text-zinc-500">{entry.category}</p>
                     </div>

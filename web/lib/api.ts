@@ -35,7 +35,7 @@ export type CreateTransactionInput = {
   transactionTypeId: string;
   categoryId: string;
   amount: number;
-  description: string;
+  description: string | null;
   date: string;
 };
 
@@ -44,7 +44,7 @@ type UpdateTransactionInput = Partial<CreateTransactionInput>;
 export type ImportTransactionInput = {
   type: TransactionType;
   amount: number;
-  description: string;
+  description: string | null;
   category: string;
   date: string;
 };
@@ -473,7 +473,7 @@ function normalizeTransactionType(raw: unknown): ApiTransactionType {
 type RawTransaction = {
   id: string;
   amount: number;
-  description: string;
+  description: string | null;
   date: string;
   categoryId?: string;
   transactionTypeId?: string;
@@ -490,7 +490,7 @@ function normalizeTransaction(raw: RawTransaction): Transaction {
     id: raw.id,
     type: typeName === "income" ? "income" : "expense",
     amount: Number(raw.amount),
-    description: raw.description,
+    description: typeof raw.description === "string" ? raw.description : null,
     category: categoryName,
     categoryId: raw.categoryId || nestedString(raw.category, "id"),
     transactionTypeId:
@@ -847,7 +847,7 @@ export function exportTransactionsCsv(transactions: Transaction[]): string {
   const header = "date,type,category,description,amount";
   const rows = transactions.map((t) => {
     const date = t.date.slice(0, 10);
-    const desc = `"${t.description.replace(/"/g, '""')}"`;
+    const desc = `"${(t.description ?? "").replace(/"/g, '""')}"`;
     return `${date},${t.type},${t.category},${desc},${t.amount}`;
   });
   return [header, ...rows].join("\n");
@@ -892,7 +892,10 @@ export function parseImportJson(raw: string): ImportTransactionInput[] {
     return {
       type: record.type as TransactionType,
       amount: Number(record.amount),
-      description: String(record.description),
+      description:
+        typeof record.description === "string"
+          ? record.description.trim() || null
+          : null,
       category: categoryName,
       date: toCalendarDate(String(record.date)),
     };
@@ -926,7 +929,7 @@ export function parseImportCsv(raw: string): ImportTransactionInput[] {
     return {
       type: type as TransactionType,
       amount: parseFloat(amount),
-      description: cleanDescription,
+      description: cleanDescription.trim() || null,
       category,
       date: toCalendarDate(date),
     };
