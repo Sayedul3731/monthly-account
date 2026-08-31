@@ -219,30 +219,30 @@ export default function MonthlyAccount() {
   return (
     <>
       {header}
-      <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
-      <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mx-auto w-full max-w-2xl px-4 py-4 sm:px-6 sm:py-8">
+      <header className="mb-4 flex flex-col gap-2.5 sm:mb-6 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gold">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gold sm:text-[11px] sm:tracking-[0.22em]">
             Monthly ledger
           </p>
-          <h1 className="mt-1 text-xl font-semibold tracking-tight text-brand sm:text-2xl dark:text-white">
+          <h1 className="mt-0.5 text-lg font-semibold tracking-tight text-brand sm:mt-1 sm:text-2xl dark:text-white">
             My Account
           </h1>
-          <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="text-xs text-zinc-500 sm:mt-0.5 sm:text-sm dark:text-zinc-400">
             Income, expenses, and budgets for this month
           </p>
         </div>
-        {tab !== "calendar" && <div className="flex items-center gap-1 self-start rounded-full border border-brand/15 bg-white p-1 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:self-auto">
+        {tab !== "calendar" && <div className="flex items-center gap-0.5 self-start rounded-full border border-brand/15 bg-white p-0.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:gap-1 sm:p-1 sm:self-auto">
           <button
             type="button"
             onClick={() => changeMonth(-1)}
-            className="rounded-full p-2 text-brand/70 transition hover:bg-brand/5 hover:text-brand dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"
+            className="rounded-full p-1.5 text-brand/70 transition hover:bg-brand/5 hover:text-brand sm:p-2 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"
             aria-label="Previous month"
           >
             <ChevronLeft />
           </button>
           <span
-            className="min-w-[9rem] px-2 text-center text-sm font-semibold text-brand dark:text-zinc-100"
+            className="min-w-[8rem] px-1.5 text-center text-[13px] font-semibold text-brand sm:min-w-[9rem] sm:px-2 sm:text-sm dark:text-zinc-100"
             aria-live="polite"
           >
             {formatMonthLabel(year, month)}
@@ -250,7 +250,7 @@ export default function MonthlyAccount() {
           <button
             type="button"
             onClick={() => changeMonth(1)}
-            className="rounded-full p-2 text-brand/70 transition hover:bg-brand/5 hover:text-brand dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"
+            className="rounded-full p-1.5 text-brand/70 transition hover:bg-brand/5 hover:text-brand sm:p-2 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"
             aria-label="Next month"
           >
             <ChevronRight />
@@ -277,7 +277,7 @@ export default function MonthlyAccount() {
 
       {tab === "overview" && (
         <div className="space-y-6">
-          <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand via-brand to-brand-deep p-6 text-white shadow-xl shadow-brand/25">
+          <section className="relative overflow-hidden rounded-3xl bg-brand bg-gradient-to-br from-brand via-brand to-brand-deep p-6 text-white shadow-xl shadow-brand/25">
             <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-gold/40 via-gold to-gold/40" />
             <div className="pointer-events-none absolute -right-10 -top-12 h-44 w-44 rounded-full bg-gold/15 blur-3xl" />
             <div className="pointer-events-none absolute -bottom-16 -left-10 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
