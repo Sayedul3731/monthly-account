@@ -152,7 +152,7 @@ export default function BudgetPanel({
           >
             <div className="relative flex-1">
               <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">
-                $
+                ৳
               </span>
               <input
                 type="number"
@@ -237,7 +237,7 @@ export default function BudgetPanel({
                   >
                     <div className="relative flex-1">
                       <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-zinc-400">
-                        $
+                        ৳
                       </span>
                       <input
                         type="number"

@@ -1,7 +1,7 @@
 {
-  "name": "aybey-api",
+  "name": "daily-hisab-api",
   "version": "0.0.1",
-  "description": "AyBey API",
+  "description": "Daily Hisab API",
   "author": "",
   "private": true,
   "license": "UNLICENSED",

@@ -245,7 +245,7 @@ export default function TransactionForm({
               </label>
               <div className="relative">
                 <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-brand/50 dark:text-zinc-400">
-                  $
+                  ৳
                 </span>
                 <input
                   id="amount"

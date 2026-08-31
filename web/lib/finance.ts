@@ -45,12 +45,12 @@ export const CATEGORY_ICONS: Record<string, string> = {
 };
 
 export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
+  const formattedAmount = new Intl.NumberFormat("en-BD", {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(amount);
+
+  return `৳${formattedAmount}`;
 }
 
 export function formatMonthLabel(year: number, month: number): string {

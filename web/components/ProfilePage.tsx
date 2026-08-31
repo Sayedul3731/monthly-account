@@ -578,7 +578,7 @@ export default function ProfilePage() {
               </h3>
               <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
                 You are on the {membershipLabel(user.membership, user.billingInterval)} plan.
-                Paid is $1 / month or $6 / year.
+                Paid is ৳1 / month or ৳6 / year.
               </p>
             </div>
             <Link
@@ -619,7 +619,7 @@ export default function ProfilePage() {
                 Session
               </h3>
               <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                Sign out of AyBey on this device.
+                Sign out of Daily Hisab on this device.
               </p>
             </div>
             <button

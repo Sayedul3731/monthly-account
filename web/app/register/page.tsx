@@ -3,9 +3,9 @@ import AuthLayout from "@/components/AuthLayout";
 import RegisterForm from "@/components/RegisterForm";
 
 export const metadata: Metadata = {
-  title: "Create account · AyBey",
+  title: "Create account · Daily Hisab",
   description:
-    "Create a free AyBey account to track income, expenses, and budgets.",
+    "Create a free Daily Hisab account to track income, expenses, and budgets.",
 };
 
 export default function RegisterPage() {

@@ -238,7 +238,7 @@ export default function MembershipsPage() {
               Plans
             </h3>
             <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-              Paid is $1 / month or $6 / year.
+              Paid is ৳1 / month or ৳6 / year.
             </p>
           </div>
 

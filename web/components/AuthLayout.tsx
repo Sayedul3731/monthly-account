@@ -35,7 +35,7 @@ export default function AuthLayout({
             <div className="flex items-center gap-3">
               <Image
                 src="/logo.png"
-                alt="AyBey"
+                alt="Daily Hisab"
                 width={44}
                 height={44}
                 className="h-11 w-11 rounded-xl object-contain shadow-sm ring-1 ring-zinc-200/80 dark:ring-zinc-700"
@@ -43,7 +43,7 @@ export default function AuthLayout({
               />
               <div>
                 <p className="text-base font-semibold tracking-tight text-zinc-900 dark:text-white">
-                  AyBey
+                  Daily Hisab
                 </p>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">
                   Personal finance, simply tracked

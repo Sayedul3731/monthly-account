@@ -106,7 +106,7 @@ export default function AppHeader({
             priority
           />
           <span className="truncate text-sm font-semibold tracking-tight text-brand dark:text-white">
-            AyBey
+            Daily Hisab
           </span>
         </Link>
 

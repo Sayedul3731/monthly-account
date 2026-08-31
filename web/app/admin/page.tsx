@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import AdminPanel from "@/components/AdminPanel";
 
 export const metadata: Metadata = {
-  title: "Admin · AyBey",
+  title: "Admin · Daily Hisab",
   description: "Manage users, roles, memberships, categories, and types.",
 };
 

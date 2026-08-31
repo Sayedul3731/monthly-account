@@ -56,7 +56,7 @@ async function bootstrap() {
     const document = SwaggerModule.createDocument(
       app,
       new DocumentBuilder()
-        .setTitle('AyBey API')
+        .setTitle('Daily Hisab API')
         .setDescription('API for tracking monthly income and expenses')
         .setVersion('1.0')
         .addBearerAuth()

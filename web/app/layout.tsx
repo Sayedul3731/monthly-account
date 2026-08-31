@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AyBey",
+  title: "Daily Hisab",
   description: "Track and manage your monthly finances",
   icons: {
     icon: "/logo.png",

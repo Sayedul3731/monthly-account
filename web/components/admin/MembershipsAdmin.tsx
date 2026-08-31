@@ -280,7 +280,7 @@ export default function MembershipsAdmin({ onError }: Props) {
             </div>
             <div>
               <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                Monthly price (USD)
+                Monthly price (BDT)
               </label>
               <input
                 type="number"
@@ -295,7 +295,7 @@ export default function MembershipsAdmin({ onError }: Props) {
             </div>
             <div>
               <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                Yearly price (USD)
+                Yearly price (BDT)
               </label>
               <input
                 type="number"

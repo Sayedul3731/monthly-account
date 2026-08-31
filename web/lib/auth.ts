@@ -24,9 +24,9 @@ export type AuthResponse = {
   user: AuthUser;
 };
 
-const ACCESS_TOKEN_KEY = "aybey_access_token";
-const REFRESH_TOKEN_KEY = "aybey_refresh_token";
-const USER_KEY = "aybey_user";
+const ACCESS_TOKEN_KEY = "daily_hisab_access_token";
+const REFRESH_TOKEN_KEY = "daily_hisab_refresh_token";
+const USER_KEY = "daily_hisab_user";
 
 export function getAccessToken(): string | null {
   if (typeof window === "undefined") return null;
