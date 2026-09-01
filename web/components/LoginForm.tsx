@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useId, useState } from "react";
-import { loginUser } from "@/lib/api";
+import { googleOAuthUrl, loginUser } from "@/lib/api";
 import { EyeIcon, EyeOffIcon, SpinnerIcon } from "./icons";
 
 function LoginFormInner() {
@@ -11,6 +11,7 @@ function LoginFormInner() {
   const searchParams = useSearchParams();
   const formId = useId();
   const passwordChanged = searchParams.get("passwordChanged") === "1";
+  const oauthError = searchParams.get("oauthError") === "google";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -100,6 +101,15 @@ function LoginFormInner() {
           className="mb-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-300"
         >
           {formError}
+        </div>
+      )}
+
+      {oauthError && (
+        <div
+          role="alert"
+          className="mb-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-300"
+        >
+          Google sign-in could not be completed. Please try again.
         </div>
       )}
 
@@ -205,6 +215,40 @@ function LoginFormInner() {
           )}
         </button>
       </form>
+
+      <div className="my-6 flex items-center gap-3" aria-hidden="true">
+        <div className="h-px flex-1 bg-zinc-200 dark:bg-zinc-700" />
+        <span className="text-xs font-medium text-zinc-400 dark:text-zinc-500">
+          OR
+        </span>
+        <div className="h-px flex-1 bg-zinc-200 dark:bg-zinc-700" />
+      </div>
+
+      <button
+        type="button"
+        onClick={() => window.location.assign(googleOAuthUrl())}
+        className="flex w-full items-center justify-center gap-3 rounded-xl border border-zinc-200 bg-white py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-800"
+      >
+        <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5">
+          <path
+            fill="#4285F4"
+            d="M21.35 12.27c0-.75-.07-1.47-.19-2.16H12v4.09h5.24a4.48 4.48 0 0 1-1.94 2.94v2.65h3.14c1.84-1.7 2.91-4.2 2.91-7.52Z"
+          />
+          <path
+            fill="#34A853"
+            d="M12 21.75c2.62 0 4.82-.87 6.43-2.36l-3.14-2.65c-.87.58-1.99.93-3.29.93-2.53 0-4.68-1.71-5.45-4.01H3.31v2.73A9.7 9.7 0 0 0 12 21.75Z"
+          />
+          <path
+            fill="#FBBC05"
+            d="M6.55 13.66A5.83 5.83 0 0 1 6.24 12c0-.58.1-1.14.31-1.66V7.61H3.31A9.72 9.72 0 0 0 2.25 12c0 1.57.38 3.06 1.06 4.39l3.24-2.73Z"
+          />
+          <path
+            fill="#EA4335"
+            d="M12 6.33c1.42 0 2.7.49 3.71 1.45l2.78-2.78C16.81 3.43 14.62 2.25 12 2.25a9.7 9.7 0 0 0-8.69 5.36l3.24 2.73c.77-2.3 2.92-4.01 5.45-4.01Z"
+          />
+        </svg>
+        Continue with Google
+      </button>
 
       <p className="mt-7 text-center text-sm text-zinc-500 dark:text-zinc-400">
         Don&apos;t have an account?{" "}

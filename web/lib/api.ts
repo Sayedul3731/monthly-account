@@ -17,6 +17,10 @@ const API_URL = (
   process.env.NEXT_PUBLIC_API_URL?.trim() || "http://localhost:3001"
 ).replace(/\/$/, "");
 
+export function googleOAuthUrl(): string {
+  return `${API_URL}/auth/google`;
+}
+
 export type ApiCategory = {
   id: string;
   name: string;
@@ -287,7 +291,8 @@ async function request<T>(
     retryOnUnauthorized &&
     path !== "/auth/login" &&
     path !== "/auth/register" &&
-    path !== "/auth/refresh"
+    path !== "/auth/refresh" &&
+    path !== "/auth/oauth/exchange"
   ) {
     const refreshed = await refreshAccessToken();
     if (refreshed) {
@@ -325,6 +330,14 @@ export async function loginUser(input: LoginInput): Promise<AuthUser> {
       email: input.email.trim().toLowerCase(),
       password: input.password,
     }),
+  });
+  return applyAuthSession(data);
+}
+
+export async function exchangeOAuthCode(code: string): Promise<AuthUser> {
+  const data = await request<AuthResponse>("/auth/oauth/exchange", {
+    method: "POST",
+    body: JSON.stringify({ code }),
   });
   return applyAuthSession(data);
 }

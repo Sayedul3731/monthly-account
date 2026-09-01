@@ -28,13 +28,28 @@ export class User {
 
   @ApiHideProperty()
   @Exclude()
-  @Prop({ required: true, select: false })
+  @Prop({ select: false })
   password?: string;
+
+  @ApiHideProperty()
+  @Exclude()
+  @Prop({ type: String, select: false, sparse: true, unique: true })
+  googleId?: string;
 
   @ApiHideProperty()
   @Exclude()
   @Prop({ type: String, select: false, default: null })
   refreshToken?: string | null;
+
+  @ApiHideProperty()
+  @Exclude()
+  @Prop({ type: String, select: false, default: null })
+  oauthHandoffHash?: string | null;
+
+  @ApiHideProperty()
+  @Exclude()
+  @Prop({ type: Date, select: false, default: null })
+  oauthHandoffExpiresAt?: Date | null;
 
   @ApiHideProperty()
   @Prop({ type: Types.ObjectId, ref: AppRole.name, required: true })
@@ -53,7 +68,8 @@ export class User {
   @ApiPropertyOptional({
     enum: BillingInterval,
     nullable: true,
-    description: 'Billing interval for a paid membership. Null on the free plan.',
+    description:
+      'Billing interval for a paid membership. Null on the free plan.',
   })
   @Prop({ type: String, enum: BillingInterval, default: null })
   billingInterval!: BillingInterval | null;

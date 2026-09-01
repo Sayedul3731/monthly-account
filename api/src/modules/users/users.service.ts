@@ -9,6 +9,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
 import { Model, Types } from 'mongoose';
+import { createHash, randomBytes } from 'node:crypto';
 import {
   asPlainList,
   notDeleted,
@@ -75,6 +76,14 @@ export class UsersService implements OnModuleInit {
       .exec();
   }
 
+  findByGoogleId(googleId: string): Promise<UserDocument | null> {
+    return this.userModel
+      .findOne(notDeleted({ googleId }))
+      .select('+googleId')
+      .populate([...USER_POPULATE])
+      .exec();
+  }
+
   /**
    * Looks up a user by id including the stored refresh-token hash.
    * Not exposed via the controller.
@@ -87,10 +96,7 @@ export class UsersService implements OnModuleInit {
       .exec();
   }
 
-  async setRefreshToken(
-    id: string,
-    hashedRefreshToken: string,
-  ): Promise<void> {
+  async setRefreshToken(id: string, hashedRefreshToken: string): Promise<void> {
     const result = await this.userModel
       .updateOne(notDeleted({ _id: id }), { refreshToken: hashedRefreshToken })
       .exec();
@@ -103,6 +109,69 @@ export class UsersService implements OnModuleInit {
   async clearRefreshToken(id: string): Promise<void> {
     await this.userModel
       .updateOne(notDeleted({ _id: id }), { refreshToken: null })
+      .exec();
+  }
+
+  async findOrCreateGoogleUser(input: {
+    googleId: string;
+    email: string;
+    name: string;
+  }): Promise<UserDocument> {
+    const email = input.email.trim().toLowerCase();
+    const byGoogleId = await this.findByGoogleId(input.googleId);
+    if (byGoogleId) return byGoogleId;
+
+    const existing = await this.findByEmail(email);
+    if (existing) {
+      existing.googleId = input.googleId;
+      await existing.save();
+      return existing.populate([...USER_POPULATE]);
+    }
+
+    const roleId = await this.getDefaultRoleId();
+    const membershipId = await this.getDefaultMembershipId();
+    const user = await this.userModel.create({
+      name: input.name.trim().slice(0, 100) || email,
+      email,
+      googleId: input.googleId,
+      roleId: new Types.ObjectId(roleId),
+      membershipId: new Types.ObjectId(membershipId),
+      billingInterval: null,
+    });
+
+    return this.findOne(user.id);
+  }
+
+  async createOAuthHandoff(userId: string): Promise<string> {
+    const code = randomBytes(32).toString('base64url');
+    const result = await this.userModel
+      .updateOne(notDeleted({ _id: userId }), {
+        oauthHandoffHash: this.hashOAuthHandoff(code),
+        oauthHandoffExpiresAt: new Date(Date.now() + 60_000),
+      })
+      .exec();
+
+    if (!result.matchedCount) {
+      throw new NotFoundException(`User ${userId} not found`);
+    }
+
+    return code;
+  }
+
+  async consumeOAuthHandoff(code: string): Promise<UserDocument | null> {
+    return this.userModel
+      .findOneAndUpdate(
+        {
+          ...notDeleted(),
+          oauthHandoffHash: this.hashOAuthHandoff(code),
+          oauthHandoffExpiresAt: { $gt: new Date() },
+        },
+        {
+          $set: { oauthHandoffHash: null, oauthHandoffExpiresAt: null },
+        },
+        { new: true },
+      )
+      .populate([...USER_POPULATE])
       .exec();
   }
 
@@ -191,6 +260,10 @@ export class UsersService implements OnModuleInit {
     if (existing) {
       throw new ConflictException(`Email ${email} is already in use`);
     }
+  }
+
+  private hashOAuthHandoff(code: string): string {
+    return createHash('sha256').update(code).digest('hex');
   }
 
   private async getDefaultRoleId(): Promise<string> {

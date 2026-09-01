@@ -50,7 +50,10 @@ export class TransactionsService {
     return asPlain<Transaction>(await this.getOwned(id, userId));
   }
 
-  async create(userId: string, dto: CreateTransactionDto): Promise<Transaction> {
+  async create(
+    userId: string,
+    dto: CreateTransactionDto,
+  ): Promise<Transaction> {
     const [user, category, transactionType] = await Promise.all([
       this.findUser(userId),
       this.findCategory(dto.categoryId),

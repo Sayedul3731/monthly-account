@@ -35,7 +35,10 @@ export class RolesService implements OnModuleInit {
   }
 
   async findAll(): Promise<AppRole[]> {
-    const docs = await this.roleModel.find(notDeleted()).sort({ name: 1 }).exec();
+    const docs = await this.roleModel
+      .find(notDeleted())
+      .sort({ name: 1 })
+      .exec();
     return asPlainList<AppRole>(docs);
   }
 

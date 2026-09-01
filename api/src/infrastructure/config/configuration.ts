@@ -12,4 +12,11 @@ export default () => ({
       process.env.JWT_REFRESH_SECRET ?? 'dev-refresh-secret-change-me',
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN ?? '7d',
   },
+  oauth: {
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackUrl: process.env.GOOGLE_CALLBACK_URL,
+    },
+  },
 });

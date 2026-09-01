@@ -69,8 +69,7 @@ export class MembershipsService implements OnModuleInit {
 
   async update(id: string, dto: UpdateMembershipDto): Promise<Membership> {
     const membership = await this.getDocument(id);
-    const nextName =
-      dto.name !== undefined ? dto.name.trim() : membership.name;
+    const nextName = dto.name !== undefined ? dto.name.trim() : membership.name;
     const nextType = dto.type ?? membership.type;
 
     if (nextName !== membership.name) {
@@ -148,9 +147,7 @@ export class MembershipsService implements OnModuleInit {
     const existing = await this.findByType(type);
 
     if (existing && existing.id !== excludeId) {
-      throw new ConflictException(
-        `A "${type}" membership already exists`,
-      );
+      throw new ConflictException(`A "${type}" membership already exists`);
     }
   }
 

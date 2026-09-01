@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { Transaction, TransactionSchema } from '../transactions/transaction.schema';
+import {
+  Transaction,
+  TransactionSchema,
+} from '../transactions/transaction.schema';
 import {
   TransactionTypeEntity,
   TransactionTypeSchema,
