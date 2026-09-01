@@ -141,7 +141,7 @@ export default function RegisterForm() {
     <div className="rounded-2xl border border-zinc-200/80 bg-white/90 p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.04)] backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-900/90 dark:shadow-[0_1px_2px_rgba(0,0,0,0.2),0_8px_24px_rgba(0,0,0,0.25)] sm:p-8">
       <div className="mb-6">
         <h2 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-white">
-          Create your account
+          Create your Daily Hisab
         </h2>
         <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
           Free to start. No credit card required.

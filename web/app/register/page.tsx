@@ -3,16 +3,16 @@ import AuthLayout from "@/components/AuthLayout";
 import RegisterForm from "@/components/RegisterForm";
 
 export const metadata: Metadata = {
-  title: "Create account · Daily Hisab",
+  title: "Create your Daily Hisab",
   description:
-    "Create a free Daily Hisab account to track income, expenses, and budgets.",
+    "আজ থেকেই আপনার টাকার হিসাব রাখুন।",
 };
 
 export default function RegisterPage() {
   return (
     <AuthLayout
-      headline="Take control of every month."
-      subtext="See where your money goes, plan ahead with budgets, and keep a clean history of every transaction."
+      headline="আজ থেকেই আপনার টাকার হিসাব রাখুন।"
+      subtext="It only takes a few seconds to get started."
     >
       <RegisterForm />
     </AuthLayout>
