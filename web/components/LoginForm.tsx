@@ -72,13 +72,16 @@ function LoginFormInner() {
   }
 
   return (
-    <div className="rounded-2xl border border-zinc-200/80 bg-white/90 p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.04)] backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-900/90 dark:shadow-[0_1px_2px_rgba(0,0,0,0.2),0_8px_24px_rgba(0,0,0,0.25)] sm:p-8">
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-white">
-          Sign in
+    <div className="rounded-2xl border border-zinc-200/90 bg-white p-6 shadow-[0_20px_50px_-30px_rgba(15,61,56,0.35)] dark:border-zinc-800 dark:bg-zinc-900 sm:p-8">
+      <div className="mb-8">
+        <p className="mb-2 text-xs font-semibold tracking-[0.16em] text-emerald-700 uppercase dark:text-emerald-400">
+          Account access
+        </p>
+        <h2 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">
+          Welcome back
         </h2>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          Welcome back. Continue where you left off.
+        <p className="mt-2 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
+          Sign in to continue managing your money with confidence.
         </p>
       </div>
 
@@ -100,11 +103,11 @@ function LoginFormInner() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+      <form onSubmit={handleSubmit} className="space-y-5" noValidate>
         <div>
           <label
             htmlFor={`${formId}-email`}
-            className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+            className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
           >
             Email
           </label>
@@ -143,7 +146,7 @@ function LoginFormInner() {
         <div>
           <label
             htmlFor={`${formId}-password`}
-            className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+            className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
           >
             Password
           </label>
@@ -190,7 +193,7 @@ function LoginFormInner() {
         <button
           type="submit"
           disabled={submitting}
-          className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+          className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-[#0f4c45] py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-950/15 transition hover:bg-[#0b3d37] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0f4c45] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 dark:bg-emerald-600 dark:hover:bg-emerald-500"
         >
           {submitting ? (
             <>
@@ -203,7 +206,7 @@ function LoginFormInner() {
         </button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
+      <p className="mt-7 text-center text-sm text-zinc-500 dark:text-zinc-400">
         Don&apos;t have an account?{" "}
         <Link
           href="/register"
@@ -211,6 +214,11 @@ function LoginFormInner() {
         >
           Create account
         </Link>
+      </p>
+
+      <p className="mt-6 flex items-center justify-center gap-2 text-xs text-zinc-400 dark:text-zinc-500">
+        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+        Secure sign-in for your personal records
       </p>
     </div>
   );

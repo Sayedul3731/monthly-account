@@ -14,9 +14,7 @@ const cyan = (text: string) => `\x1b[36m${text}\x1b[0m`;
 const yellow = (text: string) => `\x1b[33m${text}\x1b[0m`;
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
-    logger: ['error', 'warn'],
-  });
+  const app = await NestFactory.create(AppModule);
   const config = app.get(ConfigService);
 
   const port = config.get<number>('port', 3001);
@@ -33,8 +31,6 @@ async function bootstrap() {
     .filter(Boolean);
 
   app.enableCors({
-    // Reflect the page origin in development so localhost, 127.0.0.1, and
-    // LAN URLs (e.g. http://192.168.x.x:3000) can reach the API.
     origin: nodeEnv === 'production' ? productionOrigins : true,
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
