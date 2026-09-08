@@ -1,4 +1,4 @@
-export type BillingInterval = "monthly" | "yearly";
+export type BillingInterval = "monthly" | "quarterly" | "yearly";
 
 export type AuthUser = {
   id: string;
@@ -11,6 +11,7 @@ export type AuthUser = {
     name: string;
     type: "free" | "paid";
     monthlyPrice: number;
+    quarterlyPrice: number;
     yearlyPrice: number;
     description?: string | null;
   };

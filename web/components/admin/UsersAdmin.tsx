@@ -141,7 +141,7 @@ export default function UsersAdmin({ currentUserId, onError }: Props) {
       password: "",
       roleId: user.roleId || user.role?.id || "",
       membershipId: user.membershipId || user.membership?.id || "",
-      billingInterval: user.billingInterval === "yearly" ? "yearly" : "monthly",
+      billingInterval: user.billingInterval ?? "monthly",
     });
     setFieldErrors({});
     setFormError(null);
@@ -467,7 +467,7 @@ export default function UsersAdmin({ currentUserId, onError }: Props) {
                   Billing interval
                 </label>
                 <div className="flex gap-2">
-                  {(["monthly", "yearly"] as const).map((interval) => (
+                  {(["monthly", "quarterly", "yearly"] as const).map((interval) => (
                     <button
                       key={interval}
                       type="button"

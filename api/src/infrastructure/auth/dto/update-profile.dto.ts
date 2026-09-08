@@ -47,7 +47,7 @@ export class UpdateProfileDto {
 
   @ApiPropertyOptional({
     enum: BillingInterval,
-    description: 'Monthly or yearly billing. Required for the paid plan.',
+    description: 'Monthly, quarterly, or yearly billing. Required for the paid plan.',
   })
   @IsOptional()
   @IsEnum(BillingInterval)

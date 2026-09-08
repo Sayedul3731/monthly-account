@@ -148,7 +148,7 @@ export default function TransactionList({
                 Out
               </p>
               <p className="text-sm font-semibold tabular-nums text-rose-600 dark:text-rose-400">
-                -{formatCurrency(totals.expenses)}
+                {formatCurrency(totals.expenses)}
               </p>
             </div>
           </div>
@@ -347,7 +347,7 @@ function TransactionRow({
             : "text-rose-600 dark:text-rose-400"
         }`}
       >
-        {isIncome ? "+" : "-"}
+        {isIncome ? "+" : ""}
         {formatCurrency(transaction.amount)}
       </p>
 

@@ -80,7 +80,7 @@ type LoginInput = {
 };
 
 export type MembershipType = "free" | "paid";
-export type BillingInterval = "monthly" | "yearly";
+export type BillingInterval = "monthly" | "quarterly" | "yearly";
 
 type UpdateProfileInput = {
   name?: string;
@@ -96,6 +96,7 @@ export type Membership = {
   type: MembershipType;
   description: string | null;
   monthlyPrice: number;
+  quarterlyPrice: number;
   yearlyPrice: number;
 };
 
@@ -146,6 +147,7 @@ type MembershipPlanInput = {
   type: MembershipType;
   description?: string | null;
   monthlyPrice?: number;
+  quarterlyPrice?: number;
   yearlyPrice?: number;
 };
 
@@ -169,8 +171,9 @@ function normalizeMembership(
     id: raw.id,
     name: raw.name,
     type: raw.type === "paid" ? "paid" : "free",
-    monthlyPrice: Number(raw.monthlyPrice ?? 0),
-    yearlyPrice: Number(raw.yearlyPrice ?? 0),
+    monthlyPrice: normalizePrice(raw.monthlyPrice),
+    quarterlyPrice: normalizePrice(raw.quarterlyPrice),
+    yearlyPrice: normalizePrice(raw.yearlyPrice),
     description: raw.description ?? null,
   };
 }
@@ -183,18 +186,24 @@ function normalizeAuthUser(raw: AuthUser): AuthUser {
     role: raw.role
       ? { id: raw.role.id, name: raw.role.name }
       : undefined,
-    billingInterval:
-      raw.billingInterval === "yearly"
-        ? "yearly"
-        : raw.billingInterval === "monthly"
-          ? "monthly"
-          : null,
+    billingInterval: normalizeBillingInterval(raw.billingInterval),
     membership: normalizeMembership(raw.membership),
     createdAt:
       raw.createdAt != null ? String(raw.createdAt) : undefined,
     updatedAt:
       raw.updatedAt != null ? String(raw.updatedAt) : undefined,
   };
+}
+
+function normalizeBillingInterval(value: unknown): BillingInterval | null {
+  return value === "monthly" || value === "quarterly" || value === "yearly"
+    ? value
+    : null;
+}
+
+function normalizePrice(value: unknown): number {
+  const price = Number(value);
+  return Number.isFinite(price) && price >= 0 ? price : 0;
 }
 
 function applyAuthSession(data: AuthResponse): AuthUser {
@@ -429,12 +438,7 @@ function normalizeAdminUser(raw: unknown): AdminUser {
     ? normalizeMembershipRecord(record.membership)
     : undefined;
 
-  const billing =
-    record.billingInterval === "yearly"
-      ? "yearly"
-      : record.billingInterval === "monthly"
-        ? "monthly"
-        : null;
+  const billing = normalizeBillingInterval(record.billingInterval);
 
   return {
     id: extractId(record.id ?? record._id),
@@ -458,8 +462,9 @@ function normalizeMembershipRecord(raw: unknown): Membership {
     type: record.type === "paid" ? "paid" : "free",
     description:
       typeof record.description === "string" ? record.description : null,
-    monthlyPrice: Number(record.monthlyPrice ?? 0),
-    yearlyPrice: Number(record.yearlyPrice ?? 0),
+    monthlyPrice: normalizePrice(record.monthlyPrice),
+    quarterlyPrice: normalizePrice(record.quarterlyPrice),
+    yearlyPrice: normalizePrice(record.yearlyPrice),
   };
 }
 
@@ -637,6 +642,7 @@ export async function createMembershipPlan(
       type: input.type,
       description: input.description?.trim() || undefined,
       monthlyPrice: input.monthlyPrice ?? 0,
+      quarterlyPrice: input.quarterlyPrice ?? 0,
       yearlyPrice: input.yearlyPrice ?? 0,
     }),
   });
@@ -654,6 +660,9 @@ export async function updateMembershipPlan(
     body.description = input.description?.trim() || null;
   }
   if (input.monthlyPrice !== undefined) body.monthlyPrice = input.monthlyPrice;
+  if (input.quarterlyPrice !== undefined) {
+    body.quarterlyPrice = input.quarterlyPrice;
+  }
   if (input.yearlyPrice !== undefined) body.yearlyPrice = input.yearlyPrice;
 
   const data = await request<unknown>(`/memberships/${id}`, {

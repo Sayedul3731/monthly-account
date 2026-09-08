@@ -58,7 +58,12 @@ function membershipLabel(
 ): string {
   if (!membership?.name) return "Free";
   if (membership.type !== "paid") return membership.name;
-  const cadence = billingInterval === "yearly" ? "yearly" : "monthly";
+  const cadence =
+    billingInterval === "quarterly"
+      ? "quarterly"
+      : billingInterval === "yearly"
+        ? "yearly"
+        : "monthly";
   return `${membership.name} (${cadence})`;
 }
 
@@ -578,7 +583,7 @@ export default function ProfilePage() {
               </h3>
               <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
                 You are on the {membershipLabel(user.membership, user.billingInterval)} plan.
-                Paid is ৳1 / month or ৳6 / year.
+                Paid plans offer flexible monthly, quarterly, and yearly billing.
               </p>
             </div>
             <Link

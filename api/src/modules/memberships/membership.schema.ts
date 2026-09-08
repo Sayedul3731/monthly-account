@@ -27,15 +27,22 @@ export class Membership {
   description!: string | null;
 
   @ApiProperty({
-    example: 1,
-    description: 'Monthly price in USD. 0 for free.',
+    example: 49,
+    description: 'Monthly price in BDT. 0 for free.',
   })
   @Prop({ required: true, default: 0, min: 0 })
   monthlyPrice!: number;
 
   @ApiProperty({
-    example: 6,
-    description: 'Yearly price in USD. 0 for free.',
+    example: 149,
+    description: 'Quarterly price in BDT. 0 for free.',
+  })
+  @Prop({ required: true, default: 0, min: 0 })
+  quarterlyPrice!: number;
+
+  @ApiProperty({
+    example: 399,
+    description: 'Yearly price in BDT. 0 for free.',
   })
   @Prop({ required: true, default: 0, min: 0 })
   yearlyPrice!: number;

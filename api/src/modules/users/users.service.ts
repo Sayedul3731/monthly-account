@@ -288,13 +288,14 @@ export class UsersService implements OnModuleInit {
 
     if (
       interval === BillingInterval.MONTHLY ||
+      interval === BillingInterval.QUARTERLY ||
       interval === BillingInterval.YEARLY
     ) {
       return interval;
     }
 
     throw new BadRequestException(
-      'Paid membership requires monthly or yearly billing',
+      'Paid membership requires monthly, quarterly, or yearly billing',
     );
   }
 

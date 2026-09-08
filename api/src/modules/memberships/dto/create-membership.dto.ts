@@ -34,7 +34,7 @@ export class CreateMembershipDto {
   @ApiPropertyOptional({
     example: 1,
     minimum: 0,
-    description: 'Monthly price in USD. Defaults to 0.',
+    description: 'Monthly price in BDT. Defaults to 0.',
   })
   @IsOptional()
   @Type(() => Number)
@@ -43,9 +43,20 @@ export class CreateMembershipDto {
   monthlyPrice?: number;
 
   @ApiPropertyOptional({
+    example: 149,
+    minimum: 0,
+    description: 'Quarterly price in BDT. Defaults to 0.',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  quarterlyPrice?: number;
+
+  @ApiPropertyOptional({
     example: 6,
     minimum: 0,
-    description: 'Yearly price in USD. Defaults to 0.',
+    description: 'Yearly price in BDT. Defaults to 0.',
   })
   @IsOptional()
   @Type(() => Number)

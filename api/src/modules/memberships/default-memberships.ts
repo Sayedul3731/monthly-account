@@ -5,6 +5,7 @@ export const DEFAULT_MEMBERSHIPS: Array<{
   type: MembershipType;
   description: string;
   monthlyPrice: number;
+  quarterlyPrice: number;
   yearlyPrice: number;
 }> = [
   {
@@ -12,13 +13,15 @@ export const DEFAULT_MEMBERSHIPS: Array<{
     type: MembershipType.FREE,
     description: 'Track income, expenses, and budgets at no cost.',
     monthlyPrice: 0,
+    quarterlyPrice: 0,
     yearlyPrice: 0,
   },
   {
     name: 'Paid',
     type: MembershipType.PAID,
     description: 'Premium access with priority support and extra capacity.',
-    monthlyPrice: 1,
-    yearlyPrice: 6,
+    monthlyPrice: 49,
+    quarterlyPrice: 149,
+    yearlyPrice: 399,
   },
 ];

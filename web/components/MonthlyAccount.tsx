@@ -121,9 +121,11 @@ export default function MonthlyAccount() {
   }, [month, showToast, year]);
 
   const stats = useMemo(() => summarize(transactions), [transactions]);
+  const hasIncome = stats.income > 0;
+  const hasSurplus = stats.balance >= 0;
 
   const expenseShare =
-    stats.income > 0 ? Math.min((stats.expenses / stats.income) * 100, 100) : 0;
+    hasIncome ? Math.min((stats.expenses / stats.income) * 100, 100) : 0;
 
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const isCurrentMonth =
@@ -286,40 +288,62 @@ export default function MonthlyAccount() {
             <div className="relative flex items-start justify-between gap-3">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gold">
-                  {formatMonthLabel(year, month)} statement
+                  {formatMonthLabel(year, month)} overview
                 </p>
-                <p className="mt-3 text-sm font-medium text-white/70">
-                  Net balance
-                </p>
-                <p className="mt-1 text-4xl font-bold tracking-tight sm:text-5xl">
-                  {formatCurrency(stats.balance)}
-                </p>
+                {hasIncome ? (
+                  <>
+                    <p className="mt-3 text-sm font-medium text-white/70">
+                      {hasSurplus ? "Net balance" : "Amount to cover"}
+                    </p>
+                    <p className="mt-1 text-4xl font-bold tracking-tight sm:text-5xl">
+                      {formatCurrency(Math.abs(stats.balance))}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h2 className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl">
+                      Your spending, clearly organized.
+                    </h2>
+                    <p className="mt-2 max-w-md text-sm leading-6 text-white/70">
+                      Track every expense now, then add income whenever you are
+                      ready to unlock your monthly balance and savings insights.
+                    </p>
+                  </>
+                )}
               </div>
-              <span
-                className={`mt-1 shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${
-                  stats.balance >= 0
-                    ? "border-gold/40 bg-gold/15 text-gold"
-                    : "border-rose-300/40 bg-rose-400/15 text-rose-100"
-                }`}
-              >
-                {stats.balance >= 0 ? "In surplus" : "In deficit"}
-              </span>
+              {hasIncome && (
+                <span
+                  className={`mt-1 shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${
+                    hasSurplus
+                      ? "border-gold/40 bg-gold/15 text-gold"
+                      : "border-rose-300/40 bg-rose-400/15 text-rose-100"
+                  }`}
+                >
+                  {hasSurplus ? "On track" : "Needs attention"}
+                </span>
+              )}
             </div>
 
-            <div className="relative mt-6 grid grid-cols-2 gap-3">
-              <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 backdrop-blur-sm">
-                <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-white/70">
-                  <TrendUpIcon className="text-gold" />
-                  Income
-                </p>
-                <p className="mt-1 text-lg font-semibold">
-                  {formatCurrency(stats.income)}
-                </p>
-              </div>
+            <div
+              className={`relative mt-6 grid gap-3 ${
+                hasIncome ? "grid-cols-2" : "grid-cols-1"
+              }`}
+            >
+              {hasIncome && (
+                <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 backdrop-blur-sm">
+                  <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-white/70">
+                    <TrendUpIcon className="text-gold" />
+                    Income
+                  </p>
+                  <p className="mt-1 text-lg font-semibold">
+                    {formatCurrency(stats.income)}
+                  </p>
+                </div>
+              )}
               <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 backdrop-blur-sm">
                 <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-white/70">
                   <TrendDownIcon className="text-rose-200" />
-                  Expenses
+                  {hasIncome ? "Expenses" : "Spending tracked"}
                 </p>
                 <p className="mt-1 text-lg font-semibold">
                   {formatCurrency(stats.expenses)}
@@ -347,7 +371,7 @@ export default function MonthlyAccount() {
               </div>
             </div>
 
-            {stats.income > 0 && (
+            {hasIncome && (
               <div className="relative mt-4">
                 <div className="mb-1.5 flex justify-between text-xs text-white/70">
                   <span>Spent of income</span>
@@ -469,7 +493,7 @@ export default function MonthlyAccount() {
                           : "text-rose-600 dark:text-rose-400"
                       }`}
                     >
-                      {entry.type === "income" ? "+" : "-"}
+                      {entry.type === "income" ? "+" : ""}
                       {formatCurrency(entry.amount)}
                     </p>
                   </li>

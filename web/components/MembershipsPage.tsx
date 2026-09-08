@@ -31,12 +31,33 @@ function typeLabel(type: Membership["type"]): string {
 }
 
 function intervalLabel(interval?: BillingInterval | null): string {
-  return interval === "yearly" ? "yearly" : "monthly";
+  return interval === "quarterly"
+    ? "quarterly"
+    : interval === "yearly"
+      ? "yearly"
+      : "monthly";
+}
+
+function intervalPrice(
+  membership: Pick<
+    Membership,
+    "monthlyPrice" | "quarterlyPrice" | "yearlyPrice"
+  >,
+  interval?: BillingInterval | null,
+): number {
+  if (interval === "quarterly") return membership.quarterlyPrice;
+  if (interval === "yearly") return membership.yearlyPrice;
+  return membership.monthlyPrice;
+}
+
+function formatMembershipPrice(value: unknown): string {
+  const price = Number(value);
+  return Number.isFinite(price) && price >= 0 ? formatCurrency(price) : "—";
 }
 
 function priceLabel(membership: Membership): string {
   if (membership.type === "free") return "Free";
-  return `${formatCurrency(membership.monthlyPrice)} / month · ${formatCurrency(membership.yearlyPrice)} / year`;
+  return `${formatCurrency(membership.monthlyPrice)} / month · ${formatCurrency(membership.quarterlyPrice)} / quarter · ${formatCurrency(membership.yearlyPrice)} / year`;
 }
 
 function currentPlanDetail(user: AuthUser): string {
@@ -47,10 +68,7 @@ function currentPlanDetail(user: AuthUser): string {
     );
   }
 
-  const price =
-    user.billingInterval === "yearly"
-      ? `${formatCurrency(user.membership.yearlyPrice)} / year`
-      : `${formatCurrency(user.membership.monthlyPrice)} / month`;
+  const price = `${formatMembershipPrice(intervalPrice(user.membership, user.billingInterval))} / ${intervalLabel(user.billingInterval)}`;
 
   return `Billed ${intervalLabel(user.billingInterval)} at ${price}.`;
 }
@@ -198,7 +216,7 @@ export default function MembershipsPage() {
             Membership
           </h1>
           <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
-            Choose a plan that fits how you use the app
+            Premium access with a billing schedule that works for you.
           </p>
         </div>
 
@@ -238,7 +256,8 @@ export default function MembershipsPage() {
               Plans
             </h3>
             <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-              Paid is ৳1 / month or ৳6 / year.
+              Every paid option includes the same premium access. Choose the
+              billing cadence that fits you best.
             </p>
           </div>
 
@@ -272,6 +291,10 @@ export default function MembershipsPage() {
                       isPaid &&
                       plan.id === currentId &&
                       user.billingInterval === "monthly";
+                    const isCurrentQuarterly =
+                      isPaid &&
+                      plan.id === currentId &&
+                      user.billingInterval === "quarterly";
                     const isCurrentYearly =
                       isPaid &&
                       plan.id === currentId &&
@@ -335,10 +358,13 @@ export default function MembershipsPage() {
                           {isPaid ? (
                             <div className="flex flex-col gap-0.5">
                               <span>
-                                {formatCurrency(plan.monthlyPrice)} / month
+                                {formatMembershipPrice(plan.monthlyPrice)} / month
                               </span>
                               <span>
-                                {formatCurrency(plan.yearlyPrice)} / year
+                                {formatMembershipPrice(plan.quarterlyPrice)} / quarter
+                              </span>
+                              <span>
+                                {formatMembershipPrice(plan.yearlyPrice)} / year
                               </span>
                             </div>
                           ) : (
@@ -355,6 +381,11 @@ export default function MembershipsPage() {
                                 "Choose monthly",
                                 "monthly",
                                 isCurrentMonthly,
+                              )}
+                              {actionButton(
+                                "Choose quarterly",
+                                "quarterly",
+                                isCurrentQuarterly,
                               )}
                               {actionButton(
                                 "Choose yearly",

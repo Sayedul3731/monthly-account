@@ -61,6 +61,7 @@ export class MembershipsService implements OnModuleInit {
       type: dto.type,
       description: dto.description ?? null,
       monthlyPrice: dto.monthlyPrice ?? 0,
+      quarterlyPrice: dto.quarterlyPrice ?? 0,
       yearlyPrice: dto.yearlyPrice ?? 0,
     });
 
@@ -87,6 +88,9 @@ export class MembershipsService implements OnModuleInit {
     }
     if (dto.monthlyPrice !== undefined) {
       membership.monthlyPrice = dto.monthlyPrice;
+    }
+    if (dto.quarterlyPrice !== undefined) {
+      membership.quarterlyPrice = dto.quarterlyPrice;
     }
     if (dto.yearlyPrice !== undefined) {
       membership.yearlyPrice = dto.yearlyPrice;
@@ -167,6 +171,7 @@ export class MembershipsService implements OnModuleInit {
           {
             $set: {
               monthlyPrice: seed.monthlyPrice,
+              quarterlyPrice: seed.quarterlyPrice,
               yearlyPrice: seed.yearlyPrice,
             },
             $unset: { price: 1 },
