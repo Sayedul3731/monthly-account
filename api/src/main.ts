@@ -1,28 +1,23 @@
-import { setServers } from 'node:dns';
 import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory, Reflector } from '@nestjs/core';
+import { ExpressAdapter } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import express from 'express';
 import { AppModule } from './app/app.module';
 
-// Node.js on Windows (v22–v24 LTS) can fail mongodb+srv SRV lookups with
-// querySrv ECONNREFUSED. Force public resolvers before Mongoose connects.
-setServers(['1.1.1.1', '8.8.8.8']);
+const expressApp = express();
 
-const dim = (text: string) => `\x1b[2m${text}\x1b[0m`;
-const cyan = (text: string) => `\x1b[36m${text}\x1b[0m`;
-const yellow = (text: string) => `\x1b[33m${text}\x1b[0m`;
+let cachedApp: any;
 
-async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+async function bootstrapServer() {
+  if (cachedApp) return cachedApp;
+
+  const app = await NestFactory.create(AppModule, new ExpressAdapter(expressApp));
   const config = app.get(ConfigService);
 
-  const port = config.get<number>('port', 3001);
   const nodeEnv = config.get<string>('nodeEnv', 'development');
-  const frontendUrl = config.get<string>(
-    'frontendUrl',
-    'http://localhost:3000',
-  );
+  const frontendUrl = config.get<string>('frontendUrl', 'http://localhost:3000');
   const swaggerEnabled = nodeEnv !== 'production';
 
   const productionOrigins = frontendUrl
@@ -44,8 +39,6 @@ async function bootstrap() {
     }),
   );
 
-  // Ensures @Exclude()-marked fields (e.g. User.password) are stripped from
-  // every response, not just controllers that opt in individually.
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
 
   if (swaggerEnabled) {
@@ -61,13 +54,23 @@ async function bootstrap() {
     SwaggerModule.setup('docs', app, document);
   }
 
-  await app.listen(port);
-
-  const baseUrl = `http://localhost:${port}`;
-  console.log(`  ${dim('API')}         : ${cyan(baseUrl)}`);
-  if (swaggerEnabled) {
-    console.log(`  ${dim('Swagger')}     : ${yellow(`${baseUrl}/docs`)}`);
-  }
+  await app.init();
+  cachedApp = expressApp;
+  return expressApp;
 }
 
-void bootstrap();
+// Local dev: run a normal server
+if (process.env.VERCEL !== '1') {
+  bootstrapServer().then((server) => {
+    const port = process.env.PORT || 3001;
+    server.listen(port, () => {
+      console.log(`API running on http://localhost:${port}`);
+    });
+  });
+}
+
+// Vercel: export a serverless handler
+export default async function handler(req: any, res: any) {
+  const server = await bootstrapServer();
+  server(req, res);
+}
