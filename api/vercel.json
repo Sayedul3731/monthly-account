@@ -1,9 +1,4 @@
 {
-  "version": 2,
-  "builds": [
-    { "src": "dist/apps/daily-hisab-api/main.js", "use": "@vercel/node" }
-  ],
-  "routes": [
-    { "src": "/(.*)", "dest": "dist/apps/daily-hisab-api/main.js" }
-  ]
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nestjs"
 }
