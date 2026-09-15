@@ -4,6 +4,10 @@ export default () => ({
   frontendUrl: process.env.FRONTEND_URL ?? 'http://localhost:3000',
   database: {
     uri: process.env.MONGODB_URI ?? 'mongodb://localhost:27017/daily_hisab',
+    dnsServers: (process.env.MONGODB_DNS_SERVERS ?? '')
+      .split(',')
+      .map((server) => server.trim())
+      .filter(Boolean),
   },
   jwt: {
     secret: process.env.JWT_SECRET ?? 'dev-secret-change-me',
