@@ -89,6 +89,12 @@ export default function MonthlyAccount() {
   useEffect(() => {
     let cancelled = false;
 
+    if (!authReady) return;
+
+    if (!signedIn) {
+      return;
+    }
+
     async function loadData() {
       try {
         const [txData, budgetData] = await Promise.all([
@@ -118,7 +124,7 @@ export default function MonthlyAccount() {
     return () => {
       cancelled = true;
     };
-  }, [month, showToast, year]);
+  }, [authReady, month, showToast, signedIn, year]);
 
   const stats = useMemo(() => summarize(transactions), [transactions]);
   const hasIncome = stats.income > 0;
@@ -207,7 +213,7 @@ export default function MonthlyAccount() {
     />
   );
 
-  if (loading) {
+  if (loading && (!authReady || signedIn)) {
     return (
       <>
         {header}
@@ -504,30 +510,52 @@ export default function MonthlyAccount() {
         </div>
       )}
 
-      {tab === "transactions" && (
-        <div className="space-y-6">
-          <TransactionForm
-            key={editing?.id ?? "new"}
-            year={year}
-            month={month}
-            editing={editing}
-            onSaved={handleSaved}
-            onCancelEdit={() => setEditing(null)}
-            onError={(message) => showToast(message, { kind: "error" })}
-          />
-          <TransactionList
-            transactions={transactions}
-            onEdit={handleEdit}
-            onDeleted={(id) => {
-              setTransactions((prev) => prev.filter((t) => t.id !== id));
-              showToast("Transaction deleted.", { kind: "success" });
-            }}
-            onError={(message) => showToast(message, { kind: "error" })}
-          />
-        </div>
-      )}
+      {tab === "transactions" &&
+        (signedIn ? (
+          <div className="space-y-6">
+            <TransactionForm
+              key={editing?.id ?? "new"}
+              year={year}
+              month={month}
+              editing={editing}
+              onSaved={handleSaved}
+              onCancelEdit={() => setEditing(null)}
+              onError={(message) => showToast(message, { kind: "error" })}
+            />
+            <TransactionList
+              transactions={transactions}
+              onEdit={handleEdit}
+              onDeleted={(id) => {
+                setTransactions((prev) => prev.filter((t) => t.id !== id));
+                showToast("Transaction deleted.", { kind: "success" });
+              }}
+              onError={(message) => showToast(message, { kind: "error" })}
+            />
+          </div>
+        ) : (
+          <section className="rounded-2xl border border-brand/10 bg-white p-5 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <h2 className="text-base font-semibold text-brand dark:text-white">
+              Transactions
+            </h2>
+            <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+              Sign in to add and manage your transactions.
+            </p>
+          </section>
+        ))}
 
-      {tab === "calendar" && <CalendarView year={year} month={month} />}
+      {tab === "calendar" &&
+        (signedIn ? (
+          <CalendarView year={year} month={month} />
+        ) : (
+          <section className="rounded-2xl border border-brand/10 bg-white p-5 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <h2 className="text-base font-semibold text-brand dark:text-white">
+              Calendar view
+            </h2>
+            <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+              Sign in to view your transaction calendar.
+            </p>
+          </section>
+        ))}
 
       {/*
       {tab === "budgets" && (
