@@ -221,30 +221,30 @@ export default function MonthlyAccount() {
   return (
     <>
       {header}
-      <div className="mx-auto w-full max-w-2xl px-4 py-4 sm:px-6 sm:py-8">
-      <header className="mb-4 flex flex-col gap-2.5 sm:mb-6 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+      <div className="mx-auto w-full max-w-2xl px-3 py-3 sm:px-6 sm:py-5">
+      <header className="mb-3 flex flex-col gap-1.5 sm:mb-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gold sm:text-[11px] sm:tracking-[0.22em]">
-            Monthly ledger
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gold sm:tracking-[0.2em]">
+            Monthly overview
           </p>
-          <h1 className="mt-0.5 text-lg font-semibold tracking-tight text-brand sm:mt-1 sm:text-2xl dark:text-white">
-            My Account
+          <h1 className="mt-0.5 text-lg font-semibold leading-tight tracking-tight text-brand sm:text-xl dark:text-white">
+            আমার হিসাব
           </h1>
-          <p className="text-xs text-zinc-500 sm:mt-0.5 sm:text-sm dark:text-zinc-400">
-            Income, expenses, and budgets for this month
+          <p className="mt-0.5 text-[11px] leading-4 text-zinc-500 sm:text-xs dark:text-zinc-400">
+            এই মাসের আয়, ব্যয় ও বাজেট
           </p>
         </div>
-        {tab !== "calendar" && <div className="flex items-center gap-0.5 self-start rounded-full border border-brand/15 bg-white p-0.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:gap-1 sm:p-1 sm:self-auto">
+        {tab !== "calendar" && <div className="flex items-center gap-0.5 self-start rounded-full border border-brand/15 bg-white p-px shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:gap-1 sm:p-0.5 sm:self-auto">
           <button
             type="button"
             onClick={() => changeMonth(-1)}
-            className="rounded-full p-1.5 text-brand/70 transition hover:bg-brand/5 hover:text-brand sm:p-2 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"
-            aria-label="Previous month"
+            className="rounded-full p-1 text-brand/70 transition hover:bg-brand/5 hover:text-brand sm:p-1.5 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"
+            aria-label="আগের মাস"
           >
             <ChevronLeft />
           </button>
           <span
-            className="min-w-[8rem] px-1.5 text-center text-[13px] font-semibold text-brand sm:min-w-[9rem] sm:px-2 sm:text-sm dark:text-zinc-100"
+            className="min-w-[7rem] px-1 text-center text-xs font-semibold text-brand sm:min-w-[8rem] sm:px-1.5 sm:text-[13px] dark:text-zinc-100"
             aria-live="polite"
           >
             {formatMonthLabel(year, month)}
@@ -252,8 +252,8 @@ export default function MonthlyAccount() {
           <button
             type="button"
             onClick={() => changeMonth(1)}
-            className="rounded-full p-1.5 text-brand/70 transition hover:bg-brand/5 hover:text-brand sm:p-2 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"
-            aria-label="Next month"
+            className="rounded-full p-1 text-brand/70 transition hover:bg-brand/5 hover:text-brand sm:p-1.5 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"
+            aria-label="পরের মাস"
           >
             <ChevronRight />
           </button>
@@ -302,11 +302,11 @@ export default function MonthlyAccount() {
                 ) : (
                   <>
                     <h2 className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl">
-                      Your spending, clearly organized.
+                      খরচের হিসাব থাকুক হাতের মুঠোয়।
                     </h2>
                     <p className="mt-2 max-w-md text-sm leading-6 text-white/70">
-                      Track every expense now, then add income whenever you are
-                      ready to unlock your monthly balance and savings insights.
+                      Record your expenses and income to maintain a clear view
+                      of your monthly balance and savings progress.
                     </p>
                   </>
                 )}
