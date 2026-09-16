@@ -14,11 +14,17 @@ let cachedApp: any;
 async function bootstrapServer() {
   if (cachedApp) return cachedApp;
 
-  const app = await NestFactory.create(AppModule, new ExpressAdapter(expressApp));
+  const app = await NestFactory.create(
+    AppModule,
+    new ExpressAdapter(expressApp),
+  );
   const config = app.get(ConfigService);
 
   const nodeEnv = config.get<string>('nodeEnv', 'development');
-  const frontendUrl = config.get<string>('frontendUrl', 'http://localhost:3000');
+  const frontendUrl = config.get<string>(
+    'frontendUrl',
+    'http://localhost:3000',
+  );
   const swaggerEnabled = nodeEnv !== 'production';
 
   const productionOrigins = frontendUrl

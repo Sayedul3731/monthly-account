@@ -28,6 +28,7 @@ type ProfileErrors = {
 };
 
 type PasswordErrors = {
+  currentPassword?: string;
   password?: string;
   confirmPassword?: string;
 };
@@ -92,6 +93,9 @@ export default function ProfilePage() {
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordCurrentPassword, setPasswordCurrentPassword] = useState("");
+  const [showPasswordCurrentPassword, setShowPasswordCurrentPassword] =
+    useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [passwordErrors, setPasswordErrors] = useState<PasswordErrors>({});
@@ -159,6 +163,10 @@ export default function ProfilePage() {
 
   function validatePassword(): PasswordErrors {
     const errors: PasswordErrors = {};
+
+    if (!passwordCurrentPassword) {
+      errors.currentPassword = "Enter your current password.";
+    }
 
     if (!password) errors.password = "Choose a new password.";
     else if (password.length < MIN_PASSWORD_LENGTH) {
@@ -248,7 +256,7 @@ export default function ProfilePage() {
 
     setSavingPassword(true);
     try {
-      await updateProfile({ password });
+      await updateProfile({ password, currentPassword: passwordCurrentPassword });
       clearAuthSession();
       router.replace("/login?passwordChanged=1");
       router.refresh();
@@ -576,6 +584,57 @@ export default function ProfilePage() {
           )}
 
           <form onSubmit={handleChangePassword} className="space-y-4" noValidate>
+            <div>
+              <label
+                htmlFor={`${formId}-password-current`}
+                className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+              >
+                Current password
+              </label>
+              <div className="relative">
+                <input
+                  id={`${formId}-password-current`}
+                  type={showPasswordCurrentPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  minLength={MIN_PASSWORD_LENGTH}
+                  maxLength={MAX_PASSWORD_LENGTH}
+                  placeholder="Enter your current password"
+                  value={passwordCurrentPassword}
+                  onChange={(e) => {
+                    setPasswordCurrentPassword(e.target.value);
+                    if (passwordErrors.currentPassword) {
+                      setPasswordErrors((prev) => ({
+                        ...prev,
+                        currentPassword: undefined,
+                      }));
+                    }
+                  }}
+                  aria-invalid={Boolean(passwordErrors.currentPassword)}
+                  className={`${fieldClass(Boolean(passwordErrors.currentPassword))} pr-12`}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowPasswordCurrentPassword((value) => !value)
+                  }
+                  className="absolute top-1/2 right-3 -translate-y-1/2 rounded-lg p-1.5 text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+                  aria-label={
+                    showPasswordCurrentPassword
+                      ? "Hide current password"
+                      : "Show current password"
+                  }
+                >
+                  {showPasswordCurrentPassword ? <EyeOffIcon /> : <EyeIcon />}
+                </button>
+              </div>
+              {passwordErrors.currentPassword && (
+                <p className="mt-1.5 text-xs text-rose-600 dark:text-rose-400">
+                  {passwordErrors.currentPassword}
+                </p>
+              )}
+            </div>
+
             <div>
               <label
                 htmlFor={`${formId}-password`}

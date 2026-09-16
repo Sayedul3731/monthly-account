@@ -7,6 +7,7 @@ import {
   IsString,
   MaxLength,
   MinLength,
+  ValidateIf,
 } from 'class-validator';
 import { BillingInterval } from '../../../modules/memberships/billing-interval.enum';
 
@@ -32,6 +33,17 @@ export class UpdateProfileDto {
   password?: string;
 
   @ApiPropertyOptional({
+    description: 'Required when changing the password.',
+    minLength: 8,
+    maxLength: 72,
+  })
+  @ValidateIf((dto: UpdateProfileDto) => dto.password !== undefined)
+  @IsString()
+  @MinLength(8)
+  @MaxLength(72)
+  currentPassword?: string;
+
+  @ApiPropertyOptional({
     description: 'Membership plan to switch to.',
   })
   @IsOptional()
@@ -40,7 +52,8 @@ export class UpdateProfileDto {
 
   @ApiPropertyOptional({
     enum: BillingInterval,
-    description: 'Monthly, quarterly, or yearly billing. Required for the paid plan.',
+    description:
+      'Monthly, quarterly, or yearly billing. Required for the paid plan.',
   })
   @IsOptional()
   @IsEnum(BillingInterval)

@@ -8,7 +8,8 @@ export class RequestEmailChangeDto {
   email: string;
 
   @ApiProperty({
-    description: 'Current password, required before changing the email address.',
+    description:
+      'Current password, required before changing the email address.',
     minLength: 8,
     maxLength: 72,
   })

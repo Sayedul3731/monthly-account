@@ -126,14 +126,11 @@ export class UsersService implements OnModuleInit {
 
   async clearEmailChangeRequest(id: string): Promise<void> {
     await this.userModel
-      .updateOne(
-        notDeleted({ _id: id }),
-        {
-          pendingEmail: null,
-          emailChangeTokenHash: null,
-          emailChangeExpiresAt: null,
-        },
-      )
+      .updateOne(notDeleted({ _id: id }), {
+        pendingEmail: null,
+        emailChangeTokenHash: null,
+        emailChangeExpiresAt: null,
+      })
       .exec();
   }
 

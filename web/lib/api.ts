@@ -85,6 +85,7 @@ export type BillingInterval = "monthly" | "quarterly" | "yearly";
 type UpdateProfileInput = {
   name?: string;
   password?: string;
+  currentPassword?: string;
   membershipId?: string;
   billingInterval?: BillingInterval | null;
 };
@@ -379,6 +380,9 @@ export async function updateProfile(
   if (input.name !== undefined) body.name = input.name.trim();
   if (input.password !== undefined) {
     body.password = input.password;
+  }
+  if (input.currentPassword !== undefined) {
+    body.currentPassword = input.currentPassword;
   }
   if (input.membershipId !== undefined) body.membershipId = input.membershipId;
   if (input.billingInterval !== undefined && input.billingInterval !== null) {

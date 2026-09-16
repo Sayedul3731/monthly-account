@@ -161,6 +161,22 @@ export class AuthService {
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto): Promise<User> {
+    if (dto.password !== undefined) {
+      const user = await this.usersService.findByIdForEmailChange(userId);
+      if (!user?.password) {
+        throw new BadRequestException(
+          'Password changes are unavailable for accounts without a password.',
+        );
+      }
+
+      if (
+        !dto.currentPassword ||
+        !(await bcrypt.compare(dto.currentPassword, user.password))
+      ) {
+        throw new UnauthorizedException('Current password is incorrect');
+      }
+    }
+
     const user = await this.usersService.update(userId, {
       name: dto.name,
       password: dto.password,
