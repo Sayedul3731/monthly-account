@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   fetchBudgets,
   fetchTransactions,
@@ -53,12 +53,14 @@ export default function MonthlyAccount() {
   const [month, setMonth] = useState(today.getMonth());
   const [tab, setTab] = useState<Tab>("overview");
   const [editing, setEditing] = useState<Transaction | null>(null);
+  const [focusTransactionForm, setFocusTransactionForm] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
   const [sessionUser, setSessionUser] = useState<ReturnType<
     typeof getStoredUser
   >>(null);
   const [authReady, setAuthReady] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const transactionFormRef = useRef<HTMLDivElement>(null);
 
   async function handleSignOut() {
     if (signingOut) return;
@@ -124,6 +126,22 @@ export default function MonthlyAccount() {
       cancelled = true;
     };
   }, [authReady, month, showToast, signedIn, year]);
+
+  useEffect(() => {
+    if (!focusTransactionForm || tab !== "transactions") return;
+
+    const frameId = window.requestAnimationFrame(() => {
+      transactionFormRef.current?.scrollIntoView({
+        block: "start",
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
+      });
+      setFocusTransactionForm(false);
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [focusTransactionForm, tab]);
 
   const stats = useMemo(() => summarize(transactions), [transactions]);
   const hasIncome = stats.income > 0;
@@ -194,7 +212,25 @@ export default function MonthlyAccount() {
   function handleEdit(transaction: Transaction) {
     setEditing(transaction);
     setTab("transactions");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    setFocusTransactionForm(true);
+  }
+
+  function showTransactions() {
+    setTab("transactions");
+    window.requestAnimationFrame(() => {
+      window.scrollTo({
+        top: 0,
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
+      });
+    });
+  }
+
+  function openNewTransaction() {
+    setEditing(null);
+    setTab("transactions");
+    setFocusTransactionForm(true);
   }
 
   const header = (
@@ -270,7 +306,9 @@ export default function MonthlyAccount() {
           <button
             key={id}
             type="button"
-            onClick={() => setTab(id)}
+            onClick={() =>
+              id === "transactions" ? openNewTransaction() : setTab(id)
+            }
             className={`shrink-0 rounded-lg px-3 py-2 text-sm font-medium transition ${
               tab === id
                 ? "bg-brand text-white shadow-sm shadow-brand/20"
@@ -448,7 +486,7 @@ export default function MonthlyAccount() {
               {transactions.length > 0 && (
                 <button
                   type="button"
-                  onClick={() => setTab("transactions")}
+                  onClick={showTransactions}
                   className="text-sm font-medium text-brand hover:text-brand-deep dark:text-gold"
                 >
                   View all
@@ -469,7 +507,7 @@ export default function MonthlyAccount() {
                 </p>
                 <button
                   type="button"
-                  onClick={() => setTab("transactions")}
+                  onClick={openNewTransaction}
                   className="mt-4 inline-flex items-center justify-center rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-brand/20 transition hover:bg-brand-deep"
                 >
                   Add a transaction
@@ -518,15 +556,17 @@ export default function MonthlyAccount() {
       {tab === "transactions" &&
         (signedIn ? (
           <div className="space-y-6">
-            <TransactionForm
-              key={editing?.id ?? "new"}
-              year={year}
-              month={month}
-              editing={editing}
-              onSaved={handleSaved}
-              onCancelEdit={() => setEditing(null)}
-              onError={(message) => showToast(message, { kind: "error" })}
-            />
+            <div ref={transactionFormRef} className="scroll-mt-20">
+              <TransactionForm
+                key={editing?.id ?? "new"}
+                year={year}
+                month={month}
+                editing={editing}
+                onSaved={handleSaved}
+                onCancelEdit={() => setEditing(null)}
+                onError={(message) => showToast(message, { kind: "error" })}
+              />
+            </div>
             <TransactionList
               transactions={transactions}
               onEdit={handleEdit}
