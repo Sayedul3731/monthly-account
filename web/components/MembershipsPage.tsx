@@ -19,7 +19,7 @@ import {
 } from "@/lib/auth";
 import { formatCurrency } from "@/lib/finance";
 import AppHeader from "./AppHeader";
-import { ChevronLeft, SpinnerIcon } from "./icons";
+import { CheckIcon, ChevronLeft, SpinnerIcon } from "./icons";
 
 function membershipLabel(membership?: AuthUser["membership"]): string {
   if (!membership?.name) return "Free";
@@ -53,11 +53,6 @@ function intervalPrice(
 function formatMembershipPrice(value: unknown): string {
   const price = Number(value);
   return Number.isFinite(price) && price >= 0 ? formatCurrency(price) : "—";
-}
-
-function priceLabel(membership: Membership): string {
-  if (membership.type === "free") return "Free";
-  return `${formatCurrency(membership.monthlyPrice)} / month · ${formatCurrency(membership.quarterlyPrice)} / quarter · ${formatCurrency(membership.yearlyPrice)} / year`;
 }
 
 function currentPlanDetail(user: AuthUser): string {
@@ -210,7 +205,7 @@ export default function MembershipsPage() {
           onSignOut={handleSignOut}
         />
 
-        <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
+        <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
         <div className="mb-6">
           <h1 className="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl dark:text-white">
             Membership
@@ -250,160 +245,163 @@ export default function MembershipsPage() {
           </div>
         )}
 
-        <section className="overflow-hidden rounded-2xl border border-zinc-200/80 bg-white/90 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.04)] backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-900/90 dark:shadow-[0_1px_2px_rgba(0,0,0,0.2),0_8px_24px_rgba(0,0,0,0.25)]">
-          <div className="border-b border-zinc-200 px-6 py-5 dark:border-zinc-800">
-            <h3 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-white">
-              Plans
-            </h3>
-            <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-              Every paid option includes the same premium access. Choose the
-              billing cadence that fits you best.
+        <section>
+          <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h3 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-white">
+                Choose your plan
+              </h3>
+              <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                Every paid schedule includes the same premium access.
+              </p>
+            </div>
+            <p className="text-xs font-medium text-zinc-400 dark:text-zinc-500">
+              Change or cancel your plan anytime
             </p>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[32rem] text-left text-sm">
-              <thead className="bg-zinc-50 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:bg-zinc-950/60 dark:text-zinc-400">
-                <tr>
-                  <th className="px-6 py-3">Name</th>
-                  <th className="px-6 py-3">Type</th>
-                  <th className="px-6 py-3">Price</th>
-                  <th className="px-6 py-3">Description</th>
-                  <th className="px-6 py-3 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                {plans.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={5}
-                      className="px-6 py-8 text-center text-zinc-500 dark:text-zinc-400"
+          {plans.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-zinc-300 bg-white/70 px-6 py-10 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900/70 dark:text-zinc-400">
+              No membership plans are available yet.
+            </div>
+          ) : (
+            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+              {plans.flatMap((plan) => {
+                if (plan.type === "free") {
+                  const isCurrent = plan.id === currentId;
+                  const isSwitching = switchingKey === `${plan.id}:free`;
+
+                  return (
+                    <article
+                      key={plan.id}
+                      className="flex min-h-[27rem] flex-col rounded-3xl border border-zinc-200/90 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_12px_28px_rgba(0,0,0,0.05)] sm:p-7 dark:border-zinc-800 dark:bg-zinc-900"
                     >
-                      No membership plans are available yet.
-                    </td>
-                  </tr>
-                ) : (
-                  plans.map((plan) => {
-                    const isPaid = plan.type === "paid";
-                    const isCurrentFree =
-                      !isPaid && plan.id === currentId;
-                    const isCurrentMonthly =
-                      isPaid &&
-                      plan.id === currentId &&
-                      user.billingInterval === "monthly";
-                    const isCurrentQuarterly =
-                      isPaid &&
-                      plan.id === currentId &&
-                      user.billingInterval === "quarterly";
-                    const isCurrentYearly =
-                      isPaid &&
-                      plan.id === currentId &&
-                      user.billingInterval === "yearly";
-
-                    function actionButton(
-                      label: string,
-                      interval?: BillingInterval,
-                      isCurrent = false,
-                    ) {
-                      const actionKey = `${plan.id}:${interval ?? "free"}`;
-                      const isSwitching = switchingKey === actionKey;
-
-                      if (isCurrent) {
-                        return (
-                          <span className="inline-flex rounded-lg bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
-                            Current
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <span className="inline-flex rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-700 ring-1 ring-zinc-200 dark:bg-zinc-800 dark:text-zinc-200 dark:ring-zinc-700">
+                            {typeLabel(plan.type)} plan
                           </span>
-                        );
-                      }
-
-                      return (
-                        <button
-                          type="button"
-                          onClick={() => handleSelect(plan, interval)}
-                          disabled={Boolean(switchingKey)}
-                          className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          {isSwitching ? (
-                            <>
-                              <SpinnerIcon className="animate-spin" />
-                              Switching…
-                            </>
-                          ) : (
-                            label
-                          )}
-                        </button>
-                      );
-                    }
-
-                    return (
-                      <tr
-                        key={plan.id}
-                        className="bg-white dark:bg-zinc-900"
+                          <h4 className="mt-4 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">
+                            {plan.name}
+                          </h4>
+                        </div>
+                        {isCurrent && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:ring-emerald-900">
+                            <CheckIcon /> Current
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-3 min-h-12 text-sm leading-6 text-zinc-500 dark:text-zinc-400">
+                        {plan.description || "A simple way to keep your account active with no subscription cost."}
+                      </p>
+                      <div className="mt-6 rounded-xl border border-zinc-200 bg-zinc-50/70 px-4 py-3 dark:border-zinc-700 dark:bg-zinc-950/40">
+                        <span className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">Free</span>
+                        <span className="ml-1.5 text-sm text-zinc-500 dark:text-zinc-400">forever</span>
+                      </div>
+                      <ul className="mt-6 space-y-2.5 text-sm text-zinc-600 dark:text-zinc-300">
+                        {["No subscription cost", "Keep access to your account", "Switch to premium whenever you are ready"].map((feature) => (
+                          <li key={feature} className="flex items-center gap-2.5">
+                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"><CheckIcon /></span>
+                            {feature}
+                          </li>
+                        ))}
+                      </ul>
+                      <button
+                        type="button"
+                        onClick={() => handleSelect(plan)}
+                        disabled={Boolean(switchingKey) || isCurrent}
+                        className={`mt-auto inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-default ${
+                          isCurrent
+                            ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:ring-emerald-900"
+                            : "bg-zinc-900 text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+                        }`}
                       >
-                        <td className="px-6 py-4 font-semibold text-zinc-900 dark:text-white">
-                          {plan.name}
-                        </td>
-                        <td className="px-6 py-4">
-                          <span
-                            className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ring-1 ${
-                              isPaid
-                                ? "bg-amber-50 text-amber-800 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-200 dark:ring-amber-900"
-                                : "bg-zinc-100 text-zinc-700 ring-zinc-200 dark:bg-zinc-800 dark:text-zinc-200 dark:ring-zinc-700"
-                            }`}
-                          >
-                            {typeLabel(plan.type)}
+                        {isSwitching ? <><SpinnerIcon className="animate-spin" /> Switching…</> : isCurrent ? <><CheckIcon /> Current plan</> : "Choose Free"}
+                      </button>
+                    </article>
+                  );
+                }
+
+                const billingOptions: Array<{
+                  interval: BillingInterval;
+                  label: string;
+                  price: number;
+                  note: string;
+                }> = [
+                  { interval: "monthly", label: "Monthly", price: plan.monthlyPrice, note: "Maximum flexibility" },
+                  { interval: "quarterly", label: "Quarterly", price: plan.quarterlyPrice, note: "A balanced commitment" },
+                  { interval: "yearly", label: "Yearly", price: plan.yearlyPrice, note: "Best for long-term planning" },
+                ];
+
+                return billingOptions.map(({ interval, label, price, note }) => {
+                  const isCurrent = plan.id === currentId && user.billingInterval === interval;
+                  const actionKey = `${plan.id}:${interval}`;
+                  const isSwitching = switchingKey === actionKey;
+                  const isFeatured = interval === "yearly";
+
+                  return (
+                    <article
+                      key={actionKey}
+                      className={`relative flex min-h-[27rem] flex-col overflow-hidden rounded-3xl border bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_12px_28px_rgba(0,0,0,0.05)] sm:p-7 dark:bg-zinc-900 ${
+                        isFeatured
+                          ? "border-brand/35 ring-1 ring-brand/15 dark:border-gold/35 dark:ring-gold/15"
+                          : "border-zinc-200/90 dark:border-zinc-800"
+                      }`}
+                    >
+                      {isFeatured && (
+                        <div className="absolute right-0 top-0 rounded-bl-2xl bg-brand px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-gold">
+                          Best value
+                        </div>
+                      )}
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <span className="inline-flex rounded-full bg-gold/10 px-2.5 py-1 text-xs font-semibold text-brand-deep ring-1 ring-gold/30 dark:text-gold">
+                            Premium · {label}
                           </span>
-                        </td>
-                        <td className="whitespace-nowrap px-6 py-4 text-zinc-700 dark:text-zinc-300">
-                          {isPaid ? (
-                            <div className="flex flex-col gap-0.5">
-                              <span>
-                                {formatMembershipPrice(plan.monthlyPrice)} / month
-                              </span>
-                              <span>
-                                {formatMembershipPrice(plan.quarterlyPrice)} / quarter
-                              </span>
-                              <span>
-                                {formatMembershipPrice(plan.yearlyPrice)} / year
-                              </span>
-                            </div>
-                          ) : (
-                            priceLabel(plan)
-                          )}
-                        </td>
-                        <td className="max-w-[14rem] px-6 py-4 text-zinc-500 dark:text-zinc-400">
-                          {plan.description || "—"}
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          {isPaid ? (
-                            <div className="flex flex-col items-end gap-2">
-                              {actionButton(
-                                "Choose monthly",
-                                "monthly",
-                                isCurrentMonthly,
-                              )}
-                              {actionButton(
-                                "Choose quarterly",
-                                "quarterly",
-                                isCurrentQuarterly,
-                              )}
-                              {actionButton(
-                                "Choose yearly",
-                                "yearly",
-                                isCurrentYearly,
-                              )}
-                            </div>
-                          ) : (
-                            actionButton("Switch", undefined, isCurrentFree)
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+                          <h4 className="mt-4 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">
+                            {plan.name}
+                          </h4>
+                        </div>
+                        {isCurrent && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:ring-emerald-900">
+                            <CheckIcon /> Current
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-3 min-h-12 text-sm leading-6 text-zinc-500 dark:text-zinc-400">
+                        {plan.description || "Premium access with a billing schedule that works for you."}
+                      </p>
+                      <div className="mt-6 rounded-xl border border-brand/15 bg-brand/[0.03] px-4 py-4 dark:border-gold/20 dark:bg-gold/[0.04]">
+                        <span className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-white">{formatMembershipPrice(price)}</span>
+                        <span className="ml-1.5 text-sm text-zinc-500 dark:text-zinc-400">/ {intervalLabel(interval)}</span>
+                        <p className="mt-1 text-xs font-medium text-brand dark:text-gold">{note}</p>
+                      </div>
+                      <ul className="mt-6 space-y-2.5 text-sm text-zinc-600 dark:text-zinc-300">
+                        {["Premium access on every billing schedule", `Billed ${intervalLabel(interval)}`, "Switch schedules whenever you need"].map((feature) => (
+                          <li key={feature} className="flex items-center gap-2.5">
+                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand dark:bg-gold/10 dark:text-gold"><CheckIcon /></span>
+                            {feature}
+                          </li>
+                        ))}
+                      </ul>
+                      <button
+                        type="button"
+                        onClick={() => handleSelect(plan, interval)}
+                        disabled={Boolean(switchingKey) || isCurrent}
+                        className={`mt-auto inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-default ${
+                          isCurrent
+                            ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:ring-emerald-900"
+                            : "bg-brand text-white shadow-sm shadow-brand/20 hover:bg-brand-deep disabled:opacity-50"
+                        }`}
+                      >
+                        {isSwitching ? <><SpinnerIcon className="animate-spin" /> Switching…</> : isCurrent ? <><CheckIcon /> Current plan</> : `Choose ${label}`}
+                      </button>
+                    </article>
+                  );
+                });
+              })}
+            </div>
+          )}
         </section>
         </div>
       </div>
