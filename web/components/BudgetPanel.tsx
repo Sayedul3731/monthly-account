@@ -8,7 +8,7 @@ import {
   formatCurrency,
   type Transaction,
 } from "@/lib/finance";
-import { TrashIcon } from "./icons";
+import { EditIcon, MoreHorizontalIcon, TrashIcon } from "./icons";
 
 type Props = {
   year: number;
@@ -33,6 +33,7 @@ export default function BudgetPanel({
   >({});
   const [saving, setSaving] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
 
   const overallBudget = budgets.find((b) => !b.category);
   const categoryBudgets = budgets.filter((b) => b.category);
@@ -89,6 +90,7 @@ export default function BudgetPanel({
 
   function startEditing(category: string | null, amount: number) {
     const key = category ?? "__overall__";
+    setOpenMenu(null);
     setEditing(key);
 
     if (category === null) setOverallAmount(String(amount));
@@ -102,6 +104,7 @@ export default function BudgetPanel({
   }
 
   async function removeBudget(id: string) {
+    setOpenMenu(null);
     try {
       await deleteBudget(id);
       onBudgetsChange(budgets.filter((b) => b.id !== id));
@@ -131,25 +134,52 @@ export default function BudgetPanel({
               <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
                 Overall limit
               </span>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-zinc-900 dark:text-white">
+              <div className="flex items-center gap-3">
+                <span className="font-semibold tabular-nums text-zinc-900 dark:text-white">
                   {formatCurrency(overallBudget.amount)}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => startEditing(null, overallBudget.amount)}
-                  className="text-xs font-semibold text-brand hover:text-brand-deep dark:text-gold"
-                >
-                  Edit
-                </button>
-                <button
-                  type="button"
-                  onClick={() => removeBudget(overallBudget.id)}
-                  className="rounded p-1 text-zinc-400 hover:text-rose-600"
-                  aria-label="Remove overall budget"
-                >
-                  <TrashIcon />
-                </button>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setOpenMenu((current) =>
+                        current === overallBudget.id ? null : overallBudget.id,
+                      )
+                    }
+                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-500 shadow-sm transition hover:bg-zinc-50 hover:text-zinc-900 focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"
+                    aria-label="Budget actions"
+                    aria-haspopup="menu"
+                    aria-expanded={openMenu === overallBudget.id}
+                    title="Budget actions"
+                  >
+                    <MoreHorizontalIcon />
+                  </button>
+                  {openMenu === overallBudget.id && (
+                    <div
+                      role="menu"
+                      className="absolute right-0 z-10 mt-1 w-36 overflow-hidden rounded-lg border border-zinc-200 bg-white p-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
+                    >
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => startEditing(null, overallBudget.amount)}
+                        className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs font-medium text-zinc-700 transition hover:bg-brand/5 hover:text-brand dark:text-zinc-200 dark:hover:bg-zinc-800 dark:hover:text-gold"
+                      >
+                        <EditIcon />
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => removeBudget(overallBudget.id)}
+                        className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs font-medium text-rose-600 transition hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/50"
+                      >
+                        <TrashIcon />
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
             {editing === "__overall__" ? (
@@ -268,25 +298,52 @@ export default function BudgetPanel({
                     {CATEGORY_ICONS[cat]} {cat}
                   </span>
                   {budget ? (
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="text-zinc-500">
+                    <div className="flex items-center gap-3 text-sm">
+                      <span className="tabular-nums text-zinc-500">
                         {formatCurrency(spent)} / {formatCurrency(budget.amount)}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => startEditing(cat, budget.amount)}
-                        className="text-xs font-semibold text-brand hover:text-brand-deep dark:text-gold"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => removeBudget(budget.id)}
-                        className="rounded p-1 text-zinc-400 hover:text-rose-600"
-                        aria-label={`Remove ${cat} budget`}
-                      >
-                        <TrashIcon />
-                      </button>
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setOpenMenu((current) =>
+                              current === budget.id ? null : budget.id,
+                            )
+                          }
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-500 shadow-sm transition hover:bg-zinc-50 hover:text-zinc-900 focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"
+                          aria-label={`${cat} budget actions`}
+                          aria-haspopup="menu"
+                          aria-expanded={openMenu === budget.id}
+                          title={`${cat} budget actions`}
+                        >
+                          <MoreHorizontalIcon />
+                        </button>
+                        {openMenu === budget.id && (
+                          <div
+                            role="menu"
+                            className="absolute right-0 z-10 mt-1 w-36 overflow-hidden rounded-lg border border-zinc-200 bg-white p-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
+                          >
+                            <button
+                              type="button"
+                              role="menuitem"
+                              onClick={() => startEditing(cat, budget.amount)}
+                              className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs font-medium text-zinc-700 transition hover:bg-brand/5 hover:text-brand dark:text-zinc-200 dark:hover:bg-zinc-800 dark:hover:text-gold"
+                            >
+                              <EditIcon />
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              role="menuitem"
+                              onClick={() => removeBudget(budget.id)}
+                              className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs font-medium text-rose-600 transition hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/50"
+                            >
+                              <TrashIcon />
+                              Delete
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ) : null}
                 </div>
