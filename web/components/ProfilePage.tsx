@@ -217,7 +217,7 @@ export default function ProfilePage() {
           currentPassword,
         });
         setCurrentPassword("");
-        setEmail(updated.email);
+        setEmail(updated?.email ?? "");
       }
 
       setProfileSuccess(
