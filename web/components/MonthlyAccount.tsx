@@ -16,7 +16,7 @@ import {
   type Transaction,
 } from "@/lib/finance";
 import AppHeader from "./AppHeader";
-// import BudgetPanel from "./BudgetPanel";
+import BudgetPanel from "./BudgetPanel";
 import CategoryChart from "./CategoryChart";
 // import ExportImportPanel from "./ExportImportPanel";
 import {
@@ -34,14 +34,13 @@ import CalendarView from "./CalendarView";
 
 const today = new Date();
 
-type Tab = "overview" | "transactions" | "calendar"; // | "budgets" | "data";
+type Tab = "overview" | "transactions" | "calendar" | "budgets";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "overview", label: "Overview" },
   { id: "transactions", label: "Transactions" },
   { id: "calendar", label: "Calender View" },
-  // { id: "budgets", label: "Budgets" },
-  // { id: "data", label: "Export / Import" },
+  { id: "budgets", label: "Budgets" },
 ];
 
 export default function MonthlyAccount() {
@@ -557,28 +556,27 @@ export default function MonthlyAccount() {
           </section>
         ))}
 
-      {/*
       {tab === "budgets" && (
-        <BudgetPanel
-          year={year}
-          month={month}
-          budgets={budgets}
-          transactions={transactions}
-          onBudgetsChange={setBudgets}
-          onError={setError}
-        />
+        signedIn ? (
+          <BudgetPanel
+            year={year}
+            month={month}
+            budgets={budgets}
+            transactions={transactions}
+            onBudgetsChange={setBudgets}
+            onError={(message) => showToast(message, { kind: "error" })}
+          />
+        ) : (
+          <section className="rounded-2xl border border-brand/10 bg-white p-5 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <h2 className="text-base font-semibold text-brand dark:text-white">
+              Budgets
+            </h2>
+            <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+              Sign in to set and track your monthly budgets.
+            </p>
+          </section>
+        )
       )}
-
-      {tab === "data" && (
-        <ExportImportPanel
-          year={year}
-          month={month}
-          transactions={transactions}
-          onImported={loadData}
-          onError={setError}
-        />
-      )}
-      */}
     </div>
     </>
   );

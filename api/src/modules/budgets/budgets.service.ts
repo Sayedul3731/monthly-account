@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { notDeleted } from '../../infrastructure/database/schema.helpers';
+import {
+  asPlain,
+  asPlainList,
+  notDeleted,
+} from '../../infrastructure/database/schema.helpers';
 import { UpsertBudgetDto } from './dto/upsert-budget.dto';
 import { Budget, BudgetDocument } from './budget.schema';
 
@@ -12,14 +16,16 @@ export class BudgetsService {
     private readonly budgetModel: Model<BudgetDocument>,
   ) {}
 
-  findAll(year: number, month: number): Promise<Budget[]> {
-    return this.budgetModel
+  async findAll(year: number, month: number): Promise<Budget[]> {
+    const budgets = await this.budgetModel
       .find(notDeleted({ year, month }))
       .sort({ category: 1 })
       .exec();
+
+    return asPlainList<Budget>(budgets);
   }
 
-  async upsert(dto: UpsertBudgetDto): Promise<BudgetDocument> {
+  async upsert(dto: UpsertBudgetDto): Promise<Budget> {
     const category = dto.category?.trim() ? dto.category.trim() : '';
 
     const existing = await this.budgetModel
@@ -28,15 +34,17 @@ export class BudgetsService {
 
     if (existing) {
       existing.amount = dto.amount;
-      return existing.save();
+      return asPlain<Budget>(await existing.save());
     }
 
-    return this.budgetModel.create({
+    const budget = await this.budgetModel.create({
       year: dto.year,
       month: dto.month,
       category,
       amount: dto.amount,
     });
+
+    return asPlain<Budget>(budget);
   }
 
   async remove(id: string): Promise<void> {

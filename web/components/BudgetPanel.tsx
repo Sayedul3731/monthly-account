@@ -28,8 +28,11 @@ export default function BudgetPanel({
   onError,
 }: Props) {
   const [overallAmount, setOverallAmount] = useState("");
-  const [categoryAmounts, setCategoryAmounts] = useState<Record<string, string>>({});
+  const [categoryAmounts, setCategoryAmounts] = useState<
+    Record<string, string>
+  >({});
   const [saving, setSaving] = useState<string | null>(null);
+  const [editing, setEditing] = useState<string | null>(null);
 
   const overallBudget = budgets.find((b) => !b.category);
   const categoryBudgets = budgets.filter((b) => b.category);
@@ -53,7 +56,10 @@ export default function BudgetPanel({
 
   async function saveBudget(category: string | null, amountStr: string) {
     const amount = parseFloat(amountStr);
-    if (!amount || amount <= 0) return;
+    if (!Number.isFinite(amount) || amount <= 0) {
+      onError("Enter a budget greater than zero.");
+      return;
+    }
 
     const key = category ?? "__overall__";
     setSaving(key);
@@ -73,11 +79,26 @@ export default function BudgetPanel({
       ]);
       if (category === null) setOverallAmount("");
       else setCategoryAmounts((prev) => ({ ...prev, [category]: "" }));
+      setEditing(null);
     } catch (err) {
       onError(err instanceof Error ? err.message : "Failed to save budget");
     } finally {
       setSaving(null);
     }
+  }
+
+  function startEditing(category: string | null, amount: number) {
+    const key = category ?? "__overall__";
+    setEditing(key);
+
+    if (category === null) setOverallAmount(String(amount));
+    else setCategoryAmounts((prev) => ({ ...prev, [category]: String(amount) }));
+  }
+
+  function cancelEditing(category: string | null) {
+    setEditing(null);
+    if (category === null) setOverallAmount("");
+    else setCategoryAmounts((prev) => ({ ...prev, [category]: "" }));
   }
 
   async function removeBudget(id: string) {
@@ -116,6 +137,13 @@ export default function BudgetPanel({
                 </span>
                 <button
                   type="button"
+                  onClick={() => startEditing(null, overallBudget.amount)}
+                  className="text-xs font-semibold text-brand hover:text-brand-deep dark:text-gold"
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
                   onClick={() => removeBudget(overallBudget.id)}
                   className="rounded p-1 text-zinc-400 hover:text-rose-600"
                   aria-label="Remove overall budget"
@@ -124,22 +152,60 @@ export default function BudgetPanel({
                 </button>
               </div>
             </div>
-            <div className="mb-1 flex justify-between text-xs text-zinc-500">
-              <span>Spent {formatCurrency(expenseTotal)}</span>
-              <span>{overallProgress.toFixed(0)}%</span>
-            </div>
-            <div className="h-2.5 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
-              <div
-                className={`h-full rounded-full transition-all ${
-                  overallProgress >= 100 ? "bg-rose-500" : "bg-brand"
-                }`}
-                style={{ width: `${overallProgress}%` }}
-              />
-            </div>
-            {overallProgress >= 100 && (
-              <p className="mt-2 text-xs font-medium text-rose-600 dark:text-rose-400">
-                Budget exceeded by {formatCurrency(expenseTotal - overallBudget.amount)}
-              </p>
+            {editing === "__overall__" ? (
+              <form
+                className="flex gap-2"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void saveBudget(null, overallAmount);
+                }}
+              >
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={overallAmount}
+                  onChange={(event) => setOverallAmount(event.target.value)}
+                  aria-label="Overall budget"
+                  className="min-w-0 flex-1 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:border-brand dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
+                />
+                <button
+                  type="submit"
+                  disabled={saving === "__overall__"}
+                  className="rounded-lg bg-brand px-3 py-2 text-xs font-semibold text-white hover:bg-brand-deep disabled:opacity-60"
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  onClick={() => cancelEditing(null)}
+                  className="rounded-lg px-3 py-2 text-xs font-semibold text-zinc-600 hover:bg-zinc-200 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                >
+                  Cancel
+                </button>
+              </form>
+            ) : (
+              <>
+                <div className="mb-1 flex justify-between text-xs text-zinc-500">
+                  <span>Spent {formatCurrency(expenseTotal)}</span>
+                  <span>{overallProgress.toFixed(0)}%</span>
+                </div>
+                <div className="h-2.5 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
+                  <div
+                    className={`h-full rounded-full transition-all ${
+                      overallProgress >= 100 ? "bg-rose-500" : "bg-brand"
+                    }`}
+                    style={{ width: `${overallProgress}%` }}
+                  />
+                </div>
+                {overallProgress >= 100 && (
+                  <p className="mt-2 text-xs font-medium text-rose-600 dark:text-rose-400">
+                    Budget exceeded by {formatCurrency(
+                      expenseTotal - overallBudget.amount,
+                    )}
+                  </p>
+                )}
+              </>
             )}
           </div>
         ) : (
@@ -147,7 +213,7 @@ export default function BudgetPanel({
             className="mb-4 flex gap-2"
             onSubmit={(e) => {
               e.preventDefault();
-              saveBudget(null, overallAmount);
+              void saveBudget(null, overallAmount);
             }}
           >
             <div className="relative flex-1">
@@ -208,6 +274,13 @@ export default function BudgetPanel({
                       </span>
                       <button
                         type="button"
+                        onClick={() => startEditing(cat, budget.amount)}
+                        className="text-xs font-semibold text-brand hover:text-brand-deep dark:text-gold"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => removeBudget(budget.id)}
                         className="rounded p-1 text-zinc-400 hover:text-rose-600"
                         aria-label={`Remove ${cat} budget`}
@@ -218,7 +291,44 @@ export default function BudgetPanel({
                   ) : null}
                 </div>
 
-                {budget ? (
+                {budget && editing === cat ? (
+                  <form
+                    className="flex gap-2"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      void saveBudget(cat, categoryAmounts[cat] ?? "");
+                    }}
+                  >
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={categoryAmounts[cat] ?? ""}
+                      onChange={(event) =>
+                        setCategoryAmounts((prev) => ({
+                          ...prev,
+                          [cat]: event.target.value,
+                        }))
+                      }
+                      aria-label={`${cat} budget`}
+                      className="min-w-0 flex-1 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-brand dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                    />
+                    <button
+                      type="submit"
+                      disabled={saving === cat}
+                      className="rounded-lg bg-brand px-3 py-2 text-xs font-semibold text-white hover:bg-brand-deep disabled:opacity-60"
+                    >
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => cancelEditing(cat)}
+                      className="rounded-lg px-3 py-2 text-xs font-semibold text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                    >
+                      Cancel
+                    </button>
+                  </form>
+                ) : budget ? (
                   <div className="h-2 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
                     <div
                       className={`h-full rounded-full ${
@@ -232,7 +342,7 @@ export default function BudgetPanel({
                     className="flex gap-2"
                     onSubmit={(e) => {
                       e.preventDefault();
-                      saveBudget(cat, categoryAmounts[cat] ?? "");
+                      void saveBudget(cat, categoryAmounts[cat] ?? "");
                     }}
                   >
                     <div className="relative flex-1">

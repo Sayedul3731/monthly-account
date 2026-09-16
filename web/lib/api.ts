@@ -521,10 +521,16 @@ function normalizeTransaction(raw: RawTransaction): Transaction {
   };
 }
 
-function normalizeBudget(raw: Budget): Budget {
+function normalizeBudget(raw: Budget): Budget | null {
+  const amount = Number(raw.amount);
+
+  // Older or manually-created records can be missing an amount. Do not let
+  // those records reach the UI as `NaN` currency values.
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+
   return {
     ...raw,
-    amount: Number(raw.amount),
+    amount,
   };
 }
 
@@ -809,7 +815,9 @@ export async function fetchBudgets(
     month: String(month),
   });
   const data = await request<Budget[]>(`/budgets?${params}`);
-  return data.map(normalizeBudget);
+  return data
+    .map(normalizeBudget)
+    .filter((budget): budget is Budget => budget !== null);
 }
 
 export async function upsertBudget(
@@ -819,7 +827,13 @@ export async function upsertBudget(
     method: "POST",
     body: JSON.stringify(input),
   });
-  return normalizeBudget(data);
+  const budget = normalizeBudget(data);
+
+  if (!budget) {
+    throw new Error("The server returned an invalid budget amount.");
+  }
+
+  return budget;
 }
 
 export async function deleteBudget(id: string): Promise<void> {
