@@ -401,7 +401,7 @@ export default function MonthlyAccount() {
                 Saved
               </p>
               <p className="mt-1 text-base font-semibold tabular-nums text-brand dark:text-white">
-                {stats.income > 0 ? `${stats.savingsRate.toFixed(0)}%` : "—"}
+                {stats.income > 0 ? `${stats.savingsRate.toFixed(0)}%` : "0%"}
               </p>
             </div>
             <div className="rounded-2xl border border-brand/10 bg-white p-3.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
@@ -417,12 +417,18 @@ export default function MonthlyAccount() {
             </div>
             <div className="rounded-2xl border border-brand/10 bg-white p-3.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-                Budget
+                {budgetRemaining !== null && budgetRemaining < 0
+                  ? "Over budget"
+                  : "Budget left"}
               </p>
-              <p className="mt-1 text-base font-semibold tabular-nums text-brand dark:text-white">
-                {budgetRemaining === null
-                  ? "None"
-                  : formatCurrency(budgetRemaining)}
+              <p
+                className={`mt-1 text-base font-semibold tabular-nums ${
+                  budgetRemaining !== null && budgetRemaining < 0
+                    ? "text-rose-600 dark:text-rose-400"
+                    : "text-brand dark:text-white"
+                }`}
+              >
+                {formatCurrency(Math.abs(budgetRemaining ?? 0))}
               </p>
             </div>
           </div>

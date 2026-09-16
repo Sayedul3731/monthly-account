@@ -37,6 +37,10 @@ export default function BudgetPanel({
 
   const overallBudget = budgets.find((b) => !b.category);
   const categoryBudgets = budgets.filter((b) => b.category);
+  const totalCategoryBudget = categoryBudgets.reduce(
+    (total, budget) => total + budget.amount,
+    0,
+  );
 
   const expenseTotal = useMemo(
     () =>
@@ -117,6 +121,9 @@ export default function BudgetPanel({
     overallBudget && overallBudget.amount > 0
       ? Math.min((expenseTotal / overallBudget.amount) * 100, 100)
       : 0;
+  const allocationDifference = overallBudget
+    ? overallBudget.amount - totalCategoryBudget
+    : null;
 
   return (
     <div className="space-y-6">
@@ -272,12 +279,49 @@ export default function BudgetPanel({
       </section>
 
       <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <h2 className="mb-1 text-base font-semibold text-zinc-900 dark:text-white">
-          Category budgets
-        </h2>
-        <p className="mb-4 text-sm text-zinc-500">
-          Set limits per expense category.
-        </p>
+        <div className="mb-4 flex items-end justify-between gap-4">
+          <div>
+            <h2 className="mb-1 text-base font-semibold text-zinc-900 dark:text-white">
+              Category budgets
+            </h2>
+            <p className="text-sm text-zinc-500">
+              Allocate your monthly budget across expense categories.
+            </p>
+          </div>
+          <div className="shrink-0 rounded-xl border border-brand/10 bg-brand/5 px-3 py-2 text-right dark:border-zinc-700 dark:bg-zinc-800">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              Allocated
+            </p>
+            <p className="text-sm font-bold tabular-nums text-brand dark:text-gold">
+              {formatCurrency(totalCategoryBudget)}
+              {overallBudget && (
+                <span className="font-medium text-zinc-400 dark:text-zinc-500">
+                  {` / ${formatCurrency(overallBudget.amount)}`}
+                </span>
+              )}
+            </p>
+          </div>
+        </div>
+
+        {allocationDifference === null ? (
+          <p className="mb-4 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-300">
+            Set an overall monthly budget to track how much is available to
+            allocate.
+          </p>
+        ) : allocationDifference < 0 ? (
+          <p
+            role="alert"
+            className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300"
+          >
+            Category allocations exceed your monthly budget by{" "}
+            {formatCurrency(Math.abs(allocationDifference))}.
+          </p>
+        ) : (
+          <p className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300">
+            {formatCurrency(allocationDifference)} remains available to
+            allocate.
+          </p>
+        )}
 
         <ul className="space-y-3">
           {EXPENSE_CATEGORIES.map((cat) => {
