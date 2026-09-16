@@ -21,7 +21,7 @@ export const DEFAULT_MEMBERSHIPS: Array<{
     type: MembershipType.PAID,
     description: 'Premium access with priority support and extra capacity.',
     monthlyPrice: 49,
-    quarterlyPrice: 149,
-    yearlyPrice: 399,
+    quarterlyPrice: 129,
+    yearlyPrice: 449,
   },
 ];

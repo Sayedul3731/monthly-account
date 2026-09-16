@@ -24,6 +24,7 @@ type FormState = {
   type: MembershipType;
   description: string;
   monthlyPrice: string;
+  quarterlyPrice: string;
   yearlyPrice: string;
 };
 
@@ -32,6 +33,7 @@ const EMPTY_FORM: FormState = {
   type: "free",
   description: "",
   monthlyPrice: "0",
+  quarterlyPrice: "0",
   yearlyPrice: "0",
 };
 
@@ -88,6 +90,7 @@ export default function MembershipsAdmin({ onError }: Props) {
       type: plan.type,
       description: plan.description ?? "",
       monthlyPrice: String(plan.monthlyPrice),
+      quarterlyPrice: String(plan.quarterlyPrice),
       yearlyPrice: String(plan.yearlyPrice),
     });
     setNameError(null);
@@ -116,10 +119,13 @@ export default function MembershipsAdmin({ onError }: Props) {
     }
 
     const monthlyPrice = Number(form.monthlyPrice);
+    const quarterlyPrice = Number(form.quarterlyPrice);
     const yearlyPrice = Number(form.yearlyPrice);
     if (
       !Number.isFinite(monthlyPrice) ||
       monthlyPrice < 0 ||
+      !Number.isFinite(quarterlyPrice) ||
+      quarterlyPrice < 0 ||
       !Number.isFinite(yearlyPrice) ||
       yearlyPrice < 0
     ) {
@@ -135,6 +141,7 @@ export default function MembershipsAdmin({ onError }: Props) {
           type: form.type,
           description: form.description,
           monthlyPrice,
+          quarterlyPrice,
           yearlyPrice,
         });
         setPlans((prev) =>
@@ -147,6 +154,7 @@ export default function MembershipsAdmin({ onError }: Props) {
           type: form.type,
           description: form.description,
           monthlyPrice,
+          quarterlyPrice,
           yearlyPrice,
         });
         setPlans((prev) => [...prev, created]);
@@ -295,6 +303,24 @@ export default function MembershipsAdmin({ onError }: Props) {
             </div>
             <div>
               <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Quarterly price (BDT)
+              </label>
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                value={form.quarterlyPrice}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    quarterlyPrice: e.target.value,
+                  }))
+                }
+                className={fieldClass(false)}
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
                 Yearly price (BDT)
               </label>
               <input
@@ -376,6 +402,9 @@ export default function MembershipsAdmin({ onError }: Props) {
                         <div className="flex flex-col gap-0.5">
                           <span>
                             {formatCurrency(plan.monthlyPrice)} / month
+                          </span>
+                          <span>
+                            {formatCurrency(plan.quarterlyPrice)} / quarter
                           </span>
                           <span>
                             {formatCurrency(plan.yearlyPrice)} / year

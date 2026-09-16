@@ -274,14 +274,15 @@ export default function MembershipsPage() {
                   return (
                     <article
                       key={plan.id}
-                      className="flex min-h-[27rem] flex-col rounded-3xl border border-zinc-200/90 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_12px_28px_rgba(0,0,0,0.05)] sm:p-7 dark:border-zinc-800 dark:bg-zinc-900"
+                      className="relative flex min-h-[29rem] flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_12px_28px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_16px_36px_rgba(0,0,0,0.08)] sm:p-7 dark:border-zinc-800 dark:bg-zinc-900"
                     >
+                      <div aria-hidden className="absolute inset-x-0 top-0 h-1 bg-zinc-300 dark:bg-zinc-700" />
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <span className="inline-flex rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-700 ring-1 ring-zinc-200 dark:bg-zinc-800 dark:text-zinc-200 dark:ring-zinc-700">
+                          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500 dark:text-zinc-400">
                             {typeLabel(plan.type)} plan
-                          </span>
-                          <h4 className="mt-4 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">
+                          </p>
+                          <h4 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">
                             {plan.name}
                           </h4>
                         </div>
@@ -294,11 +295,11 @@ export default function MembershipsPage() {
                       <p className="mt-3 min-h-12 text-sm leading-6 text-zinc-500 dark:text-zinc-400">
                         {plan.description || "A simple way to keep your account active with no subscription cost."}
                       </p>
-                      <div className="mt-6 rounded-xl border border-zinc-200 bg-zinc-50/70 px-4 py-3 dark:border-zinc-700 dark:bg-zinc-950/40">
-                        <span className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">Free</span>
-                        <span className="ml-1.5 text-sm text-zinc-500 dark:text-zinc-400">forever</span>
+                      <div className="my-6 border-y border-zinc-100 py-5 dark:border-zinc-800">
+                        <span className="text-4xl font-semibold tracking-[-0.04em] text-zinc-900 dark:text-white">৳0</span>
+                        <span className="ml-1.5 text-sm font-medium text-zinc-500 dark:text-zinc-400">/ forever</span>
                       </div>
-                      <ul className="mt-6 space-y-2.5 text-sm text-zinc-600 dark:text-zinc-300">
+                      <ul className="space-y-3 text-sm text-zinc-700 dark:text-zinc-300">
                         {["No subscription cost", "Keep access to your account", "Switch to premium whenever you are ready"].map((feature) => (
                           <li key={feature} className="flex items-center gap-2.5">
                             <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"><CheckIcon /></span>
@@ -326,28 +327,45 @@ export default function MembershipsPage() {
                   interval: BillingInterval;
                   label: string;
                   price: number;
-                  note: string;
                 }> = [
-                  { interval: "monthly", label: "Monthly", price: plan.monthlyPrice, note: "Maximum flexibility" },
-                  { interval: "quarterly", label: "Quarterly", price: plan.quarterlyPrice, note: "A balanced commitment" },
-                  { interval: "yearly", label: "Yearly", price: plan.yearlyPrice, note: "Best for long-term planning" },
+                  { interval: "monthly", label: "Monthly", price: plan.monthlyPrice },
+                  { interval: "quarterly", label: "Quarterly", price: plan.quarterlyPrice },
+                  { interval: "yearly", label: "Yearly", price: plan.yearlyPrice },
                 ];
 
-                return billingOptions.map(({ interval, label, price, note }) => {
+                return billingOptions.map(({ interval, label, price }) => {
                   const isCurrent = plan.id === currentId && user.billingInterval === interval;
                   const actionKey = `${plan.id}:${interval}`;
                   const isSwitching = switchingKey === actionKey;
                   const isFeatured = interval === "yearly";
+                  const months = interval === "quarterly" ? 3 : interval === "yearly" ? 12 : 1;
+                  const savings = Math.max(0, plan.monthlyPrice * months - price);
+                  const note =
+                    savings > 0
+                      ? `Save ${formatMembershipPrice(savings)} vs monthly`
+                      : "Maximum flexibility";
+                  const term =
+                    interval === "quarterly"
+                      ? "3 months"
+                      : interval === "yearly"
+                        ? "12 months"
+                        : "1 month";
 
                   return (
                     <article
                       key={actionKey}
-                      className={`relative flex min-h-[27rem] flex-col overflow-hidden rounded-3xl border bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_12px_28px_rgba(0,0,0,0.05)] sm:p-7 dark:bg-zinc-900 ${
+                      className={`relative flex min-h-[29rem] flex-col overflow-hidden rounded-2xl border bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_12px_28px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_16px_36px_rgba(0,0,0,0.1)] sm:p-7 dark:bg-zinc-900 ${
                         isFeatured
-                          ? "border-brand/35 ring-1 ring-brand/15 dark:border-gold/35 dark:ring-gold/15"
-                          : "border-zinc-200/90 dark:border-zinc-800"
+                          ? "border-gold/70 bg-gradient-to-b from-gold/[0.08] via-white to-white ring-1 ring-gold/30 dark:border-gold/60 dark:from-gold/[0.08] dark:via-zinc-900 dark:to-zinc-900"
+                          : "border-zinc-200 dark:border-zinc-800"
                       }`}
                     >
+                      <div
+                        aria-hidden
+                        className={`absolute inset-x-0 top-0 h-1 ${
+                          isFeatured ? "bg-gold" : "bg-brand"
+                        }`}
+                      />
                       {isFeatured && (
                         <div className="absolute right-0 top-0 rounded-bl-2xl bg-brand px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-gold">
                           Best value
@@ -355,12 +373,18 @@ export default function MembershipsPage() {
                       )}
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <span className="inline-flex rounded-full bg-gold/10 px-2.5 py-1 text-xs font-semibold text-brand-deep ring-1 ring-gold/30 dark:text-gold">
+                          <span className="hidden">
                             Premium · {label}
                           </span>
-                          <h4 className="mt-4 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">
-                            {plan.name}
+                          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand dark:text-gold">
+                            Premium plan
+                          </p>
+                          <h4 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">
+                            {label}
                           </h4>
+                          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                            {term} of {plan.name} access
+                          </p>
                         </div>
                         {isCurrent && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:ring-emerald-900">
@@ -371,13 +395,22 @@ export default function MembershipsPage() {
                       <p className="mt-3 min-h-12 text-sm leading-6 text-zinc-500 dark:text-zinc-400">
                         {plan.description || "Premium access with a billing schedule that works for you."}
                       </p>
-                      <div className="mt-6 rounded-xl border border-brand/15 bg-brand/[0.03] px-4 py-4 dark:border-gold/20 dark:bg-gold/[0.04]">
-                        <span className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-white">{formatMembershipPrice(price)}</span>
-                        <span className="ml-1.5 text-sm text-zinc-500 dark:text-zinc-400">/ {intervalLabel(interval)}</span>
-                        <p className="mt-1 text-xs font-medium text-brand dark:text-gold">{note}</p>
+                      <div className="my-6 border-y border-zinc-100 py-5 dark:border-zinc-800">
+                        <div className="flex items-end justify-between gap-3">
+                          <div>
+                            <span className="text-4xl font-semibold tracking-[-0.04em] text-zinc-900 dark:text-white">{formatMembershipPrice(price)}</span>
+                            <span className="ml-1.5 text-sm font-medium text-zinc-500 dark:text-zinc-400">/ {term}</span>
+                          </div>
+                          {savings > 0 && (
+                            <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:ring-emerald-900">
+                              Save {formatMembershipPrice(savings)}
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-2 text-xs font-medium text-zinc-500 dark:text-zinc-400">{note}</p>
                       </div>
-                      <ul className="mt-6 space-y-2.5 text-sm text-zinc-600 dark:text-zinc-300">
-                        {["Premium access on every billing schedule", `Billed ${intervalLabel(interval)}`, "Switch schedules whenever you need"].map((feature) => (
+                      <ul className="space-y-3 text-sm text-zinc-700 dark:text-zinc-300">
+                        {["Full premium access", `One payment every ${term}`, "Switch schedules anytime"].map((feature) => (
                           <li key={feature} className="flex items-center gap-2.5">
                             <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand dark:bg-gold/10 dark:text-gold"><CheckIcon /></span>
                             {feature}
