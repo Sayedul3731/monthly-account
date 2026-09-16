@@ -5,6 +5,7 @@ import { ExpressAdapter } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import express from 'express';
 import { AppModule } from './app/app.module';
+import { requestTimingMiddleware } from './shared/middleware/request-timing.middleware';
 
 const expressApp = express();
 
@@ -30,6 +31,8 @@ async function bootstrapServer() {
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
+
+  app.use(requestTimingMiddleware);
 
   app.useGlobalPipes(
     new ValidationPipe({
