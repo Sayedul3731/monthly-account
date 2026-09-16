@@ -335,22 +335,22 @@ export default function MonthlyAccount() {
               }`}
             >
               {hasIncome && (
-                <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 backdrop-blur-sm">
-                  <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-white/70">
-                    <TrendUpIcon className="text-gold" />
+                <div className="rounded-2xl border border-emerald-300/25 bg-emerald-300/10 px-4 py-3 backdrop-blur-sm">
+                  <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-emerald-50/80">
+                    <TrendUpIcon className="text-emerald-200" />
                     Income
                   </p>
-                  <p className="mt-1 text-lg font-semibold">
+                  <p className="mt-1 text-lg font-semibold text-emerald-50">
                     {formatCurrency(stats.income)}
                   </p>
                 </div>
               )}
-              <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 backdrop-blur-sm">
-                <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-white/70">
+              <div className="rounded-2xl border border-rose-300/25 bg-rose-400/10 px-4 py-3 backdrop-blur-sm">
+                <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-rose-50/80">
                   <TrendDownIcon className="text-rose-200" />
                   {hasIncome ? "Expenses" : "Spending tracked"}
                 </p>
-                <p className="mt-1 text-lg font-semibold">
+                <p className="mt-1 text-lg font-semibold text-rose-50">
                   {formatCurrency(stats.expenses)}
                 </p>
               </div>
