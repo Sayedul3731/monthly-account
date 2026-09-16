@@ -96,6 +96,77 @@ export class UsersService implements OnModuleInit {
       .exec();
   }
 
+  findByIdForEmailChange(id: string): Promise<UserDocument | null> {
+    return this.userModel
+      .findOne(notDeleted({ _id: id }))
+      .select('+password')
+      .populate([...USER_POPULATE])
+      .exec();
+  }
+
+  async createEmailChangeRequest(
+    id: string,
+    email: string,
+    tokenHash: string,
+    expiresAt: Date,
+  ): Promise<void> {
+    const user = await this.findOne(id);
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (normalizedEmail === user.email) {
+      throw new BadRequestException('Enter a different email address');
+    }
+
+    await this.ensureEmailAvailable(normalizedEmail, user.id);
+    user.pendingEmail = normalizedEmail;
+    user.emailChangeTokenHash = tokenHash;
+    user.emailChangeExpiresAt = expiresAt;
+    await user.save();
+  }
+
+  async clearEmailChangeRequest(id: string): Promise<void> {
+    await this.userModel
+      .updateOne(
+        notDeleted({ _id: id }),
+        {
+          pendingEmail: null,
+          emailChangeTokenHash: null,
+          emailChangeExpiresAt: null,
+        },
+      )
+      .exec();
+  }
+
+  async confirmEmailChange(tokenHash: string): Promise<boolean> {
+    const user = await this.userModel
+      .findOne(
+        notDeleted({
+          emailChangeTokenHash: tokenHash,
+          emailChangeExpiresAt: { $gt: new Date() },
+        }),
+      )
+      .select('+pendingEmail +emailChangeTokenHash +emailChangeExpiresAt')
+      .exec();
+
+    if (!user?.pendingEmail) return false;
+
+    try {
+      await this.ensureEmailAvailable(user.pendingEmail, user.id);
+    } catch (error) {
+      if (!(error instanceof ConflictException)) throw error;
+      await this.clearEmailChangeRequest(user.id);
+      return false;
+    }
+
+    user.email = user.pendingEmail;
+    user.pendingEmail = null;
+    user.emailChangeTokenHash = null;
+    user.emailChangeExpiresAt = null;
+    user.refreshToken = null;
+    await user.save();
+    return true;
+  }
+
   async setRefreshToken(id: string, hashedRefreshToken: string): Promise<void> {
     const result = await this.userModel
       .updateOne(notDeleted({ _id: id }), { refreshToken: hashedRefreshToken })
@@ -254,10 +325,13 @@ export class UsersService implements OnModuleInit {
     }
   }
 
-  private async ensureEmailAvailable(email: string): Promise<void> {
+  private async ensureEmailAvailable(
+    email: string,
+    excludeUserId?: string,
+  ): Promise<void> {
     const existing = await this.userModel.findOne(notDeleted({ email })).exec();
 
-    if (existing) {
+    if (existing && existing.id !== excludeUserId) {
       throw new ConflictException(`Email ${email} is already in use`);
     }
   }

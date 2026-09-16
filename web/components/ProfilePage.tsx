@@ -3,7 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useState } from "react";
-import { fetchMe, logoutUser, updateProfile } from "@/lib/api";
+import {
+  fetchMe,
+  logoutUser,
+  requestEmailChange,
+  updateProfile,
+} from "@/lib/api";
 import {
   clearAuthSession,
   getAccessToken,
@@ -19,6 +24,7 @@ const MAX_PASSWORD_LENGTH = 72;
 type ProfileErrors = {
   name?: string;
   email?: string;
+  currentPassword?: string;
 };
 
 type PasswordErrors = {
@@ -77,6 +83,8 @@ export default function ProfilePage() {
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [profileErrors, setProfileErrors] = useState<ProfileErrors>({});
   const [profileError, setProfileError] = useState<string | null>(null);
   const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
@@ -139,6 +147,13 @@ export default function ProfilePage() {
       errors.email = "Enter a valid email address.";
     }
 
+    if (
+      trimmedEmail.toLowerCase() !== user?.email &&
+      !currentPassword
+    ) {
+      errors.currentPassword = "Enter your current password to change email.";
+    }
+
     return errors;
   }
 
@@ -181,14 +196,27 @@ export default function ProfilePage() {
 
     setSavingProfile(true);
     try {
-      const updated = await updateProfile({
-        ...(nameChanged ? { name: trimmedName } : {}),
-        ...(emailChanged ? { email: trimmedEmail } : {}),
-      });
-      setUser(updated);
-      setName(updated.name);
-      setEmail(updated.email);
-      setProfileSuccess("Profile updated successfully.");
+      let updated = user;
+      if (nameChanged) {
+        updated = await updateProfile({ name: trimmedName });
+        setUser(updated);
+        setName(updated.name);
+      }
+
+      if (emailChanged) {
+        await requestEmailChange({
+          email: trimmedEmail,
+          currentPassword,
+        });
+        setCurrentPassword("");
+        setEmail(updated.email);
+      }
+
+      setProfileSuccess(
+        emailChanged
+          ? "We sent a verification link to your new email address. Your email will change after you confirm it."
+          : "Profile updated successfully.",
+      );
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to update profile";
@@ -196,6 +224,11 @@ export default function ProfilePage() {
         setProfileErrors((prev) => ({
           ...prev,
           email: "An account with this email already exists.",
+        }));
+      } else if (/current password/i.test(message)) {
+        setProfileErrors((prev) => ({
+          ...prev,
+          currentPassword: "Your current password is incorrect.",
         }));
       } else {
         setProfileError(message);
@@ -242,7 +275,7 @@ export default function ProfilePage() {
   const inputBase =
     "w-full rounded-xl border bg-white px-4 py-3 text-[15px] text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:ring-2 dark:bg-zinc-950 dark:text-white dark:placeholder:text-zinc-500";
   const inputOk =
-    "border-zinc-200 focus:border-emerald-500 focus:ring-emerald-500/20 dark:border-zinc-700";
+    "border-zinc-200 focus:border-brand focus:ring-brand/15 dark:border-zinc-700";
   const inputErr =
     "border-rose-400 focus:border-rose-500 focus:ring-rose-500/20 dark:border-rose-500/60";
 
@@ -253,7 +286,7 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand border-t-transparent" />
       </div>
     );
   }
@@ -278,11 +311,13 @@ export default function ProfilePage() {
     );
   }
 
+  const emailChanged = email.trim().toLowerCase() !== user.email;
+
   return (
     <div className="relative min-h-full overflow-x-hidden bg-zinc-50 dark:bg-zinc-950">
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_40%_at_50%_-10%,rgba(16,185,129,0.12),transparent)] dark:bg-[radial-gradient(ellipse_70%_40%_at_50%_-10%,rgba(16,185,129,0.1),transparent)]"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_40%_at_50%_-10%,rgba(18,56,71,0.14),transparent)] dark:bg-[radial-gradient(ellipse_70%_40%_at_50%_-10%,rgba(18,56,71,0.2),transparent)]"
       />
 
       <div className="relative">
@@ -294,20 +329,34 @@ export default function ProfilePage() {
           onSignOut={handleSignOut}
         />
 
-        <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
-        <div className="mb-6">
-          <h1 className="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl dark:text-white">
-            Profile
-          </h1>
-          <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
-            Your account details, plan, and security
-          </p>
+        <div className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
+        <div className="mb-6 flex items-end justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gold">
+              Account
+            </p>
+            <h1 className="mt-1 text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl dark:text-white">
+              Account settings
+            </h1>
+            <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
+              Manage your identity, plan, and security.
+            </p>
+          </div>
+          <Link
+            href="/"
+            className="mb-0.5 inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-medium text-brand transition hover:bg-brand/5 hover:text-brand-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/50 dark:text-gold dark:hover:bg-zinc-800"
+          >
+            <ChevronLeft />
+            Account
+          </Link>
         </div>
 
-        <section className="mb-6 overflow-hidden rounded-2xl border border-zinc-200/80 bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 p-6 text-white shadow-sm sm:p-8">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+        <section className="relative mb-6 overflow-hidden rounded-3xl bg-gradient-to-br from-brand via-brand to-brand-deep p-6 text-white shadow-xl shadow-brand/20 sm:p-8">
+          <div className="pointer-events-none absolute -right-12 -top-16 h-48 w-48 rounded-full border border-gold/25 bg-gold/5" />
+          <div className="pointer-events-none absolute -bottom-20 left-1/3 h-36 w-36 rounded-full bg-white/5 blur-3xl" />
+          <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center">
             <div
-              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-xl font-semibold tracking-wide ring-1 ring-white/25 backdrop-blur-sm"
+              className="flex h-[4.5rem] w-[4.5rem] shrink-0 items-center justify-center rounded-2xl bg-gold/15 text-xl font-semibold tracking-wide text-gold ring-1 ring-gold/40 backdrop-blur-sm"
               aria-hidden
             >
               {initialsFromName(user.name)}
@@ -316,20 +365,20 @@ export default function ProfilePage() {
               <h2 className="truncate text-xl font-semibold tracking-tight">
                 {user.name}
               </h2>
-              <p className="mt-0.5 truncate text-sm text-emerald-50/90">
+              <p className="mt-0.5 truncate text-sm text-white/75">
                 {user.email}
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-                <span className="rounded-full bg-white/15 px-2.5 py-1 font-medium ring-1 ring-white/20">
+                <span className="rounded-full bg-white/10 px-2.5 py-1 font-medium ring-1 ring-white/20">
                   {roleLabel(user.role)}
                 </span>
                 <Link
                   href="/membership"
-                  className="rounded-full bg-white/15 px-2.5 py-1 font-medium ring-1 ring-white/20 transition hover:bg-white/25"
+                  className="rounded-full bg-gold/15 px-2.5 py-1 font-medium text-gold ring-1 ring-gold/30 transition hover:bg-gold/25"
                 >
                   {membershipLabel(user.membership, user.billingInterval)} plan
                 </Link>
-                <span className="text-emerald-50/80">
+                <span className="text-white/65">
                   Member since {formatMemberSince(user.createdAt)}
                 </span>
               </div>
@@ -365,6 +414,7 @@ export default function ProfilePage() {
           )}
 
           <form onSubmit={handleSaveProfile} className="space-y-4" noValidate>
+            <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label
                 htmlFor={`${formId}-name`}
@@ -416,6 +466,12 @@ export default function ProfilePage() {
                   if (profileErrors.email) {
                     setProfileErrors((prev) => ({ ...prev, email: undefined }));
                   }
+                  if (profileErrors.currentPassword) {
+                    setProfileErrors((prev) => ({
+                      ...prev,
+                      currentPassword: undefined,
+                    }));
+                  }
                 }}
                 aria-invalid={Boolean(profileErrors.email)}
                 className={fieldClass(Boolean(profileErrors.email))}
@@ -427,11 +483,65 @@ export default function ProfilePage() {
                 </p>
               )}
             </div>
+            {emailChanged && (
+              <div className="sm:col-span-2 rounded-xl border border-gold/30 bg-gold/5 p-4 dark:border-gold/20 dark:bg-gold/10">
+                <label
+                  htmlFor={`${formId}-current-password`}
+                  className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-200"
+                >
+                  Confirm your current password
+                </label>
+                <p className="mb-3 text-xs leading-5 text-zinc-500 dark:text-zinc-400">
+                  We will send a verification link to the new email address
+                  before updating your account.
+                </p>
+                <div className="relative">
+                  <input
+                    id={`${formId}-current-password`}
+                    type={showCurrentPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    minLength={MIN_PASSWORD_LENGTH}
+                    maxLength={MAX_PASSWORD_LENGTH}
+                    value={currentPassword}
+                    onChange={(e) => {
+                      setCurrentPassword(e.target.value);
+                      if (profileErrors.currentPassword) {
+                        setProfileErrors((prev) => ({
+                          ...prev,
+                          currentPassword: undefined,
+                        }));
+                      }
+                    }}
+                    aria-invalid={Boolean(profileErrors.currentPassword)}
+                    className={`${fieldClass(Boolean(profileErrors.currentPassword))} pr-12`}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPassword((value) => !value)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-zinc-400 transition hover:bg-white/80 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+                    aria-label={
+                      showCurrentPassword
+                        ? "Hide current password"
+                        : "Show current password"
+                    }
+                  >
+                    {showCurrentPassword ? <EyeOffIcon /> : <EyeIcon />}
+                  </button>
+                </div>
+                {profileErrors.currentPassword && (
+                  <p className="mt-1.5 text-xs text-rose-600 dark:text-rose-400">
+                    {profileErrors.currentPassword}
+                  </p>
+                )}
+              </div>
+            )}
+            </div>
 
             <button
               type="submit"
               disabled={savingProfile}
-              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:px-6"
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-brand py-3.5 text-sm font-semibold text-white shadow-sm shadow-brand/20 transition hover:bg-brand-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:px-6"
             >
               {savingProfile ? (
                 <>
@@ -588,7 +698,7 @@ export default function ProfilePage() {
             </div>
             <Link
               href="/membership"
-              className="rounded-xl bg-emerald-600 px-4 py-2.5 text-center text-sm font-semibold text-white transition hover:bg-emerald-700"
+              className="rounded-xl bg-brand px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm shadow-brand/20 transition hover:bg-brand-deep"
             >
               View plans
             </Link>
@@ -609,7 +719,7 @@ export default function ProfilePage() {
               </div>
               <Link
                 href="/admin"
-                className="rounded-xl bg-emerald-600 px-4 py-2.5 text-center text-sm font-semibold text-white transition hover:bg-emerald-700"
+                className="rounded-xl bg-brand px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm shadow-brand/20 transition hover:bg-brand-deep"
               >
                 Open admin panel
               </Link>

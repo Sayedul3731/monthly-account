@@ -44,6 +44,21 @@ export class User {
   @ApiHideProperty()
   @Exclude()
   @Prop({ type: String, select: false, default: null })
+  pendingEmail?: string | null;
+
+  @ApiHideProperty()
+  @Exclude()
+  @Prop({ type: String, select: false, default: null })
+  emailChangeTokenHash?: string | null;
+
+  @ApiHideProperty()
+  @Exclude()
+  @Prop({ type: Date, select: false, default: null })
+  emailChangeExpiresAt?: Date | null;
+
+  @ApiHideProperty()
+  @Exclude()
+  @Prop({ type: String, select: false, default: null })
   oauthHandoffHash?: string | null;
 
   @ApiHideProperty()

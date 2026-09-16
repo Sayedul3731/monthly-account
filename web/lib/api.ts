@@ -84,10 +84,14 @@ export type BillingInterval = "monthly" | "quarterly" | "yearly";
 
 type UpdateProfileInput = {
   name?: string;
-  email?: string;
   password?: string;
   membershipId?: string;
   billingInterval?: BillingInterval | null;
+};
+
+type RequestEmailChangeInput = {
+  email: string;
+  currentPassword: string;
 };
 
 export type Membership = {
@@ -373,7 +377,6 @@ export async function updateProfile(
 ): Promise<AuthUser> {
   const body: Record<string, string> = {};
   if (input.name !== undefined) body.name = input.name.trim();
-  if (input.email !== undefined) body.email = input.email.trim().toLowerCase();
   if (input.password !== undefined) {
     body.password = input.password;
   }
@@ -389,6 +392,18 @@ export async function updateProfile(
   const user = normalizeAuthUser(data);
   updateStoredUser(user);
   return user;
+}
+
+export async function requestEmailChange(
+  input: RequestEmailChangeInput,
+): Promise<void> {
+  await request<{ message: string }>("/auth/me/email-change", {
+    method: "POST",
+    body: JSON.stringify({
+      email: input.email.trim().toLowerCase(),
+      currentPassword: input.currentPassword,
+    }),
+  });
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

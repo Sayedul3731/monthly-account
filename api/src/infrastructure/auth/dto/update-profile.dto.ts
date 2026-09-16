@@ -1,6 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
-  IsEmail,
   IsEnum,
   IsMongoId,
   IsNotEmpty,
@@ -18,12 +17,6 @@ export class UpdateProfileDto {
   @IsNotEmpty()
   @MaxLength(100)
   name?: string;
-
-  @ApiPropertyOptional({ example: 'jane@example.com', maxLength: 255 })
-  @IsOptional()
-  @IsEmail()
-  @MaxLength(255)
-  email?: string;
 
   @ApiPropertyOptional({
     description:

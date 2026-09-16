@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   HttpCode,
+  HttpStatus,
   Patch,
   Post,
   Query,
@@ -12,6 +13,7 @@ import {
 import type { Request, Response } from 'express';
 import {
   ApiBearerAuth,
+  ApiAcceptedResponse,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiNoContentResponse,
@@ -29,6 +31,7 @@ import { LoginDto } from './dto/login.dto';
 import { OAuthExchangeDto } from './dto/oauth-exchange.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
+import { RequestEmailChangeDto } from './dto/request-email-change.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import type { AuthenticatedUser } from './jwt-payload.interface';
 
@@ -153,6 +156,35 @@ export class AuthController {
     @Body() dto: UpdateProfileDto,
   ) {
     return this.authService.updateProfile(user.userId, dto);
+  }
+
+  @Post('me/email-change')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Send a verification email before changing the account email',
+  })
+  @ApiAcceptedResponse({ description: 'Verification email sent' })
+  @ApiUnauthorizedResponse({ description: 'Current password is incorrect' })
+  async requestEmailChange(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: RequestEmailChangeDto,
+  ) {
+    await this.authService.requestEmailChange(user.userId, dto);
+    return { message: 'Verification email sent' };
+  }
+
+  @Public()
+  @Get('verify-email-change')
+  @ApiOperation({ summary: 'Confirm an email-change verification link' })
+  async confirmEmailChange(
+    @Query('token') token: string | undefined,
+    @Res() response: Response,
+  ): Promise<void> {
+    const verified = await this.authService.confirmEmailChange(token);
+    response.redirect(
+      this.authService.emailChangeVerificationRedirectUrl(verified),
+    );
   }
 }
 

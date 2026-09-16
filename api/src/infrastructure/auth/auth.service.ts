@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   BadGatewayException,
   Injectable,
   ServiceUnavailableException,
@@ -7,14 +8,16 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { JwtService, type JwtSignOptions } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
-import { createHash } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
 import { User, UserDocument } from '../../modules/users/user.schema';
 import { UsersService } from '../../modules/users/users.service';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { RequestEmailChangeDto } from './dto/request-email-change.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import type { RefreshJwtPayload } from './jwt-payload.interface';
+import { SmtpMailerService } from './smtp-mailer.service';
 
 type GoogleOAuthState = { purpose: 'google-oauth-state' };
 
@@ -31,6 +34,7 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
+    private readonly smtpMailer: SmtpMailerService,
   ) {}
 
   async register(dto: RegisterDto): Promise<AuthResponseDto> {
@@ -159,12 +163,61 @@ export class AuthService {
   async updateProfile(userId: string, dto: UpdateProfileDto): Promise<User> {
     const user = await this.usersService.update(userId, {
       name: dto.name,
-      email: dto.email,
       password: dto.password,
       membershipId: dto.membershipId,
       billingInterval: dto.billingInterval,
     });
     return this.toPublicUser(user);
+  }
+
+  async requestEmailChange(
+    userId: string,
+    dto: RequestEmailChangeDto,
+  ): Promise<void> {
+    const user = await this.usersService.findByIdForEmailChange(userId);
+    if (!user?.password) {
+      throw new BadRequestException(
+        'Email changes are unavailable for accounts without a password.',
+      );
+    }
+
+    if (!(await bcrypt.compare(dto.currentPassword, user.password))) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    const token = randomBytes(32).toString('hex');
+    const tokenHash = this.hashEmailChangeToken(token);
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+
+    await this.usersService.createEmailChangeRequest(
+      userId,
+      dto.email,
+      tokenHash,
+      expiresAt,
+    );
+
+    try {
+      await this.smtpMailer.sendEmailChangeVerification(
+        dto.email.trim().toLowerCase(),
+        this.emailChangeVerificationUrl(token),
+      );
+    } catch (error) {
+      await this.usersService.clearEmailChangeRequest(userId);
+      throw error;
+    }
+  }
+
+  confirmEmailChange(token: string | undefined): Promise<boolean> {
+    if (!token) return Promise.resolve(false);
+    return this.usersService.confirmEmailChange(
+      this.hashEmailChangeToken(token),
+    );
+  }
+
+  emailChangeVerificationRedirectUrl(verified: boolean): string {
+    return this.frontendUrl('/profile', {
+      emailVerification: verified ? 'success' : 'invalid',
+    });
   }
 
   private toPublicUser(user: UserDocument): User {
@@ -228,6 +281,10 @@ export class AuthService {
   }
 
   private hashRefreshToken(token: string): string {
+    return createHash('sha256').update(token).digest('hex');
+  }
+
+  private hashEmailChangeToken(token: string): string {
     return createHash('sha256').update(token).digest('hex');
   }
 
@@ -320,6 +377,13 @@ export class AuthService {
     for (const [key, value] of Object.entries(params)) {
       url.searchParams.set(key, value);
     }
+    return url.toString();
+  }
+
+  private emailChangeVerificationUrl(token: string): string {
+    const apiUrl = this.config.get<string>('apiUrl', 'http://localhost:3001');
+    const url = new URL('/auth/verify-email-change', apiUrl);
+    url.searchParams.set('token', token);
     return url.toString();
   }
 }
