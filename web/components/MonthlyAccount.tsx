@@ -18,7 +18,7 @@ import {
 import AppHeader from "./AppHeader";
 import BudgetPanel from "./BudgetPanel";
 import CategoryChart from "./CategoryChart";
-// import ExportImportPanel from "./ExportImportPanel";
+import ExportImportPanel from "./ExportImportPanel";
 import {
   CalendarIcon,
   ChevronLeft,
@@ -231,6 +231,21 @@ export default function MonthlyAccount() {
     setEditing(null);
     setTab("transactions");
     setFocusTransactionForm(true);
+  }
+
+  async function handleImportedTransactions() {
+    setLoading(true);
+    try {
+      setTransactions(await fetchTransactions(year, month));
+      showToast("Transactions imported successfully.", { kind: "success" });
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : "Imported transactions could not be loaded.",
+        { kind: "error", title: "Import completed with a refresh error" },
+      );
+    } finally {
+      setLoading(false);
+    }
   }
 
   const header = (
@@ -574,6 +589,13 @@ export default function MonthlyAccount() {
                 setTransactions((prev) => prev.filter((t) => t.id !== id));
                 showToast("Transaction deleted.", { kind: "success" });
               }}
+              onError={(message) => showToast(message, { kind: "error" })}
+            />
+            <ExportImportPanel
+              year={year}
+              month={month}
+              transactions={transactions}
+              onImported={() => void handleImportedTransactions()}
               onError={(message) => showToast(message, { kind: "error" })}
             />
           </div>
