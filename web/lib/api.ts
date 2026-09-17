@@ -105,6 +105,30 @@ export type Membership = {
   yearlyPrice: number;
 };
 
+export type ManualPaymentStatus = "pending" | "approved" | "rejected";
+
+export type ManualPayment = {
+  id: string;
+  userId: string;
+  membershipId: string;
+  billingInterval: BillingInterval;
+  amount: number;
+  currency: "BDT";
+  method: "Nagad";
+  transactionId: string;
+  status: ManualPaymentStatus;
+  reviewNote: string | null;
+  reviewedAt?: string;
+  createdAt?: string;
+  user?: Pick<AdminUser, "id" | "name" | "email">;
+  membership?: Membership;
+  reviewedBy?: Pick<AdminUser, "id" | "name" | "email"> | null;
+};
+
+export type ManualPaymentSettings = {
+  nagadNumber: string | null;
+};
+
 export type AppRole = {
   id: string;
   name: string;
@@ -553,6 +577,55 @@ function normalizeBudget(raw: Budget): Budget | null {
   };
 }
 
+function normalizeManualPayment(raw: unknown): ManualPayment {
+  const record = isRecord(raw) ? raw : {};
+  const user = isRecord(record.user)
+    ? {
+        id: extractId(record.user.id ?? record.user._id),
+        name: typeof record.user.name === "string" ? record.user.name : "",
+        email: typeof record.user.email === "string" ? record.user.email : "",
+      }
+    : undefined;
+  const reviewedBy = isRecord(record.reviewedBy)
+    ? {
+        id: extractId(record.reviewedBy.id ?? record.reviewedBy._id),
+        name:
+          typeof record.reviewedBy.name === "string"
+            ? record.reviewedBy.name
+            : "",
+        email:
+          typeof record.reviewedBy.email === "string"
+            ? record.reviewedBy.email
+            : "",
+      }
+    : null;
+
+  return {
+    id: extractId(record.id ?? record._id),
+    userId: extractId(record.userId) || user?.id || "",
+    membershipId: extractId(record.membershipId),
+    billingInterval: normalizeBillingInterval(record.billingInterval) ?? "monthly",
+    amount: normalizePrice(record.amount),
+    currency: "BDT",
+    method: "Nagad",
+    transactionId:
+      typeof record.transactionId === "string" ? record.transactionId : "",
+    status:
+      record.status === "approved" || record.status === "rejected"
+        ? record.status
+        : "pending",
+    reviewNote:
+      typeof record.reviewNote === "string" ? record.reviewNote : null,
+    reviewedAt: asIsoString(record.reviewedAt),
+    createdAt: asIsoString(record.createdAt),
+    user,
+    membership: isRecord(record.membership)
+      ? normalizeMembershipRecord(record.membership)
+      : undefined,
+    reviewedBy,
+  };
+}
+
 export async function fetchMemberships(
   type?: MembershipType,
 ): Promise<Membership[]> {
@@ -853,6 +926,57 @@ export async function upsertBudget(
   }
 
   return budget;
+}
+
+export async function fetchManualPaymentSettings(): Promise<ManualPaymentSettings> {
+  const data = await request<unknown>("/manual-payments/settings");
+  const record = isRecord(data) ? data : {};
+  return {
+    nagadNumber:
+      typeof record.nagadNumber === "string" && record.nagadNumber.trim()
+        ? record.nagadNumber.trim()
+        : null,
+  };
+}
+
+export async function fetchMyManualPayments(): Promise<ManualPayment[]> {
+  const data = await request<unknown[]>("/manual-payments/mine");
+  return data.map(normalizeManualPayment);
+}
+
+export async function createManualPayment(input: {
+  membershipId: string;
+  billingInterval: BillingInterval;
+  transactionId: string;
+}): Promise<ManualPayment> {
+  const data = await request<unknown>("/manual-payments", {
+    method: "POST",
+    body: JSON.stringify({
+      membershipId: input.membershipId,
+      billingInterval: input.billingInterval,
+      transactionId: input.transactionId.trim(),
+    }),
+  });
+  return normalizeManualPayment(data);
+}
+
+export async function fetchManualPayments(): Promise<ManualPayment[]> {
+  const data = await request<unknown[]>("/manual-payments");
+  return data.map(normalizeManualPayment);
+}
+
+export async function reviewManualPayment(
+  id: string,
+  input: { status: "approved" | "rejected"; reviewNote?: string },
+): Promise<ManualPayment> {
+  const data = await request<unknown>(`/manual-payments/${id}/review`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      status: input.status,
+      reviewNote: input.reviewNote?.trim() || undefined,
+    }),
+  });
+  return normalizeManualPayment(data);
 }
 
 export async function deleteBudget(id: string): Promise<void> {

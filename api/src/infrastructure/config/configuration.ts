@@ -32,4 +32,7 @@ export default () => ({
     pass: process.env.SMTP_PASS,
     from: process.env.SMTP_FROM,
   },
+  payments: {
+    nagadNumber: process.env.NAGAD_PAYMENT_NUMBER?.trim() ?? '',
+  },
 });

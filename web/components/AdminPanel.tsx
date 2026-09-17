@@ -14,6 +14,7 @@ import AppHeader from "./AppHeader";
 import AdminOverview from "./admin/AdminOverview";
 import CategoriesAdmin from "./admin/CategoriesAdmin";
 import MembershipsAdmin from "./admin/MembershipsAdmin";
+import ManualPaymentsAdmin from "./admin/ManualPaymentsAdmin";
 import RolesAdmin from "./admin/RolesAdmin";
 import TransactionTypesAdmin from "./admin/TransactionTypesAdmin";
 import type { AdminTab } from "./admin/types";
@@ -25,6 +26,7 @@ const TABS: { id: AdminTab; label: string }[] = [
   { id: "users", label: "Users" },
   { id: "roles", label: "Roles" },
   { id: "memberships", label: "Memberships" },
+  { id: "payments", label: "Payments" },
   { id: "categories", label: "Categories" },
   { id: "types", label: "Types" },
 ];
@@ -208,6 +210,7 @@ export default function AdminPanel() {
         {tab === "memberships" && (
           <MembershipsAdmin onError={handleError} />
         )}
+        {tab === "payments" && <ManualPaymentsAdmin onError={handleError} />}
         {tab === "categories" && (
           <CategoriesAdmin onError={handleError} />
         )}

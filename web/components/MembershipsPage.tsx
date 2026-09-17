@@ -131,6 +131,13 @@ export default function MembershipsPage() {
     plan: Membership,
     billingInterval?: BillingInterval,
   ) {
+    if (plan.type === "paid" && billingInterval) {
+      router.push(
+        `/membership/checkout?plan=${encodeURIComponent(plan.id)}&interval=${billingInterval}`,
+      );
+      return;
+    }
+
     const actionKey = `${plan.id}:${billingInterval ?? "free"}`;
     const isCurrent =
       plan.id === user?.membership?.id &&

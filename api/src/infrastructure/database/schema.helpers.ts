@@ -22,6 +22,7 @@ export function documentToJson(
     'userId',
     'categoryId',
     'transactionTypeId',
+    'reviewedById',
   ] as const) {
     const value = ret[key];
     if (value != null && typeof value === 'object' && 'toString' in value) {

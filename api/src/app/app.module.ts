@@ -7,6 +7,7 @@ import { DatabaseModule } from '../infrastructure/database/database.module';
 import { BudgetsModule } from '../modules/budgets/budgets.module';
 import { CategoriesModule } from '../modules/categories/categories.module';
 import { MembershipsModule } from '../modules/memberships/memberships.module';
+import { ManualPaymentsModule } from '../modules/manual-payments/manual-payments.module';
 import { RolesModule } from '../modules/roles/roles.module';
 import { TransactionTypesModule } from '../modules/transaction-types/transaction-types.module';
 import { TransactionsModule } from '../modules/transactions/transactions.module';
@@ -27,6 +28,7 @@ import { AppService } from './app.service';
     UsersModule,
     CategoriesModule,
     MembershipsModule,
+    ManualPaymentsModule,
     TransactionTypesModule,
     RolesModule,
     AuthModule,

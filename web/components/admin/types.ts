@@ -3,5 +3,6 @@ export type AdminTab =
   | "users"
   | "roles"
   | "memberships"
+  | "payments"
   | "categories"
   | "types";
