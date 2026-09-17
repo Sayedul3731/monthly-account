@@ -52,6 +52,7 @@ type Props = {
 
 export default function CategoriesAdmin({ onError }: Props) {
   const [categories, setCategories] = useState<ApiCategory[]>([]);
+  const [filter, setFilter] = useState<"all" | TransactionType>("all");
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<ApiCategory | null>(null);
@@ -188,6 +189,28 @@ export default function CategoriesAdmin({ onError }: Props) {
     );
   }
 
+  const filters: Array<{
+    id: "all" | TransactionType;
+    label: string;
+    count: number;
+  }> = [
+    { id: "all", label: "All", count: categories.length },
+    {
+      id: "income",
+      label: "Income",
+      count: categories.filter((category) => category.type === "income").length,
+    },
+    {
+      id: "expense",
+      label: "Expense",
+      count: categories.filter((category) => category.type === "expense").length,
+    },
+  ];
+  const visibleCategories =
+    filter === "all"
+      ? categories
+      : categories.filter((category) => category.type === filter);
+
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -310,6 +333,27 @@ export default function CategoriesAdmin({ onError }: Props) {
       )}
 
       <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="border-b border-zinc-200 px-3 py-3 dark:border-zinc-800 sm:px-5">
+          <nav aria-label="Category type filters" className="flex gap-1 overflow-x-auto">
+            {filters.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setFilter(item.id)}
+                className={`shrink-0 rounded-lg px-3 py-2 text-sm font-medium transition ${
+                  filter === item.id
+                    ? "bg-emerald-600 text-white shadow-sm"
+                    : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                }`}
+              >
+                {item.label}{" "}
+                <span className={filter === item.id ? "text-emerald-100" : "text-zinc-400 dark:text-zinc-500"}>
+                  {item.count}
+                </span>
+              </button>
+            ))}
+          </nav>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[28rem] text-left text-sm">
             <thead className="bg-zinc-50 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:bg-zinc-950/60 dark:text-zinc-400">
@@ -320,10 +364,12 @@ export default function CategoriesAdmin({ onError }: Props) {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-              {categories.length === 0 ? (
-                <AdminEmpty>No categories yet.</AdminEmpty>
+              {visibleCategories.length === 0 ? (
+                <AdminEmpty>
+                  {filter === "all" ? "No categories yet." : `No ${filter} categories.`}
+                </AdminEmpty>
               ) : (
-                categories.map((category) => (
+                visibleCategories.map((category) => (
                   <tr key={category.id}>
                     <td className="px-5 py-3.5">
                       <span className="mr-2 text-lg">{category.icon || "📌"}</span>
