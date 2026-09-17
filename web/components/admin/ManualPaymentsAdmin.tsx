@@ -24,6 +24,7 @@ function statusClass(status: ManualPayment["status"]): string {
 export default function ManualPaymentsAdmin({ onError }: Props) {
   const [payments, setPayments] = useState<ManualPayment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<"all" | ManualPayment["status"]>("all");
 
   useEffect(() => {
     let cancelled = false;
@@ -49,6 +50,15 @@ export default function ManualPaymentsAdmin({ onError }: Props) {
   }
 
   const pendingCount = payments.filter((payment) => payment.status === "pending").length;
+  const filters: Array<{ id: "all" | ManualPayment["status"]; label: string; count: number }> = [
+    { id: "all", label: "All", count: payments.length },
+    { id: "pending", label: "Pending", count: pendingCount },
+    { id: "approved", label: "Approved", count: payments.filter((payment) => payment.status === "approved").length },
+    { id: "rejected", label: "Rejected", count: payments.filter((payment) => payment.status === "rejected").length },
+  ];
+  const visiblePayments = filter === "all"
+    ? payments
+    : payments.filter((payment) => payment.status === filter);
 
   return (
     <div className="space-y-5">
@@ -61,6 +71,24 @@ export default function ManualPaymentsAdmin({ onError }: Props) {
       </div>
 
       <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="border-b border-zinc-200 px-3 py-3 dark:border-zinc-800 sm:px-5">
+          <nav aria-label="Payment status filters" className="flex gap-1 overflow-x-auto">
+            {filters.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setFilter(item.id)}
+                className={`shrink-0 rounded-lg px-3 py-2 text-sm font-medium transition ${
+                  filter === item.id
+                    ? "bg-emerald-600 text-white shadow-sm"
+                    : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                }`}
+              >
+                {item.label} <span className={filter === item.id ? "text-emerald-100" : "text-zinc-400 dark:text-zinc-500"}>{item.count}</span>
+              </button>
+            ))}
+          </nav>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[58rem] text-left text-sm">
             <thead className="bg-zinc-50 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:bg-zinc-950/60 dark:text-zinc-400">
@@ -77,10 +105,10 @@ export default function ManualPaymentsAdmin({ onError }: Props) {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-              {payments.length === 0 ? (
-                <AdminEmpty>No manual payment submissions yet.</AdminEmpty>
+              {visiblePayments.length === 0 ? (
+                <AdminEmpty>{filter === "all" ? "No manual payment submissions yet." : `No ${filter} payments.`}</AdminEmpty>
               ) : (
-                payments.map((payment) => (
+                visiblePayments.map((payment) => (
                   <tr key={payment.id} className="group transition hover:bg-emerald-50/40 dark:hover:bg-emerald-950/10">
                     <td className="px-5 py-4">
                       <Link href={`/admin/payments/${payment.id}`} className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
