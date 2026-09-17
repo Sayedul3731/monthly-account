@@ -28,14 +28,6 @@ function initialsFromName(name: string): string {
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
 }
 
-function navClass(active: boolean) {
-  return `rounded-md px-2.5 py-1.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/50 ${
-    active
-      ? "bg-brand/10 text-brand dark:bg-zinc-800 dark:text-white"
-      : "text-zinc-500 hover:bg-brand/5 hover:text-brand dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"
-  }`;
-}
-
 function menuItemClass(active = false) {
   return `flex w-full items-center rounded-lg px-3 py-2 text-left text-sm transition ${
     active
@@ -58,7 +50,6 @@ export default function AppHeader({
   const menuRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
 
-  const accountActive = pathname === "/";
   const adminActive = pathname.startsWith("/admin");
   const profileActive = pathname.startsWith("/profile");
 
@@ -117,12 +108,6 @@ export default function AppHeader({
           />
         ) : signedIn ? (
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-            <nav aria-label="Primary" className="hidden items-center sm:flex">
-              <Link href="/" className={navClass(accountActive)}>
-                Account
-              </Link>
-            </nav>
-
             <div className="relative" ref={menuRef}>
               <button
                 type="button"
@@ -165,14 +150,6 @@ export default function AppHeader({
                   </div>
 
                   <div className="p-1">
-                    <Link
-                      href="/"
-                      role="menuitem"
-                      className={`${menuItemClass(accountActive)} sm:hidden`}
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      Account
-                    </Link>
                     <Link
                       href="/profile"
                       role="menuitem"
