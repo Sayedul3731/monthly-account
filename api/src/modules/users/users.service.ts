@@ -17,6 +17,8 @@ import {
 import { BillingInterval } from '../memberships/billing-interval.enum';
 import { MembershipType } from '../memberships/membership-type.enum';
 import { MembershipsService } from '../memberships/memberships.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/notification-type.enum';
 import { DefaultRole } from '../roles/app-role.schema';
 import { RolesService } from '../roles/roles.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -35,6 +37,7 @@ export class UsersService implements OnModuleInit {
     private readonly userModel: Model<UserDocument>,
     private readonly rolesService: RolesService,
     private readonly membershipsService: MembershipsService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -310,6 +313,28 @@ export class UsersService implements OnModuleInit {
     return roleChanged || membershipChanged || intervalChanged
       ? this.findOne(user.id)
       : user.populate([...USER_POPULATE]);
+  }
+
+  async cancelMembership(id: string): Promise<UserDocument> {
+    const user = await this.findOne(id);
+    if (user.membership?.type === MembershipType.FREE) {
+      throw new BadRequestException('Your membership is already free');
+    }
+
+    const previousPlan = user.membership?.name ?? 'paid';
+    user.membershipId = new Types.ObjectId(await this.getDefaultMembershipId());
+    user.billingInterval = null;
+    await user.save();
+
+    await this.notificationsService.create({
+      userId: user.id,
+      type: NotificationType.MEMBERSHIP_CANCELLED,
+      title: 'Membership cancelled',
+      message: `Your ${previousPlan} membership was cancelled and your account is now on the Free plan.`,
+      link: '/membership',
+    });
+
+    return this.findOne(user.id);
   }
 
   async remove(id: string): Promise<void> {

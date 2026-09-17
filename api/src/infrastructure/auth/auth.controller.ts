@@ -158,6 +158,16 @@ export class AuthController {
     return this.authService.updateProfile(user.userId, dto);
   }
 
+  @Post('me/cancel-membership')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Cancel the current paid membership and switch to Free',
+  })
+  @ApiOkResponse({ type: User })
+  cancelMembership(@CurrentUser() user: AuthenticatedUser) {
+    return this.authService.cancelMembership(user.userId);
+  }
+
   @Post('me/email-change')
   @HttpCode(HttpStatus.ACCEPTED)
   @ApiBearerAuth()

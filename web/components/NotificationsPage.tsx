@@ -143,7 +143,7 @@ export default function NotificationsPage() {
               <div className="divide-y divide-zinc-200 dark:divide-zinc-800">
                 {notifications.map((notification) => (
                   <button key={notification.id} type="button" onClick={() => void handleOpen(notification)} className={`flex w-full items-start gap-3 px-5 py-4 text-left transition hover:bg-zinc-50 dark:hover:bg-zinc-800/50 ${notification.readAt ? "" : "bg-emerald-50/60 dark:bg-emerald-950/15"}`}>
-                    <span className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${notification.readAt ? "bg-zinc-300 dark:bg-zinc-700" : notification.type === "payment_approved" ? "bg-emerald-500" : "bg-rose-500"}`} aria-hidden />
+                    <span className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${notification.readAt ? "bg-zinc-300 dark:bg-zinc-700" : notification.type === "payment_rejected" ? "bg-rose-500" : notification.type === "payment_submitted" ? "bg-amber-500" : notification.type === "membership_cancelled" ? "bg-zinc-400" : "bg-emerald-500"}`} aria-hidden />
                     <span className="min-w-0 flex-1"><span className="flex flex-wrap items-center justify-between gap-2"><span className="font-semibold text-zinc-900 dark:text-white">{notification.title}</span><span className="text-xs text-zinc-500 dark:text-zinc-400">{notificationDate(notification.createdAt)}</span></span><span className="mt-1 block text-sm leading-6 text-zinc-600 dark:text-zinc-300">{notification.message}</span></span>
                   </button>
                 ))}

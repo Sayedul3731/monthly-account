@@ -218,7 +218,7 @@ export default function AppHeader({
                           onClick={() => void openNotification(notification)}
                           className={`flex w-full items-start gap-2.5 px-4 py-3 text-left transition hover:bg-zinc-50 dark:hover:bg-zinc-800 ${notification.readAt ? "" : "bg-emerald-50/60 dark:bg-emerald-950/15"}`}
                         >
-                          <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${notification.readAt ? "bg-zinc-300 dark:bg-zinc-700" : notification.type === "payment_approved" ? "bg-emerald-500" : "bg-rose-500"}`} aria-hidden />
+                          <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${notification.readAt ? "bg-zinc-300 dark:bg-zinc-700" : notification.type === "payment_rejected" ? "bg-rose-500" : notification.type === "payment_submitted" ? "bg-amber-500" : notification.type === "membership_cancelled" ? "bg-zinc-400" : "bg-emerald-500"}`} aria-hidden />
                           <span className="min-w-0"><span className="block text-sm font-semibold text-zinc-900 dark:text-white">{notification.title}</span><span className="mt-0.5 line-clamp-2 block text-xs leading-5 text-zinc-500 dark:text-zinc-400">{notification.message}</span></span>
                         </button>
                       ))}

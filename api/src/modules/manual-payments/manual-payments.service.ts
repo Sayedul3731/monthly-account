@@ -113,6 +113,21 @@ export class ManualPaymentsService {
         transactionId,
         status: ManualPaymentStatus.PENDING,
       });
+      await Promise.all([
+        this.notificationsService.create({
+          userId: user.id,
+          type: NotificationType.PAYMENT_SUBMITTED,
+          title: 'Payment submitted',
+          message: `Your Nagad payment ${transactionId} was submitted for verification.`,
+          link: '/membership',
+        }),
+        this.notificationsService.createForAdmins({
+          type: NotificationType.PAYMENT_SUBMITTED,
+          title: 'Payment review required',
+          message: `${user.name} submitted Nagad payment ${transactionId} for review.`,
+          link: `/admin/payments/${payment.id}`,
+        }),
+      ]);
       return this.findOne(payment.id);
     } catch (error) {
       if (this.isDuplicateKeyError(error)) {

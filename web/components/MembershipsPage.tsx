@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
+  cancelMembership,
   fetchMe,
   fetchMemberships,
   fetchMyManualPayments,
@@ -147,6 +148,11 @@ export default function MembershipsPage() {
     plan: Membership,
     billingInterval?: BillingInterval,
   ) {
+    if (plan.type === "free" && user?.membership?.type === "paid") {
+      confirmCancellation();
+      return;
+    }
+
     if (plan.type === "paid" && billingInterval) {
       router.push(
         `/membership/checkout?plan=${encodeURIComponent(plan.id)}&interval=${billingInterval}`,
@@ -183,22 +189,35 @@ export default function MembershipsPage() {
   }
 
   function confirmCancellation() {
-    const freePlan = plans.find((plan) => plan.type === "free");
-    if (!freePlan) {
-      setActionError("A free plan is not available right now. Please contact support.");
-      return;
-    }
-
     toast("Cancel paid membership?", {
       description:
         "Your account will switch to the Free plan immediately. This action does not issue a refund.",
       duration: Infinity,
       action: {
         label: "Cancel plan",
-        onClick: () => void handleSelect(freePlan),
+        onClick: () => void handleCancellation(),
       },
       cancel: { label: "Keep plan", onClick: () => undefined },
     });
+  }
+
+  async function handleCancellation() {
+    if (switchingKey) return;
+    setActionError(null);
+    setActionSuccess(null);
+    setSwitchingKey("cancel-membership");
+    try {
+      const updated = await cancelMembership();
+      setUser(updated);
+      window.dispatchEvent(new Event("notifications:updated"));
+      setActionSuccess("Your paid membership was cancelled. You are now on the Free plan.");
+    } catch (err) {
+      setActionError(
+        err instanceof Error ? err.message : "Failed to cancel membership",
+      );
+    } finally {
+      setSwitchingKey(null);
+    }
   }
 
   if (loading) {

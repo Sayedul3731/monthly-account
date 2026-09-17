@@ -186,6 +186,11 @@ export class AuthService {
     return this.toPublicUser(user);
   }
 
+  async cancelMembership(userId: string): Promise<User> {
+    const user = await this.usersService.cancelMembership(userId);
+    return this.toPublicUser(user);
+  }
+
   async requestEmailChange(
     userId: string,
     dto: RequestEmailChangeDto,

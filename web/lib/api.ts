@@ -133,7 +133,11 @@ export type ManualPaymentSettings = {
 
 export type AppNotification = {
   id: string;
-  type: "payment_approved" | "payment_rejected";
+  type:
+    | "payment_submitted"
+    | "payment_approved"
+    | "payment_rejected"
+    | "membership_cancelled";
   title: string;
   message: string;
   link: string | null;
@@ -644,7 +648,12 @@ function normalizeNotification(raw: unknown): AppNotification {
   const record = isRecord(raw) ? raw : {};
   return {
     id: extractId(record.id ?? record._id),
-    type: record.type === "payment_rejected" ? "payment_rejected" : "payment_approved",
+    type:
+      record.type === "payment_submitted" ||
+      record.type === "payment_rejected" ||
+      record.type === "membership_cancelled"
+        ? record.type
+        : "payment_approved",
     title: typeof record.title === "string" ? record.title : "Notification",
     message: typeof record.message === "string" ? record.message : "",
     link: typeof record.link === "string" ? record.link : null,
@@ -953,6 +962,15 @@ export async function upsertBudget(
   }
 
   return budget;
+}
+
+export async function cancelMembership(): Promise<AuthUser> {
+  const data = await request<AuthUser>("/auth/me/cancel-membership", {
+    method: "POST",
+  });
+  const user = normalizeAuthUser(data);
+  updateStoredUser(user);
+  return user;
 }
 
 export async function fetchManualPaymentSettings(): Promise<ManualPaymentSettings> {

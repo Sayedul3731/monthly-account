@@ -6,6 +6,12 @@ import {
   asPlainList,
   notDeleted,
 } from '../../infrastructure/database/schema.helpers';
+import {
+  AppRole,
+  AppRoleDocument,
+  DefaultRole,
+} from '../roles/app-role.schema';
+import { User, UserDocument } from '../users/user.schema';
 import { Notification, NotificationDocument } from './notification.schema';
 import { NotificationType } from './notification-type.enum';
 
@@ -14,6 +20,10 @@ export class NotificationsService {
   constructor(
     @InjectModel(Notification.name)
     private readonly notificationModel: Model<NotificationDocument>,
+    @InjectModel(User.name)
+    private readonly userModel: Model<UserDocument>,
+    @InjectModel(AppRole.name)
+    private readonly roleModel: Model<AppRoleDocument>,
   ) {}
 
   async create(input: {
@@ -39,6 +49,31 @@ export class NotificationsService {
       .sort({ createdAt: -1 })
       .exec();
     return asPlainList<Notification>(notifications);
+  }
+
+  async createForAdmins(
+    input: Omit<Parameters<NotificationsService['create']>[0], 'userId'>,
+  ): Promise<void> {
+    const adminRole = await this.roleModel
+      .findOne(notDeleted({ name: DefaultRole.ADMIN }))
+      .exec();
+    if (!adminRole) return;
+
+    const admins = await this.userModel
+      .find(notDeleted({ roleId: adminRole._id }))
+      .select('_id')
+      .exec();
+    if (!admins.length) return;
+
+    await this.notificationModel.insertMany(
+      admins.map((admin) => ({
+        userId: admin._id,
+        type: input.type,
+        title: input.title.trim(),
+        message: input.message.trim(),
+        link: input.link?.trim() || null,
+      })),
+    );
   }
 
   async markRead(id: string, userId: string): Promise<Notification> {
