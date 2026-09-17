@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import {
   fetchMe,
   fetchMemberships,
@@ -181,6 +182,25 @@ export default function MembershipsPage() {
     }
   }
 
+  function confirmCancellation() {
+    const freePlan = plans.find((plan) => plan.type === "free");
+    if (!freePlan) {
+      setActionError("A free plan is not available right now. Please contact support.");
+      return;
+    }
+
+    toast("Cancel paid membership?", {
+      description:
+        "Your account will switch to the Free plan immediately. This action does not issue a refund.",
+      duration: Infinity,
+      action: {
+        label: "Cancel plan",
+        onClick: () => void handleSelect(freePlan),
+      },
+      cancel: { label: "Keep plan", onClick: () => undefined },
+    });
+  }
+
   if (loading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
@@ -210,6 +230,7 @@ export default function MembershipsPage() {
   }
 
   const currentId = user.membership?.id;
+  const isPaidMembership = user.membership?.type === "paid";
 
   return (
     <div className="relative min-h-full overflow-x-hidden bg-zinc-50 dark:bg-zinc-950">
@@ -249,6 +270,27 @@ export default function MembershipsPage() {
             {currentPlanDetail(user)}
           </p>
         </section>
+
+        {isPaidMembership && (
+          <section className="mb-6 flex flex-col gap-3 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="font-semibold text-zinc-900 dark:text-white">
+                Cancel membership
+              </h3>
+              <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                Switch to Free immediately. Cancellation does not issue a refund.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={confirmCancellation}
+              disabled={Boolean(switchingKey)}
+              className="inline-flex shrink-0 items-center justify-center rounded-xl border border-rose-200 px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950/30"
+            >
+              Cancel paid plan
+            </button>
+          </section>
+        )}
 
         {payments.length > 0 && (
           <section className="mb-6 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-6">
