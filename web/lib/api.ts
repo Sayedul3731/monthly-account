@@ -119,6 +119,8 @@ export type ManualPayment = {
   status: ManualPaymentStatus;
   reviewNote: string | null;
   reviewedAt?: string;
+  planStartedAt?: string;
+  planEndsAt?: string;
   createdAt?: string;
   user?: Pick<AdminUser, "id" | "name" | "email">;
   membership?: Membership;
@@ -617,6 +619,8 @@ function normalizeManualPayment(raw: unknown): ManualPayment {
     reviewNote:
       typeof record.reviewNote === "string" ? record.reviewNote : null,
     reviewedAt: asIsoString(record.reviewedAt),
+    planStartedAt: asIsoString(record.planStartedAt),
+    planEndsAt: asIsoString(record.planEndsAt),
     createdAt: asIsoString(record.createdAt),
     user,
     membership: isRecord(record.membership)
@@ -963,6 +967,11 @@ export async function createManualPayment(input: {
 export async function fetchManualPayments(): Promise<ManualPayment[]> {
   const data = await request<unknown[]>("/manual-payments");
   return data.map(normalizeManualPayment);
+}
+
+export async function fetchManualPayment(id: string): Promise<ManualPayment> {
+  const data = await request<unknown>(`/manual-payments/${id}`);
+  return normalizeManualPayment(data);
 }
 
 export async function reviewManualPayment(

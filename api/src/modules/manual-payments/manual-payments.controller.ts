@@ -46,6 +46,16 @@ export class ManualPaymentsController {
     return this.manualPaymentsService.findMine(user.userId);
   }
 
+  @Get(':id')
+  @Roles(DefaultRole.ADMIN)
+  @ApiOperation({ summary: 'Get one manual payment for admin review' })
+  @ApiParam({ name: 'id' })
+  @ApiOkResponse({ type: ManualPayment })
+  @ApiNotFoundResponse({ description: 'Payment not found' })
+  findOne(@Param('id', ParseObjectIdPipe) id: string) {
+    return this.manualPaymentsService.findOne(id);
+  }
+
   @Get()
   @Roles(DefaultRole.ADMIN)
   @ApiOperation({ summary: 'List manual payments for admin review' })

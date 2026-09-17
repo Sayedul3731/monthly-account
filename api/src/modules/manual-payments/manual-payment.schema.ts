@@ -74,6 +74,22 @@ export class ManualPayment {
   @Prop({ type: Date, default: null })
   reviewedAt!: Date | null;
 
+  @ApiPropertyOptional({
+    format: 'date-time',
+    nullable: true,
+    description: 'When approved membership access begins.',
+  })
+  @Prop({ type: Date, default: null })
+  planStartedAt!: Date | null;
+
+  @ApiPropertyOptional({
+    format: 'date-time',
+    nullable: true,
+    description: 'When approved membership access ends.',
+  })
+  @Prop({ type: Date, default: null })
+  planEndsAt!: Date | null;
+
   @ApiPropertyOptional({ maxLength: 500, nullable: true })
   @Prop({ type: String, default: null, maxlength: 500 })
   reviewNote!: string | null;

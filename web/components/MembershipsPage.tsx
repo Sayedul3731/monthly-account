@@ -6,9 +6,11 @@ import { useEffect, useState } from "react";
 import {
   fetchMe,
   fetchMemberships,
+  fetchMyManualPayments,
   logoutUser,
   updateMembership,
   type BillingInterval,
+  type ManualPayment,
   type Membership,
 } from "@/lib/api";
 import {
@@ -68,10 +70,21 @@ function currentPlanDetail(user: AuthUser): string {
   return `Billed ${intervalLabel(user.billingInterval)} at ${price}.`;
 }
 
+function paymentStatusClass(status: ManualPayment["status"]): string {
+  if (status === "approved") {
+    return "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:ring-emerald-900";
+  }
+  if (status === "rejected") {
+    return "bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-950/50 dark:text-rose-300 dark:ring-rose-900";
+  }
+  return "bg-amber-50 text-amber-800 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-200 dark:ring-amber-900";
+}
+
 export default function MembershipsPage() {
   const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [plans, setPlans] = useState<Membership[]>([]);
+  const [payments, setPayments] = useState<ManualPayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [switchingKey, setSwitchingKey] = useState<string | null>(null);
@@ -89,13 +102,15 @@ export default function MembershipsPage() {
 
     (async () => {
       try {
-        const [me, memberships] = await Promise.all([
+        const [me, memberships, manualPayments] = await Promise.all([
           fetchMe(),
           fetchMemberships(),
+          fetchMyManualPayments(),
         ]);
         if (cancelled) return;
         setUser(me);
         setPlans(memberships);
+        setPayments(manualPayments);
       } catch (err) {
         if (cancelled) return;
         const message =
@@ -234,6 +249,51 @@ export default function MembershipsPage() {
             {currentPlanDetail(user)}
           </p>
         </section>
+
+        {payments.length > 0 && (
+          <section className="mb-6 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-6">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="text-base font-semibold text-zinc-900 dark:text-white">
+                  Payment verification
+                </h3>
+                <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
+                  Track the review status of your Nagad payment submissions.
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 space-y-3">
+              {payments.map((payment) => (
+                <div
+                  key={payment.id}
+                  className="flex flex-col gap-3 rounded-xl bg-zinc-50 p-4 dark:bg-zinc-800/70 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-semibold text-zinc-900 dark:text-white">
+                        {payment.membership?.name || "Paid membership"} · {intervalLabel(payment.billingInterval)}
+                      </p>
+                      <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${paymentStatusClass(payment.status)}`}>
+                        {payment.status === "approved" ? "Verified" : payment.status === "rejected" ? "Rejected" : "Awaiting verification"}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                      Nagad transaction ID: <span className="font-mono font-medium">{payment.transactionId}</span>
+                    </p>
+                    {payment.reviewNote && (
+                      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
+                        Admin note: {payment.reviewNote}
+                      </p>
+                    )}
+                  </div>
+                  <p className="shrink-0 font-semibold text-zinc-900 dark:text-white">
+                    {formatMembershipPrice(payment.amount)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {actionError && (
           <div

@@ -142,6 +142,14 @@ export class ManualPaymentsService {
     }
 
     const reviewedAt = new Date();
+    const planDates =
+      dto.status === ManualPaymentStatus.APPROVED
+        ? await this.createPlanDates(
+            payment.userId,
+            payment.billingInterval,
+            reviewedAt,
+          )
+        : { planStartedAt: null, planEndsAt: null };
     const reviewed = await this.manualPaymentModel
       .findOneAndUpdate(
         notDeleted({ _id: id, status: ManualPaymentStatus.PENDING }),
@@ -150,6 +158,7 @@ export class ManualPaymentsService {
           reviewedById: new Types.ObjectId(reviewerId),
           reviewedAt,
           reviewNote: dto.reviewNote?.trim() || null,
+          ...planDates,
         },
         { new: true },
       )
@@ -204,6 +213,50 @@ export class ManualPaymentsService {
       return membership.quarterlyPrice;
     if (interval === BillingInterval.YEARLY) return membership.yearlyPrice;
     return membership.monthlyPrice;
+  }
+
+  private async createPlanDates(
+    userId: Types.ObjectId,
+    interval: BillingInterval,
+    now: Date,
+  ): Promise<{ planStartedAt: Date; planEndsAt: Date }> {
+    const activePayment = await this.manualPaymentModel
+      .findOne(
+        notDeleted({
+          userId,
+          status: ManualPaymentStatus.APPROVED,
+          planEndsAt: { $gt: now },
+        }),
+      )
+      .sort({ planEndsAt: -1 })
+      .exec();
+    const planStartedAt =
+      activePayment?.planEndsAt && activePayment.planEndsAt > now
+        ? activePayment.planEndsAt
+        : now;
+    const months =
+      interval === BillingInterval.YEARLY
+        ? 12
+        : interval === BillingInterval.QUARTERLY
+          ? 3
+          : 1;
+
+    return {
+      planStartedAt,
+      planEndsAt: this.addCalendarMonths(planStartedAt, months),
+    };
+  }
+
+  private addCalendarMonths(date: Date, months: number): Date {
+    const result = new Date(date);
+    const day = result.getUTCDate();
+    result.setUTCDate(1);
+    result.setUTCMonth(result.getUTCMonth() + months);
+    const lastDay = new Date(
+      Date.UTC(result.getUTCFullYear(), result.getUTCMonth() + 1, 0),
+    ).getUTCDate();
+    result.setUTCDate(Math.min(day, lastDay));
+    return result;
   }
 
   private isDuplicateKeyError(error: unknown): boolean {
