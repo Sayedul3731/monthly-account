@@ -84,7 +84,7 @@ export default function ManualPaymentsAdmin({ onError }: Props) {
                     : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
                 }`}
               >
-                {item.label} <span className={filter === item.id ? "text-emerald-100" : "text-zinc-400 dark:text-zinc-500"}>{item.count}</span>
+                {item.label} <span className={filter === item.id ? "text-emerald-100" : "text-zinc-400 dark:text-zinc-500"}>({item.count})</span>
               </button>
             ))}
           </nav>

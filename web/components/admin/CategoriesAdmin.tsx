@@ -348,7 +348,7 @@ export default function CategoriesAdmin({ onError }: Props) {
               >
                 {item.label}{" "}
                 <span className={filter === item.id ? "text-emerald-100" : "text-zinc-400 dark:text-zinc-500"}>
-                  {item.count}
+                  ({item.count})
                 </span>
               </button>
             ))}
