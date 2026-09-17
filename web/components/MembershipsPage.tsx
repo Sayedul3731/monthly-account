@@ -280,6 +280,11 @@ export default function MembershipsPage() {
                     <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
                       Nagad transaction ID: <span className="font-mono font-medium">{payment.transactionId}</span>
                     </p>
+                    {payment.planStartedAt && payment.planEndsAt && (
+                      <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                        Access: {new Date(payment.planStartedAt).toLocaleDateString()} – {new Date(payment.planEndsAt).toLocaleDateString()}
+                      </p>
+                    )}
                     {payment.reviewNote && (
                       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
                         Admin note: {payment.reviewNote}
