@@ -18,6 +18,8 @@ import {
 } from '../memberships/membership.schema';
 import { MembershipType } from '../memberships/membership-type.enum';
 import { User, UserDocument } from '../users/user.schema';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/notification-type.enum';
 import { CreateManualPaymentDto } from './dto/create-manual-payment.dto';
 import { ReviewManualPaymentDto } from './dto/review-manual-payment.dto';
 import { ManualPayment, ManualPaymentDocument } from './manual-payment.schema';
@@ -39,6 +41,7 @@ export class ManualPaymentsService {
     private readonly userModel: Model<UserDocument>,
     @InjectModel(Membership.name)
     private readonly membershipModel: Model<MembershipDocument>,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async findMine(userId: string): Promise<ManualPayment[]> {
@@ -180,6 +183,23 @@ export class ManualPaymentsService {
         );
       }
     }
+
+    await this.notificationsService.create({
+      userId: reviewed.userId.toString(),
+      type:
+        dto.status === ManualPaymentStatus.APPROVED
+          ? NotificationType.PAYMENT_APPROVED
+          : NotificationType.PAYMENT_REJECTED,
+      title:
+        dto.status === ManualPaymentStatus.APPROVED
+          ? 'Payment verified'
+          : 'Payment needs attention',
+      message:
+        dto.status === ManualPaymentStatus.APPROVED
+          ? `Your Nagad payment ${reviewed.transactionId} was verified and your paid plan is active.`
+          : `Your Nagad payment ${reviewed.transactionId} was not verified.${reviewed.reviewNote ? ` ${reviewed.reviewNote}` : ''}`,
+      link: '/membership',
+    });
 
     return this.findOne(id);
   }

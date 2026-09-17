@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Membership, MembershipSchema } from '../memberships/membership.schema';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { User, UserSchema } from '../users/user.schema';
 import { ManualPayment, ManualPaymentSchema } from './manual-payment.schema';
 import { ManualPaymentsController } from './manual-payments.controller';
@@ -13,6 +14,7 @@ import { ManualPaymentsService } from './manual-payments.service';
       { name: User.name, schema: UserSchema },
       { name: Membership.name, schema: MembershipSchema },
     ]),
+    NotificationsModule,
   ],
   controllers: [ManualPaymentsController],
   providers: [ManualPaymentsService],

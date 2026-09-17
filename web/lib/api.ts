@@ -131,6 +131,16 @@ export type ManualPaymentSettings = {
   nagadNumber: string | null;
 };
 
+export type AppNotification = {
+  id: string;
+  type: "payment_approved" | "payment_rejected";
+  title: string;
+  message: string;
+  link: string | null;
+  readAt?: string;
+  createdAt?: string;
+};
+
 export type AppRole = {
   id: string;
   name: string;
@@ -630,6 +640,19 @@ function normalizeManualPayment(raw: unknown): ManualPayment {
   };
 }
 
+function normalizeNotification(raw: unknown): AppNotification {
+  const record = isRecord(raw) ? raw : {};
+  return {
+    id: extractId(record.id ?? record._id),
+    type: record.type === "payment_rejected" ? "payment_rejected" : "payment_approved",
+    title: typeof record.title === "string" ? record.title : "Notification",
+    message: typeof record.message === "string" ? record.message : "",
+    link: typeof record.link === "string" ? record.link : null,
+    readAt: asIsoString(record.readAt),
+    createdAt: asIsoString(record.createdAt),
+  };
+}
+
 export async function fetchMemberships(
   type?: MembershipType,
 ): Promise<Membership[]> {
@@ -986,6 +1009,22 @@ export async function reviewManualPayment(
     }),
   });
   return normalizeManualPayment(data);
+}
+
+export async function fetchNotifications(): Promise<AppNotification[]> {
+  const data = await request<unknown[]>("/notifications");
+  return data.map(normalizeNotification);
+}
+
+export async function markNotificationRead(id: string): Promise<AppNotification> {
+  const data = await request<unknown>(`/notifications/${id}/read`, {
+    method: "PATCH",
+  });
+  return normalizeNotification(data);
+}
+
+export async function markAllNotificationsRead(): Promise<void> {
+  await request<void>("/notifications/read-all", { method: "POST" });
 }
 
 export async function deleteBudget(id: string): Promise<void> {
