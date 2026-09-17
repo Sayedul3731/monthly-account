@@ -190,7 +190,7 @@ export default function AppHeader({
               >
                 <BellIcon />
                 {unreadCount > 0 && (
-                  <span className="absolute right-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-paper dark:ring-zinc-950">
+                  <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold leading-none text-white ring-1 ring-paper dark:ring-zinc-950">
                     {unreadCount > 9 ? "9+" : unreadCount}
                   </span>
                 )}
