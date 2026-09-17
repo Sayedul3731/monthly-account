@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
 import {
   cancelMembership,
   fetchMe,
@@ -93,6 +92,8 @@ export default function MembershipsPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
+  const [cancellationDialogOpen, setCancellationDialogOpen] = useState(false);
+  const [cancellationConfirmation, setCancellationConfirmation] = useState("");
 
   useEffect(() => {
     if (!getAccessToken()) {
@@ -149,7 +150,7 @@ export default function MembershipsPage() {
     billingInterval?: BillingInterval,
   ) {
     if (plan.type === "free" && user?.membership?.type === "paid") {
-      confirmCancellation();
+      openCancellationDialog();
       return;
     }
 
@@ -188,27 +189,21 @@ export default function MembershipsPage() {
     }
   }
 
-  function confirmCancellation() {
-    toast("Cancel paid membership?", {
-      description:
-        "Your account will switch to the Free plan immediately. This action does not issue a refund.",
-      duration: Infinity,
-      action: {
-        label: "Cancel plan",
-        onClick: () => void handleCancellation(),
-      },
-      cancel: { label: "Keep plan", onClick: () => undefined },
-    });
+  function openCancellationDialog() {
+    setCancellationConfirmation("");
+    setCancellationDialogOpen(true);
   }
 
   async function handleCancellation() {
-    if (switchingKey) return;
+    if (switchingKey || cancellationConfirmation !== "CANCEL") return;
     setActionError(null);
     setActionSuccess(null);
     setSwitchingKey("cancel-membership");
     try {
       const updated = await cancelMembership();
       setUser(updated);
+      setCancellationDialogOpen(false);
+      setCancellationConfirmation("");
       window.dispatchEvent(new Event("notifications:updated"));
       setActionSuccess("Your paid membership was cancelled. You are now on the Free plan.");
     } catch (err) {
@@ -302,13 +297,88 @@ export default function MembershipsPage() {
             </div>
             <button
               type="button"
-              onClick={confirmCancellation}
+              onClick={openCancellationDialog}
               disabled={Boolean(switchingKey)}
               className="inline-flex shrink-0 items-center justify-center rounded-xl border border-rose-200 px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950/30"
             >
               Cancel paid plan
             </button>
           </section>
+        )}
+
+        {cancellationDialogOpen && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/50 p-4 backdrop-blur-sm"
+            role="presentation"
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="cancel-membership-title"
+              aria-describedby="cancel-membership-description"
+              className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-6 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-rose-100 text-lg font-bold text-rose-700 dark:bg-rose-950/60 dark:text-rose-300">
+                !
+              </div>
+              <h3
+                id="cancel-membership-title"
+                className="mt-4 text-lg font-semibold text-zinc-900 dark:text-white"
+              >
+                Cancel paid membership
+              </h3>
+              <p
+                id="cancel-membership-description"
+                className="mt-2 text-sm leading-6 text-zinc-600 dark:text-zinc-300"
+              >
+                Your account will move to the Free plan immediately and paid access will end. Payments already made are not refunded.
+              </p>
+              <form
+                className="mt-5"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void handleCancellation();
+                }}
+              >
+                <label
+                  htmlFor="cancellation-confirmation"
+                  className="text-sm font-medium text-zinc-800 dark:text-zinc-200"
+                >
+                  Type <span className="font-mono font-semibold">CANCEL</span> to confirm
+                </label>
+                <input
+                  id="cancellation-confirmation"
+                  autoFocus
+                  value={cancellationConfirmation}
+                  onChange={(event) => setCancellationConfirmation(event.target.value)}
+                  placeholder="CANCEL"
+                  autoComplete="off"
+                  className="mt-2 w-full rounded-xl border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-rose-500 focus:ring-2 focus:ring-rose-100 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white dark:focus:border-rose-400 dark:focus:ring-rose-950"
+                />
+                <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (switchingKey) return;
+                      setCancellationDialogOpen(false);
+                      setCancellationConfirmation("");
+                    }}
+                    disabled={Boolean(switchingKey)}
+                    className="inline-flex justify-center rounded-xl border border-zinc-300 px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                  >
+                    Keep paid plan
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={cancellationConfirmation !== "CANCEL" || Boolean(switchingKey)}
+                    className="inline-flex justify-center rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {switchingKey === "cancel-membership" ? "Cancelling…" : "Cancel membership"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
         )}
 
         {payments.length > 0 && (
