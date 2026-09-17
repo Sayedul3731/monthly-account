@@ -285,27 +285,6 @@ export default function MembershipsPage() {
           </p>
         </section>
 
-        {isPaidMembership && (
-          <section className="mb-6 flex flex-col gap-3 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h3 className="font-semibold text-zinc-900 dark:text-white">
-                Cancel membership
-              </h3>
-              <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                Switch to Free immediately. Cancellation does not issue a refund.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={openCancellationDialog}
-              disabled={Boolean(switchingKey)}
-              className="inline-flex shrink-0 items-center justify-center rounded-xl border border-rose-200 px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950/30"
-            >
-              Cancel paid plan
-            </button>
-          </section>
-        )}
-
         {cancellationDialogOpen && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/50 p-4 backdrop-blur-sm"
@@ -639,6 +618,40 @@ export default function MembershipsPage() {
             </div>
           )}
         </section>
+
+        {isPaidMembership && (
+          <section className="mt-8">
+            <details className="group rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-sm text-zinc-600 transition hover:bg-zinc-50 [&::-webkit-details-marker]:hidden dark:text-zinc-300 dark:hover:bg-zinc-800/70">
+                <span>
+                  <span className="block font-medium text-zinc-800 dark:text-zinc-100">
+                    Need to cancel your membership?
+                  </span>
+                  <span className="mt-0.5 block text-xs text-zinc-500 dark:text-zinc-400">
+                    Your paid plan stays active unless you choose to cancel it.
+                  </span>
+                </span>
+                <span className="shrink-0 text-xs font-semibold text-zinc-500 group-open:text-zinc-700 dark:text-zinc-400 dark:group-open:text-zinc-200">
+                  <span className="group-open:hidden">Show</span>
+                  <span className="hidden group-open:inline">Hide</span>
+                </span>
+              </summary>
+              <div className="flex flex-col gap-4 border-t border-zinc-100 px-5 py-4 dark:border-zinc-800 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                  Cancellation switches your account to Free immediately and does not issue a refund.
+                </p>
+                <button
+                  type="button"
+                  onClick={openCancellationDialog}
+                  disabled={Boolean(switchingKey)}
+                  className="inline-flex shrink-0 items-center justify-center rounded-xl border border-rose-200 px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950/30"
+                >
+                  Cancel paid plan
+                </button>
+              </div>
+            </details>
+          </section>
+        )}
         </div>
       </div>
     </div>
