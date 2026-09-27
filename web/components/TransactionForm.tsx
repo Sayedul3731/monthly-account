@@ -11,12 +11,19 @@ import {
 } from "@/lib/api";
 import {
   calendarYearMonth,
+  createId,
   monthDateBounds,
   toCalendarDate,
   toDateInputValue,
   type Transaction,
   type TransactionType,
 } from "@/lib/finance";
+import {
+  getOfflineLookups,
+  queueOfflineTransaction,
+  saveOfflineLookups,
+} from "@/lib/offline-ledger";
+import { getStoredUser } from "@/lib/auth";
 import { CloseIcon, TrendDownIcon, TrendUpIcon } from "./icons";
 
 type FormMode = "create" | "edit";
@@ -28,6 +35,7 @@ type Props = {
   onSaved: (
     transaction: Transaction,
     navigatedMonth?: { year: number; month: number },
+    queuedOffline?: boolean,
   ) => void;
   onCancelEdit: () => void;
   onError: (message: string) => void;
@@ -78,6 +86,8 @@ export default function TransactionForm({
         if (cancelled) return;
         setCategories(nextCategories);
         setTransactionTypes(nextTypes);
+        const userId = getStoredUser()?.id;
+        if (userId) saveOfflineLookups(userId, nextCategories, nextTypes);
 
         if (!editing) {
           const firstExpense = nextCategories.find(
@@ -89,6 +99,19 @@ export default function TransactionForm({
       })
       .catch((err) => {
         if (cancelled) return;
+        const cached = getOfflineLookups(getStoredUser()?.id ?? "");
+        if (cached) {
+          setCategories(cached.categories);
+          setTransactionTypes(cached.transactionTypes);
+          if (!editing) {
+            const firstExpense = cached.categories.find(
+              (category) => category.type === "expense",
+            );
+            if (firstExpense) setCategoryId(firstExpense.id);
+          }
+          setLookupsReady(true);
+          return;
+        }
         onError(
           err instanceof Error
             ? err.message
@@ -136,6 +159,44 @@ export default function TransactionForm({
         description: description.trim() || null,
         date,
       };
+
+      const selectedCategory = categories.find(
+        (category) => category.id === categoryId,
+      );
+      const userId = getStoredUser()?.id;
+
+      if (mode === "create" && !navigator.onLine) {
+        if (!userId || !selectedCategory) {
+          onError("Connect to the internet before adding your first offline transaction.");
+          return;
+        }
+
+        const entry: Transaction = {
+          id: `offline-${createId()}`,
+          type,
+          amount: parsed,
+          description: payload.description,
+          category: selectedCategory.name,
+          categoryId: selectedCategory.id,
+          transactionTypeId: transactionType.id,
+          categoryIcon: selectedCategory.icon,
+          date: toCalendarDate(date),
+          pendingSync: true,
+        };
+        queueOfflineTransaction(userId, payload, entry);
+        const { year: txYear, month: txMonth } = calendarYearMonth(entry.date);
+
+        setAmount("");
+        setDescription("");
+        onSaved(
+          entry,
+          txYear !== year || txMonth !== month
+            ? { year: txYear, month: txMonth }
+            : undefined,
+          true,
+        );
+        return;
+      }
 
       const entry =
         mode === "edit" && editing

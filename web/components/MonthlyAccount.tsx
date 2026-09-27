@@ -10,6 +10,12 @@ import {
 } from "@/lib/api";
 import { getAccessToken, getStoredUser, isAdmin } from "@/lib/auth";
 import {
+  getOfflineAccount,
+  saveOfflineAccount,
+  saveOfflineTransactions,
+  syncOfflineTransactions,
+} from "@/lib/offline-ledger";
+import {
   formatCurrency,
   formatMonthLabel,
   summarize,
@@ -60,6 +66,7 @@ export default function MonthlyAccount() {
   >>(null);
   const [authReady, setAuthReady] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [offline, setOffline] = useState(false);
   const transactionFormRef = useRef<HTMLDivElement>(null);
 
   async function handleSignOut() {
@@ -97,6 +104,13 @@ export default function MonthlyAccount() {
     }
 
     async function loadData() {
+      const cached = getOfflineAccount(sessionUser?.id ?? "", year, month);
+      if (cached) {
+        setTransactions(cached.transactions);
+        setBudgets(cached.budgets);
+        setLoading(false);
+      }
+
       try {
         const [txData, budgetData] = await Promise.all([
           fetchTransactions(year, month),
@@ -106,15 +120,27 @@ export default function MonthlyAccount() {
 
         setTransactions(txData);
         setBudgets(budgetData);
+        if (sessionUser?.id) {
+          saveOfflineAccount(sessionUser.id, year, month, txData, budgetData);
+        }
+        setOffline(false);
       } catch (err) {
         if (cancelled) return;
 
-        showToast(err instanceof Error ? err.message : "Failed to load data", {
-          kind: "error",
-          title: "Could not load account",
-        });
-        setTransactions([]);
-        setBudgets([]);
+        if (cached) {
+          setOffline(true);
+          showToast("You are offline. Showing your last saved account data.", {
+            kind: "error",
+            title: "Offline mode",
+          });
+        } else {
+          showToast(err instanceof Error ? err.message : "Failed to load data", {
+            kind: "error",
+            title: "Could not load account",
+          });
+          setTransactions([]);
+          setBudgets([]);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -125,7 +151,54 @@ export default function MonthlyAccount() {
     return () => {
       cancelled = true;
     };
-  }, [authReady, month, showToast, signedIn, year]);
+  }, [authReady, month, sessionUser?.id, showToast, signedIn, year]);
+
+  useEffect(() => {
+    const userId = sessionUser?.id ?? "";
+    if (!authReady || !signedIn) return;
+    if (!userId) return;
+
+    let cancelled = false;
+    async function syncPending() {
+      if (!navigator.onLine) {
+        setOffline(true);
+        return;
+      }
+
+      try {
+        const synced = await syncOfflineTransactions(userId);
+        if (cancelled) return;
+        if (synced.length) {
+          const cached = getOfflineAccount(userId, year, month);
+          if (cached) setTransactions(cached.transactions);
+          showToast(
+            `${synced.length} offline transaction${synced.length === 1 ? "" : "s"} synced.`,
+            { kind: "success" },
+          );
+        }
+        setOffline(false);
+      } catch {
+        // Keep queued transactions locally and retry on the next online event.
+      }
+    }
+
+    function handleOnline() {
+      void syncPending();
+    }
+
+    function handleOffline() {
+      setOffline(true);
+    }
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    void syncPending();
+    return () => {
+      cancelled = true;
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, [authReady, month, sessionUser?.id, showToast, signedIn, year]);
 
   useEffect(() => {
     if (!focusTransactionForm || tab !== "transactions") return;
@@ -184,16 +257,39 @@ export default function MonthlyAccount() {
   function handleSaved(
     entry: Transaction,
     navigatedMonth?: { year: number; month: number },
+    queuedOffline = false,
   ) {
     const wasEditing = Boolean(editing);
     setEditing(null);
 
     showToast(
-      wasEditing ? "Transaction updated." : "Transaction added.",
+      queuedOffline
+        ? "Saved offline. It will sync automatically when you reconnect."
+        : wasEditing
+          ? "Transaction updated."
+          : "Transaction added.",
       { kind: "success" },
     );
 
     if (navigatedMonth) {
+      if (sessionUser?.id) {
+        const cached = getOfflineAccount(
+          sessionUser.id,
+          navigatedMonth.year,
+          navigatedMonth.month,
+        );
+        saveOfflineTransactions(
+          sessionUser.id,
+          navigatedMonth.year,
+          navigatedMonth.month,
+          [
+            entry,
+            ...(cached?.transactions ?? []).filter(
+              (transaction) => transaction.id !== entry.id,
+            ),
+          ],
+        );
+      }
       setLoading(true);
       setYear(navigatedMonth.year);
       setMonth(navigatedMonth.month);
@@ -202,10 +298,13 @@ export default function MonthlyAccount() {
 
     setTransactions((prev) => {
       const exists = prev.some((t) => t.id === entry.id);
-      if (exists) {
-        return prev.map((t) => (t.id === entry.id ? entry : t));
+      const next = exists
+        ? prev.map((t) => (t.id === entry.id ? entry : t))
+        : [entry, ...prev];
+      if (sessionUser?.id) {
+        saveOfflineTransactions(sessionUser.id, year, month, next);
       }
-      return [entry, ...prev];
+      return next;
     });
   }
 
@@ -278,6 +377,11 @@ export default function MonthlyAccount() {
     <>
       {header}
       <div className="mx-auto w-full max-w-2xl px-3 py-3 sm:px-6 sm:py-5">
+      {offline && (
+        <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
+          Offline mode — changes are saved on this device and will sync when you reconnect.
+        </div>
+      )}
       <header className="mb-3 flex flex-col gap-1.5 sm:mb-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gold sm:tracking-[0.2em]">

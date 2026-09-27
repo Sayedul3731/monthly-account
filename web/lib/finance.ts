@@ -10,6 +10,8 @@ export type Transaction = {
   transactionTypeId: string;
   categoryIcon: string;
   date: string;
+  /** True until an entry created offline has been accepted by the API. */
+  pendingSync?: boolean;
 };
 
 export const INCOME_CATEGORIES = [

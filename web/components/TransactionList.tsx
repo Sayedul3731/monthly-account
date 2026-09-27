@@ -338,6 +338,11 @@ function TransactionRow({
           {transaction.category}
           {showDate ? ` · ${formatRowDate(transaction.date)}` : ""}
         </p>
+        {transaction.pendingSync && (
+          <p className="mt-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+            Pending sync
+          </p>
+        )}
       </div>
 
       <p
