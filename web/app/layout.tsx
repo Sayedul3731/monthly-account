@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import PwaServiceWorker from "@/components/PwaServiceWorker";
 import { ToastProvider } from "@/components/ToastProvider";
 
 const geistSans = Geist({
@@ -16,10 +17,20 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Daily Hisab",
   description: "Track and manage your monthly finances",
+  appleWebApp: {
+    capable: true,
+    title: "Daily Hisab",
+    statusBarStyle: "default",
+  },
   icons: {
     icon: "/logo.png",
     apple: "/logo.png",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#123847",
+  colorScheme: "light dark",
 };
 
 export default function RootLayout({
@@ -34,6 +45,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <ToastProvider>{children}</ToastProvider>
+        <PwaServiceWorker />
       </body>
     </html>
   );
