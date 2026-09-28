@@ -509,6 +509,16 @@ export default function MembershipsPage() {
                       : interval === "yearly"
                         ? "12 months"
                         : "1 month";
+                  const hasMonthlyEquivalent = interval !== "monthly";
+                  const priceSuffix =
+                    interval === "yearly"
+                      ? "year"
+                      : interval === "quarterly"
+                        ? "quarter"
+                        : term;
+                  const supportingText = hasMonthlyEquivalent
+                    ? `≈ ${formatMembershipPrice(price / months)} per month`
+                    : note;
 
                   return (
                     <article
@@ -553,7 +563,7 @@ export default function MembershipsPage() {
                         <div className="flex items-end justify-between gap-3">
                           <div>
                             <span className="text-4xl font-semibold tracking-[-0.04em] text-zinc-900 dark:text-white">{formatMembershipPrice(price)}</span>
-                            <span className="ml-1.5 text-sm font-medium text-zinc-500 dark:text-zinc-400">/ {term}</span>
+                            <span className="ml-1.5 text-sm font-medium text-zinc-500 dark:text-zinc-400">/ {priceSuffix}</span>
                           </div>
                           {savings > 0 && (
                             <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:ring-emerald-900">
@@ -561,7 +571,7 @@ export default function MembershipsPage() {
                             </span>
                           )}
                         </div>
-                        <p className="mt-2 text-xs font-medium text-zinc-500 dark:text-zinc-400">{note}</p>
+                        <p className="mt-2 text-xs font-medium text-zinc-500 dark:text-zinc-400">{supportingText}</p>
                       </div>
                       <div className="mt-1 mb-6">
                         <p className="mb-3 text-xs font-semibold tracking-wide text-zinc-500 uppercase dark:text-zinc-400">
