@@ -11,6 +11,7 @@ import {
   type AuthUser,
 } from "@/lib/auth";
 import AppHeader from "./AppHeader";
+import LoadingState from "./LoadingState";
 import AdminOverview from "./admin/AdminOverview";
 import CategoriesAdmin from "./admin/CategoriesAdmin";
 import MembershipsAdmin from "./admin/MembershipsAdmin";
@@ -98,11 +99,7 @@ export default function AdminPanel() {
   }
 
   if (loading) {
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
-      </div>
-    );
+    return <LoadingState label="Loading admin workspace" />;
   }
 
   if (forbidden || !user || !isAdmin(user)) {

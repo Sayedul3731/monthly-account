@@ -18,7 +18,7 @@ import {
   type AuthUser,
 } from "@/lib/auth";
 import AppHeader from "./AppHeader";
-import { SpinnerIcon } from "./icons";
+import LoadingState from "./LoadingState";
 
 function notificationDate(value?: string): string {
   if (!value) return "";
@@ -112,7 +112,7 @@ export default function NotificationsPage() {
   }
 
   if (loading) {
-    return <div className="flex min-h-[60vh] items-center justify-center"><SpinnerIcon className="animate-spin" /></div>;
+    return <LoadingState label="Loading notifications" />;
   }
 
   if (error && !user) {

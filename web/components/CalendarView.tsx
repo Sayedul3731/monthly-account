@@ -10,6 +10,7 @@ import {
 } from "@/lib/finance";
 import { useToast } from "@/components/ToastProvider";
 import { CalendarIcon, ChevronLeft, ChevronRight } from "./icons";
+import LoadingState from "./LoadingState";
 
 type ViewMode = "daily" | "weekly" | "monthly" | "yearly";
 
@@ -253,9 +254,7 @@ export default function CalendarView({ year, month }: { year: number; month: num
 
       <div className="p-4 sm:p-6">
         {loading ? (
-          <div className="grid min-h-72 place-items-center text-sm text-zinc-500">
-            Loading calendar...
-          </div>
+          <LoadingState compact label="Loading spending calendar" />
         ) : (
           <>
             {mode === "weekly" && (

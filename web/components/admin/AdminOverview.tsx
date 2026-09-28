@@ -9,6 +9,7 @@ import {
   fetchUsers,
 } from "@/lib/api";
 import type { AdminTab } from "./types";
+import LoadingState from "../LoadingState";
 
 type Counts = {
   users: number;
@@ -93,11 +94,7 @@ export default function AdminOverview({ onOpen, onError }: Props) {
   }, [onError]);
 
   if (loading && !counts) {
-    return (
-      <div className="flex min-h-[20vh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
-      </div>
-    );
+    return <LoadingState compact label="Loading overview" />;
   }
 
   return (

@@ -21,6 +21,7 @@ import {
 } from "@/lib/auth";
 import { formatCurrency } from "@/lib/finance";
 import AppHeader from "./AppHeader";
+import LoadingState from "./LoadingState";
 import { CheckIcon, ChevronLeft, SpinnerIcon } from "./icons";
 
 function membershipLabel(membership?: AuthUser["membership"]): string {
@@ -187,11 +188,7 @@ export default function MembershipsPage() {
   }
 
   if (loading) {
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
-      </div>
-    );
+    return <LoadingState label="Loading membership options" />;
   }
 
   if (loadError || !user) {

@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { fetchManualPayments, type ManualPayment } from "@/lib/api";
 import { formatCurrency } from "@/lib/finance";
-import { ChevronRight, SpinnerIcon } from "../icons";
+import { ChevronRight } from "../icons";
+import LoadingState from "../LoadingState";
 import { AdminEmpty, formatShortDate, titleCase } from "./ui";
 
 type Props = {
@@ -46,7 +47,7 @@ export default function ManualPaymentsAdmin({ onError }: Props) {
   }, [onError]);
 
   if (loading) {
-    return <div className="flex min-h-[20vh] items-center justify-center"><SpinnerIcon className="animate-spin" /></div>;
+    return <LoadingState compact label="Loading payments" />;
   }
 
   const pendingCount = payments.filter((payment) => payment.status === "pending").length;

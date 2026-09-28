@@ -16,6 +16,7 @@ import {
   type AuthUser,
 } from "@/lib/auth";
 import AppHeader from "./AppHeader";
+import LoadingState from "./LoadingState";
 import { ChevronLeft, EyeIcon, EyeOffIcon, SpinnerIcon } from "./icons";
 
 const MIN_PASSWORD_LENGTH = 8;
@@ -292,11 +293,7 @@ export default function ProfilePage() {
   }
 
   if (loading) {
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand border-t-transparent" />
-      </div>
-    );
+    return <LoadingState label="Loading your profile" />;
   }
 
   if (loadError || !user) {

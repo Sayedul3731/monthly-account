@@ -23,6 +23,7 @@ import {
 } from "@/lib/auth";
 import { formatCurrency } from "@/lib/finance";
 import AppHeader from "./AppHeader";
+import LoadingState from "./LoadingState";
 import { ChevronLeft, SpinnerIcon } from "./icons";
 
 const intervals: BillingInterval[] = ["monthly", "quarterly", "yearly"];
@@ -164,7 +165,7 @@ function CheckoutContent() {
   }
 
   if (loading && !invalidSelection) {
-    return <div className="flex min-h-[60vh] items-center justify-center"><SpinnerIcon className="animate-spin" /></div>;
+    return <LoadingState label="Preparing checkout" />;
   }
 
   if (invalidSelection || (error && (!plan || !user)) || !plan || !user || !isBillingInterval(interval)) {
@@ -258,5 +259,5 @@ function CheckoutContent() {
 }
 
 export default function CheckoutPage() {
-  return <Suspense fallback={<div className="flex min-h-[60vh] items-center justify-center"><SpinnerIcon className="animate-spin" /></div>}><CheckoutContent /></Suspense>;
+  return <Suspense fallback={<LoadingState label="Preparing checkout" />}><CheckoutContent /></Suspense>;
 }

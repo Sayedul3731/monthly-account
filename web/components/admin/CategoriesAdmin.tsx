@@ -10,6 +10,7 @@ import {
 } from "@/lib/api";
 import type { TransactionType } from "@/lib/finance";
 import { CloseIcon, EditIcon, PlusIcon, SpinnerIcon } from "../icons";
+import LoadingState from "../LoadingState";
 import {
   AdminAlert,
   AdminEmpty,
@@ -182,11 +183,7 @@ export default function CategoriesAdmin({ onError }: Props) {
   }
 
   if (loading) {
-    return (
-      <div className="flex min-h-[20vh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
-      </div>
-    );
+    return <LoadingState compact label="Loading categories" />;
   }
 
   const filters: Array<{

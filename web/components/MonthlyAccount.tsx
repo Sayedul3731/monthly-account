@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import LoadingState from "./LoadingState";
 import {
   fetchDashboard,
   fetchTransactions,
@@ -374,9 +375,7 @@ export default function MonthlyAccount() {
     return (
       <>
         {header}
-        <div className="flex min-h-[60vh] items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand border-t-transparent" />
-        </div>
+        <LoadingState label="Loading your daily account" />
       </>
     );
   }

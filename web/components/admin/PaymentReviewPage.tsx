@@ -19,6 +19,7 @@ import {
 import { formatCurrency } from "@/lib/finance";
 import { toast } from "sonner";
 import AppHeader from "../AppHeader";
+import LoadingState from "../LoadingState";
 import { ChevronLeft, SpinnerIcon } from "../icons";
 import { formatShortDate, titleCase } from "./ui";
 
@@ -146,7 +147,7 @@ export default function PaymentReviewPage() {
   }
 
   if (loading && !invalidPaymentId) {
-    return <div className="flex min-h-[60vh] items-center justify-center"><SpinnerIcon className="animate-spin" /></div>;
+    return <LoadingState label="Loading payment review" />;
   }
 
   if (invalidPaymentId || forbidden || !user || !isAdmin(user) || error && !payment) {
