@@ -24,6 +24,15 @@ import AppHeader from "./AppHeader";
 import LoadingState from "./LoadingState";
 import { CheckIcon, ChevronLeft, SpinnerIcon } from "./icons";
 
+const FREE_FEATURES = ["Overview", "Transactions"];
+const PREMIUM_FEATURES = [
+  "Overview",
+  "Transactions",
+  "Spending Calendar",
+  "Budget Tracking",
+  "Categories",
+];
+
 function membershipLabel(membership?: AuthUser["membership"]): string {
   if (!membership?.name) return "Free";
   return membership.name;
@@ -449,14 +458,19 @@ export default function MembershipsPage() {
                         <span className="text-4xl font-semibold tracking-[-0.04em] text-zinc-900 dark:text-white">৳0</span>
                         <span className="ml-1.5 text-sm font-medium text-zinc-500 dark:text-zinc-400">/ forever</span>
                       </div>
-                      <ul className="space-y-3 text-sm text-zinc-700 dark:text-zinc-300">
-                        {["No subscription cost", "Keep access to your account", "Switch to premium whenever you are ready"].map((feature) => (
+                      <div className="mt-1">
+                        <p className="mb-3 text-xs font-semibold tracking-wide text-zinc-500 uppercase dark:text-zinc-400">
+                          Included features
+                        </p>
+                        <ul className="space-y-3 text-sm text-zinc-700 dark:text-zinc-300">
+                        {FREE_FEATURES.map((feature) => (
                           <li key={feature} className="flex items-center gap-2.5">
                             <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"><CheckIcon /></span>
                             {feature}
                           </li>
                         ))}
-                      </ul>
+                        </ul>
+                      </div>
                       <button
                         type="button"
                         onClick={() => handleSelect(plan)}
@@ -559,14 +573,19 @@ export default function MembershipsPage() {
                         </div>
                         <p className="mt-2 text-xs font-medium text-zinc-500 dark:text-zinc-400">{note}</p>
                       </div>
-                      <ul className="space-y-3 text-sm text-zinc-700 dark:text-zinc-300">
-                        {["Full premium access", `One payment every ${term}`, "Switch schedules anytime"].map((feature) => (
+                      <div className="mt-1">
+                        <p className="mb-3 text-xs font-semibold tracking-wide text-zinc-500 uppercase dark:text-zinc-400">
+                          Included features
+                        </p>
+                        <ul className="space-y-3 text-sm text-zinc-700 dark:text-zinc-300">
+                        {PREMIUM_FEATURES.map((feature) => (
                           <li key={feature} className="flex items-center gap-2.5">
                             <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand dark:bg-gold/10 dark:text-gold"><CheckIcon /></span>
                             {feature}
                           </li>
                         ))}
-                      </ul>
+                        </ul>
+                      </div>
                       <button
                         type="button"
                         onClick={() => handleSelect(plan, interval)}
