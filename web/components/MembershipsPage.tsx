@@ -436,7 +436,7 @@ export default function MembershipsPage() {
                       className="relative flex min-h-[29rem] flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_12px_28px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_16px_36px_rgba(0,0,0,0.08)] sm:p-7 dark:border-zinc-800 dark:bg-zinc-900"
                     >
                       <div aria-hidden className="absolute inset-x-0 top-0 h-1 bg-zinc-300 dark:bg-zinc-700" />
-                      <div className="flex min-h-[6.5rem] items-start justify-between gap-3">
+                      <div className="flex min-h-[6.5rem] items-start">
                         <div>
                           <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500 dark:text-zinc-400">
                             {typeLabel(plan.type)} plan
@@ -445,11 +445,6 @@ export default function MembershipsPage() {
                             {plan.name}
                           </h4>
                         </div>
-                        {isCurrent && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:ring-emerald-900">
-                            <CheckIcon /> Current
-                          </span>
-                        )}
                       </div>
                       <p className="mt-3 min-h-[5.25rem] text-sm leading-6 text-zinc-500 dark:text-zinc-400">
                         {plan.description || "A simple way to keep your account active with no subscription cost."}
@@ -535,8 +530,8 @@ export default function MembershipsPage() {
                           Best value
                         </div>
                       )}
-                      <div className="relative min-h-[6.5rem]">
-                        <div className={isCurrent ? "pr-20" : ""}>
+                      <div className="min-h-[6.5rem]">
+                        <div>
                           <span className="hidden">
                             Premium · {label}
                           </span>
@@ -550,11 +545,6 @@ export default function MembershipsPage() {
                             {term} of {plan.name} access
                           </p>
                         </div>
-                        {isCurrent && (
-                          <span className={`absolute right-0 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:ring-emerald-900 ${isFeatured ? "top-7" : "top-0"}`}>
-                            <CheckIcon /> Current
-                          </span>
-                        )}
                       </div>
                       <p className="mt-3 min-h-[5.25rem] text-sm leading-6 text-zinc-500 dark:text-zinc-400">
                         {plan.description || "Premium access with a billing schedule that works for you."}
