@@ -16,6 +16,8 @@ const nextConfig: NextConfig = {
   async headers() {
     const apiOrigin = process.env.NEXT_PUBLIC_API_URL?.trim().replace(/\/$/, "");
     const connectSource = apiOrigin ? ` ${apiOrigin}` : "";
+    const developmentScriptSource =
+      process.env.NODE_ENV === "production" ? "" : " 'unsafe-eval'";
     const securityHeaders = [
       { key: "X-Content-Type-Options", value: "nosniff" },
       { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
@@ -23,7 +25,7 @@ const nextConfig: NextConfig = {
       { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
       {
         key: "Content-Security-Policy",
-        value: `default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'${connectSource};`,
+        value: `default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'${developmentScriptSource}; connect-src 'self'${connectSource};`,
       },
       ...(process.env.NODE_ENV === "production"
         ? [{ key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" }]
