@@ -171,7 +171,7 @@ export default function AppHeader({
             priority
           />
           <span className="truncate text-sm font-semibold tracking-tight text-brand dark:text-white">
-            Daily Hisab
+            Doinik Hisab
           </span>
         </Link>
 

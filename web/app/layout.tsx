@@ -15,11 +15,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Daily Hisab",
+  title: "Doinik Hisab",
   description: "Track and manage your monthly finances",
   appleWebApp: {
     capable: true,
-    title: "Daily Hisab",
+    title: "Doinik Hisab",
     statusBarStyle: "default",
   },
   icons: {

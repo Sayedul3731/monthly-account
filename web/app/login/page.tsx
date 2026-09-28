@@ -3,7 +3,7 @@ import AuthLayout from "@/components/AuthLayout";
 import LoginForm from "@/components/LoginForm";
 
 export const metadata: Metadata = {
-  title: "Daily Hisab",
+  title: "Doinik Hisab",
   description: "আপনার প্রতিদিনের আয়-ব্যয়ের সহজ হিসাব।",
 };
 

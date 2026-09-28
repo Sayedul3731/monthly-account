@@ -81,7 +81,7 @@ async function bootstrapServer() {
     const document = SwaggerModule.createDocument(
       app,
       new DocumentBuilder()
-        .setTitle('Daily Hisab API')
+        .setTitle('Doinik Hisab API')
         .setDescription('API for tracking monthly income and expenses')
         .setVersion('1.0')
         .addBearerAuth()

@@ -34,16 +34,16 @@ export class SmtpMailerService {
       await transport.sendMail({
         from,
         to: recipient,
-        subject: 'Confirm your new Daily Hisab email address',
+        subject: 'Confirm your new Doinik Hisab email address',
         text: [
-          'You requested to change the email address for your Daily Hisab account.',
+          'You requested to change the email address for your Doinik Hisab account.',
           '',
           'Confirm the change by opening this link within 30 minutes:',
           verificationUrl,
           '',
           'If you did not request this change, you can ignore this email.',
         ].join('\n'),
-        html: `<p>You requested to change the email address for your Daily Hisab account.</p><p><a href="${verificationUrl}">Confirm your new email address</a></p><p>This link expires in 30 minutes. If you did not request this change, you can safely ignore this email.</p>`,
+        html: `<p>You requested to change the email address for your Doinik Hisab account.</p><p><a href="${verificationUrl}">Confirm your new email address</a></p><p>This link expires in 30 minutes. If you did not request this change, you can safely ignore this email.</p>`,
       });
     } catch {
       throw new ServiceUnavailableException(

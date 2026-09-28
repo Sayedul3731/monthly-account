@@ -39,14 +39,14 @@ export default function AuthLayout({
             <div className="relative flex items-center gap-2.5 sm:gap-3">
               <Image
                 src="/logo.png"
-                alt="Daily Hisab"
+                alt="Doinik Hisab"
                 width={40}
                 height={40}
                 className="h-10 w-10 rounded-xl bg-white object-contain p-1 shadow-lg shadow-black/10 sm:h-11 sm:w-11"
                 priority
               />
               <div>
-                <p className="text-sm font-semibold tracking-tight sm:text-base">Daily Hisab</p>
+                <p className="text-sm font-semibold tracking-tight sm:text-base">Doinik Hisab</p>
                 <p className="text-xs text-emerald-100/70">Personal finance, simplified</p>
               </div>
             </div>

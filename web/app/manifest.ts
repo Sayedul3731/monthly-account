@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Daily Hisab",
-    short_name: "Daily Hisab",
+    name: "Doinik Hisab",
+    short_name: "Doinik Hisab",
     description: "Track and manage your monthly finances.",
     start_url: "/",
     scope: "/",

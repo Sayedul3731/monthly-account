@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "You are offline | Daily Hisab",
+  title: "You are offline | Doinik Hisab",
   robots: { index: false, follow: false },
 };
 
@@ -11,7 +11,7 @@ export default function OfflinePage() {
     <main className="flex min-h-dvh items-center justify-center bg-paper px-6 text-center dark:bg-zinc-950">
       <section className="max-w-sm rounded-2xl border border-brand/10 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
         <p className="text-sm font-semibold uppercase tracking-[0.18em] text-gold">
-          Daily Hisab
+          Doinik Hisab
         </p>
         <h1 className="mt-3 text-2xl font-semibold text-brand dark:text-white">
           You&apos;re offline

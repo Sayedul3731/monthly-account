@@ -793,7 +793,7 @@ export default function ProfilePage() {
                 Session
               </h3>
               <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                Sign out of Daily Hisab on this device.
+                Sign out of Doinik Hisab on this device.
               </p>
             </div>
             <button
