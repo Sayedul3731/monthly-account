@@ -62,6 +62,20 @@ $ npm run test:cov
 
 ## Deployment
 
+### Budget ownership migration
+
+Before deploying the user-scoped budget change, run:
+
+```bash
+npm run migrate:budget-ownership
+```
+
+If legacy budgets exist, set `LEGACY_BUDGET_OWNER_ID` to their real owner's
+MongoDB ObjectId before running the command. The migration validates the supplied
+user, assigns only budgets with no `userId`, and replaces the old global unique
+index with the user-scoped index. It will not guess an owner. If no legacy budgets
+exist, no owner ID is required.
+
 When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
 
 If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:

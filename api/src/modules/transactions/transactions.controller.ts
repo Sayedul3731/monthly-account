@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -41,10 +42,24 @@ export class TransactionsController {
     @CurrentUser() user: AuthenticatedUser,
     @Query() query: TransactionQueryDto,
   ) {
+    const hasMonth = query.year !== undefined || query.month !== undefined;
+    const hasRange = query.start !== undefined || query.end !== undefined;
+    if (
+      (hasMonth && (query.year === undefined || query.month === undefined)) ||
+      (hasRange && (query.start === undefined || query.end === undefined)) ||
+      (hasMonth && hasRange)
+    ) {
+      throw new BadRequestException(
+        'Provide either year and month, or start and end dates.',
+      );
+    }
+
     return this.transactionsService.findAll(
       user.userId,
       query.year,
       query.month,
+      query.start,
+      query.end,
     );
   }
 

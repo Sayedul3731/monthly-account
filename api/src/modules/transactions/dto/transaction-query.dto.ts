@@ -2,6 +2,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsInt,
+  IsDateString,
   IsOptional,
   Max,
   Min,
@@ -45,4 +46,14 @@ export class TransactionQueryDto {
   @Min(0)
   @Max(11)
   month?: number;
+
+  @ApiPropertyOptional({ example: '2026-05-01', format: 'date' })
+  @IsOptional()
+  @IsDateString()
+  start?: string;
+
+  @ApiPropertyOptional({ example: '2026-05-31', format: 'date' })
+  @IsOptional()
+  @IsDateString()
+  end?: string;
 }

@@ -156,28 +156,30 @@ export class MembershipsService implements OnModuleInit {
   }
 
   private async ensureDefaultMemberships(): Promise<void> {
-    for (const seed of DEFAULT_MEMBERSHIPS) {
-      const existing = await this.findByType(seed.type);
-
-      if (!existing) {
-        await this.membershipModel.create(seed);
-        this.logger.log(`Seeded membership "${seed.name}" (${seed.type})`);
-        continue;
-      }
-
-      await this.membershipModel
-        .updateOne(
-          { _id: existing._id },
-          {
+    const result = await this.membershipModel.bulkWrite(
+      DEFAULT_MEMBERSHIPS.map((seed) => ({
+        updateOne: {
+          filter: notDeleted({ type: seed.type }),
+          update: {
             $set: {
               monthlyPrice: seed.monthlyPrice,
               quarterlyPrice: seed.quarterlyPrice,
               yearlyPrice: seed.yearlyPrice,
             },
+            $setOnInsert: {
+              name: seed.name,
+              type: seed.type,
+              description: seed.description,
+            },
             $unset: { price: 1 },
           },
-        )
-        .exec();
+          upsert: true,
+        },
+      })),
+    );
+
+    if (result.upsertedCount) {
+      this.logger.log(`Seeded ${result.upsertedCount} default membership(s)`);
     }
   }
 }

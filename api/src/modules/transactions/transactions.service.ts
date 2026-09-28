@@ -22,7 +22,7 @@ import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { TransactionType } from './transaction-type.enum';
 import { Transaction, TransactionDocument } from './transaction.schema';
 
-const TRANSACTION_POPULATE = ['user', 'category', 'transactionType'] as const;
+const TRANSACTION_POPULATE = ['category', 'transactionType'] as const;
 
 @Injectable()
 export class TransactionsService {
@@ -41,8 +41,10 @@ export class TransactionsService {
     userId: string,
     year?: number,
     month?: number,
+    start?: string,
+    end?: string,
   ): Promise<Transaction[]> {
-    const docs = await this.findDocuments(userId, year, month);
+    const docs = await this.findDocuments(userId, year, month, start, end);
     return asPlainList<Transaction>(docs);
   }
 
@@ -155,6 +157,8 @@ export class TransactionsService {
     userId: string,
     year?: number,
     month?: number,
+    start?: string,
+    end?: string,
   ): Promise<TransactionDocument[]> {
     const filter: Record<string, unknown> = {
       userId: new Types.ObjectId(userId),
@@ -162,6 +166,11 @@ export class TransactionsService {
 
     if (year !== undefined && month !== undefined) {
       filter.date = utcMonthRange(year, month);
+    } else if (start !== undefined && end !== undefined) {
+      filter.date = {
+        $gte: parseCalendarDate(start),
+        $lte: new Date(`${end}T23:59:59.999Z`),
+      };
     }
 
     return this.transactionModel

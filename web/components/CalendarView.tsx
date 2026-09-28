@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { fetchTransactions } from "@/lib/api";
+import { fetchTransactionsInRange } from "@/lib/api";
 import {
   categoryBreakdown,
   formatCurrency,
@@ -108,12 +108,14 @@ export default function CalendarView({ year, month }: { year: number; month: num
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const bounds = useMemo(() => periodBounds(mode, cursor), [cursor, mode]);
+
   useEffect(() => {
     let cancelled = false;
     async function loadTransactions() {
       setLoading(true);
       try {
-        const data = await fetchTransactions();
+        const data = await fetchTransactionsInRange(bounds.start, bounds.end);
         if (!cancelled) setTransactions(data);
       } catch (error) {
         if (!cancelled) {
@@ -130,13 +132,12 @@ export default function CalendarView({ year, month }: { year: number; month: num
     return () => {
       cancelled = true;
     };
-  }, [showToast]);
+  }, [bounds.end, bounds.start, showToast]);
 
   const expenses = useMemo(
     () => transactions.filter((transaction) => transaction.type === "expense"),
     [transactions],
   );
-  const bounds = useMemo(() => periodBounds(mode, cursor), [cursor, mode]);
   const periodExpenses = useMemo(
     () =>
       expenses

@@ -51,6 +51,14 @@ export class NotificationsService {
     return asPlainList<Notification>(notifications);
   }
 
+  async countUnread(userId: string): Promise<number> {
+    return this.notificationModel
+      .countDocuments(
+        notDeleted({ userId: new Types.ObjectId(userId), readAt: null }),
+      )
+      .exec();
+  }
+
   async createForAdmins(
     input: Omit<Parameters<NotificationsService['create']>[0], 'userId'>,
   ): Promise<void> {

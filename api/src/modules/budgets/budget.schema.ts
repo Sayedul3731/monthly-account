@@ -1,7 +1,8 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { HydratedDocument } from 'mongoose';
+import { HydratedDocument, Types } from 'mongoose';
 import { baseSchemaOptions } from '../../infrastructure/database/schema.helpers';
+import { User } from '../users/user.schema';
 
 export type BudgetDocument = HydratedDocument<Budget>;
 
@@ -9,6 +10,10 @@ export type BudgetDocument = HydratedDocument<Budget>;
 export class Budget {
   @ApiProperty()
   id!: string;
+
+  @ApiProperty()
+  @Prop({ type: Types.ObjectId, ref: User.name, required: true })
+  userId!: Types.ObjectId;
 
   @ApiProperty({ example: 2026 })
   @Prop({ required: true })
@@ -43,6 +48,6 @@ export class Budget {
 export const BudgetSchema = SchemaFactory.createForClass(Budget);
 
 BudgetSchema.index(
-  { year: 1, month: 1, category: 1 },
+  { userId: 1, year: 1, month: 1, category: 1 },
   { unique: true, partialFilterExpression: { deletedAt: null } },
 );

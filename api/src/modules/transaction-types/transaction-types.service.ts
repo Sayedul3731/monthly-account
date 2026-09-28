@@ -125,15 +125,18 @@ export class TransactionTypesService implements OnModuleInit {
   }
 
   private async ensureDefaultTypes(): Promise<void> {
-    for (const seed of DEFAULT_TRANSACTION_TYPES) {
-      const existing = await this.transactionTypeModel
-        .findOne(notDeleted({ name: seed.name }))
-        .exec();
+    const result = await this.transactionTypeModel.bulkWrite(
+      DEFAULT_TRANSACTION_TYPES.map((seed) => ({
+        updateOne: {
+          filter: notDeleted({ name: seed.name }),
+          update: { $setOnInsert: seed },
+          upsert: true,
+        },
+      })),
+    );
 
-      if (!existing) {
-        await this.transactionTypeModel.create(seed);
-        this.logger.log(`Seeded transaction type "${seed.name}"`);
-      }
+    if (result.upsertedCount) {
+      this.logger.log(`Seeded ${result.upsertedCount} default transaction type(s)`);
     }
   }
 }

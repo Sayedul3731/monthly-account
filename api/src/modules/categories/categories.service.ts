@@ -125,15 +125,18 @@ export class CategoriesService implements OnModuleInit {
   }
 
   private async ensureDefaultCategories(): Promise<void> {
-    for (const seed of DEFAULT_CATEGORIES) {
-      const existing = await this.categoryModel
-        .findOne(notDeleted({ type: seed.type, name: seed.name }))
-        .exec();
+    const result = await this.categoryModel.bulkWrite(
+      DEFAULT_CATEGORIES.map((seed) => ({
+        updateOne: {
+          filter: notDeleted({ type: seed.type, name: seed.name }),
+          update: { $setOnInsert: seed },
+          upsert: true,
+        },
+      })),
+    );
 
-      if (!existing) {
-        await this.categoryModel.create(seed);
-        this.logger.log(`Seeded category "${seed.name}" (${seed.type})`);
-      }
+    if (result.upsertedCount) {
+      this.logger.log(`Seeded ${result.upsertedCount} default category(s)`);
     }
   }
 }

@@ -4,6 +4,7 @@ import { AuthModule } from '../infrastructure/auth/auth.module';
 import configuration from '../infrastructure/config/configuration';
 import { ENV_FILE_PATH } from '../infrastructure/config/env.loader';
 import { DatabaseModule } from '../infrastructure/database/database.module';
+import { DashboardModule } from '../modules/dashboard/dashboard.module';
 import { BudgetsModule } from '../modules/budgets/budgets.module';
 import { CategoriesModule } from '../modules/categories/categories.module';
 import { MembershipsModule } from '../modules/memberships/memberships.module';
@@ -24,6 +25,7 @@ import { AppService } from './app.service';
       load: [configuration],
     }),
     DatabaseModule,
+    DashboardModule,
     TransactionsModule,
     BudgetsModule,
     UsersModule,

@@ -98,16 +98,23 @@ export class RolesService implements OnModuleInit {
   }
 
   private async ensureDefaultRoles(): Promise<void> {
-    for (const name of Object.values(DefaultRole)) {
-      const existing = await this.findByName(name);
+    const result = await this.roleModel.bulkWrite(
+      Object.values(DefaultRole).map((name) => ({
+        updateOne: {
+          filter: notDeleted({ name }),
+          update: {
+            $setOnInsert: {
+              name,
+              description: DEFAULT_ROLE_DESCRIPTIONS[name],
+            },
+          },
+          upsert: true,
+        },
+      })),
+    );
 
-      if (!existing) {
-        await this.roleModel.create({
-          name,
-          description: DEFAULT_ROLE_DESCRIPTIONS[name],
-        });
-        this.logger.log(`Seeded default role "${name}"`);
-      }
+    if (result.upsertedCount) {
+      this.logger.log(`Seeded ${result.upsertedCount} default role(s)`);
     }
   }
 }

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import {
   asPlain,
   asPlainList,
@@ -16,20 +16,32 @@ export class BudgetsService {
     private readonly budgetModel: Model<BudgetDocument>,
   ) {}
 
-  async findAll(year: number, month: number): Promise<Budget[]> {
+  async findAll(
+    userId: string,
+    year: number,
+    month: number,
+  ): Promise<Budget[]> {
     const budgets = await this.budgetModel
-      .find(notDeleted({ year, month }))
+      .find(notDeleted({ userId: new Types.ObjectId(userId), year, month }))
       .sort({ category: 1 })
       .exec();
 
     return asPlainList<Budget>(budgets);
   }
 
-  async upsert(dto: UpsertBudgetDto): Promise<Budget> {
+  async upsert(userId: string, dto: UpsertBudgetDto): Promise<Budget> {
     const category = dto.category?.trim() ? dto.category.trim() : '';
+    const ownerId = new Types.ObjectId(userId);
 
     const existing = await this.budgetModel
-      .findOne(notDeleted({ year: dto.year, month: dto.month, category }))
+      .findOne(
+        notDeleted({
+          userId: ownerId,
+          year: dto.year,
+          month: dto.month,
+          category,
+        }),
+      )
       .exec();
 
     if (existing) {
@@ -38,6 +50,7 @@ export class BudgetsService {
     }
 
     const budget = await this.budgetModel.create({
+      userId: ownerId,
       year: dto.year,
       month: dto.month,
       category,
@@ -47,9 +60,12 @@ export class BudgetsService {
     return asPlain<Budget>(budget);
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string, userId: string): Promise<void> {
     await this.budgetModel
-      .updateOne(notDeleted({ _id: id }), { deletedAt: new Date() })
+      .updateOne(
+        notDeleted({ _id: id, userId: new Types.ObjectId(userId) }),
+        { deletedAt: new Date() },
+      )
       .exec();
   }
 }

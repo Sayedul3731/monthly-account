@@ -24,6 +24,7 @@ type AppHeaderProps = {
   onSignOut?: () => void;
   wide?: boolean;
   ready?: boolean;
+  unreadNotificationCount?: number;
 };
 
 function initialsFromName(name: string): string {
@@ -49,6 +50,7 @@ export default function AppHeader({
   onSignOut,
   wide = false,
   ready = true,
+  unreadNotificationCount = 0,
 }: AppHeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -56,10 +58,12 @@ export default function AppHeader({
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [notificationsLoadedFor, setNotificationsLoadedFor] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
   const notificationsMenuId = useId();
+  const currentUserKey = user?.email ?? null;
 
   const adminActive = pathname.startsWith("/admin");
   const profileActive = pathname.startsWith("/profile");
@@ -106,6 +110,7 @@ export default function AppHeader({
       try {
         const notifications = await fetchNotifications();
         if (!cancelled) {
+          setNotificationsLoadedFor(currentUserKey);
           setNotifications(notifications);
           setUnreadCount(
             notifications.filter((notification) => !notification.readAt).length,
@@ -117,13 +122,17 @@ export default function AppHeader({
       }
     }
 
-    void refreshNotifications();
+    if (notificationsOpen) void refreshNotifications();
     window.addEventListener("notifications:updated", refreshNotifications);
     return () => {
       cancelled = true;
       window.removeEventListener("notifications:updated", refreshNotifications);
     };
-  }, [signedIn]);
+  }, [currentUserKey, notificationsOpen, signedIn]);
+
+  const displayedUnreadCount = notificationsLoadedFor === currentUserKey
+    ? unreadCount
+    : unreadNotificationCount;
 
   async function openNotification(notification: AppNotification) {
     setNotificationsOpen(false);
@@ -179,7 +188,7 @@ export default function AppHeader({
                 aria-expanded={notificationsOpen}
                 aria-haspopup="menu"
                 aria-controls={notificationsMenuId}
-                aria-label={unreadCount ? `Notifications (${unreadCount} unread)` : "Notifications"}
+                aria-label={displayedUnreadCount ? `Notifications (${displayedUnreadCount} unread)` : "Notifications"}
                 onClick={() => {
                   setNotificationsOpen((open) => !open);
                   setMenuOpen(false);
@@ -189,9 +198,9 @@ export default function AppHeader({
                 }`}
               >
                 <BellIcon />
-                {unreadCount > 0 && (
+                {displayedUnreadCount > 0 && (
                   <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold leading-none text-white ring-1 ring-paper dark:ring-zinc-950">
-                    {unreadCount > 9 ? "9+" : unreadCount}
+                    {displayedUnreadCount > 9 ? "9+" : displayedUnreadCount}
                   </span>
                 )}
               </button>
@@ -204,7 +213,7 @@ export default function AppHeader({
                 >
                   <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-3 dark:border-zinc-800">
                     <p className="text-sm font-semibold text-zinc-900 dark:text-white">Notifications</p>
-                    {unreadCount > 0 && <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300">{unreadCount} unread</span>}
+                    {displayedUnreadCount > 0 && <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300">{displayedUnreadCount} unread</span>}
                   </div>
                   {notifications.length === 0 ? (
                     <p className="px-4 py-8 text-center text-sm text-zinc-500 dark:text-zinc-400">No notifications yet.</p>

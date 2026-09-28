@@ -31,6 +31,20 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 
 ## Deploy on Vercel
 
+### Same-origin API proxy
+
+When the web app and API are deployed at different origins, configure the web
+project with these production environment variables:
+
+```bash
+NEXT_PUBLIC_API_URL=/api
+API_PROXY_ORIGIN=https://your-api.example.com
+```
+
+The Next.js rewrite proxies browser requests through the web origin. This avoids
+CORS preflight round trips for authenticated API calls. Leave these variables
+unset for the existing direct-API deployment behaviour.
+
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

@@ -9,16 +9,17 @@ import { requestTimingMiddleware } from './shared/middleware/request-timing.midd
 
 const expressApp = express();
 
-let cachedApp: any;
+let appPromise: Promise<typeof expressApp> | undefined;
 
 async function bootstrapServer() {
-  if (cachedApp) return cachedApp;
+  if (appPromise) return appPromise;
 
-  const app = await NestFactory.create(
-    AppModule,
-    new ExpressAdapter(expressApp),
-  );
-  const config = app.get(ConfigService);
+  appPromise = (async () => {
+    const app = await NestFactory.create(
+      AppModule,
+      new ExpressAdapter(expressApp),
+    );
+    const config = app.get(ConfigService);
 
   const nodeEnv = config.get<string>('nodeEnv', 'development');
   const frontendUrl = config.get<string>(
@@ -63,9 +64,14 @@ async function bootstrapServer() {
     SwaggerModule.setup('docs', app, document);
   }
 
-  await app.init();
-  cachedApp = expressApp;
-  return expressApp;
+    await app.init();
+    return expressApp;
+  })().catch((error: unknown) => {
+    appPromise = undefined;
+    throw error;
+  });
+
+  return appPromise;
 }
 
 // Local dev: run a normal server

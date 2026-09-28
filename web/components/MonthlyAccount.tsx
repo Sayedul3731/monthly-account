@@ -1,9 +1,10 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  fetchBudgets,
+  fetchDashboard,
   fetchTransactions,
   logoutUser,
   type Budget,
@@ -22,9 +23,7 @@ import {
   type Transaction,
 } from "@/lib/finance";
 import AppHeader from "./AppHeader";
-import BudgetPanel from "./BudgetPanel";
 import CategoryChart from "./CategoryChart";
-import ExportImportPanel from "./ExportImportPanel";
 import {
   CalendarIcon,
   ChevronLeft,
@@ -33,10 +32,13 @@ import {
   TrendUpIcon,
   WalletIcon,
 } from "./icons";
-import TransactionForm from "./TransactionForm";
-import TransactionList from "./TransactionList";
 import { useToast } from "@/components/ToastProvider";
-import CalendarView from "./CalendarView";
+
+const BudgetPanel = dynamic(() => import("./BudgetPanel"));
+const CalendarView = dynamic(() => import("./CalendarView"));
+const ExportImportPanel = dynamic(() => import("./ExportImportPanel"));
+const TransactionForm = dynamic(() => import("./TransactionForm"));
+const TransactionList = dynamic(() => import("./TransactionList"));
 
 const today = new Date();
 
@@ -67,6 +69,7 @@ export default function MonthlyAccount() {
   const [authReady, setAuthReady] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [offline, setOffline] = useState(false);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const transactionFormRef = useRef<HTMLDivElement>(null);
 
   async function handleSignOut() {
@@ -112,16 +115,20 @@ export default function MonthlyAccount() {
       }
 
       try {
-        const [txData, budgetData] = await Promise.all([
-          fetchTransactions(year, month),
-          fetchBudgets(year, month),
-        ]);
+        const dashboard = await fetchDashboard(year, month);
         if (cancelled) return;
 
-        setTransactions(txData);
-        setBudgets(budgetData);
+        setTransactions(dashboard.transactions);
+        setBudgets(dashboard.budgets);
+        setUnreadNotificationCount(dashboard.unreadNotificationCount);
         if (sessionUser?.id) {
-          saveOfflineAccount(sessionUser.id, year, month, txData, budgetData);
+          saveOfflineAccount(
+            sessionUser.id,
+            year,
+            month,
+            dashboard.transactions,
+            dashboard.budgets,
+          );
         }
         setOffline(false);
       } catch (err) {
@@ -356,6 +363,7 @@ export default function MonthlyAccount() {
           : null
       }
       isAdmin={isAdmin(sessionUser)}
+      unreadNotificationCount={unreadNotificationCount}
       signingOut={signingOut}
       onSignOut={handleSignOut}
       ready={authReady}

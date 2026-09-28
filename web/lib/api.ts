@@ -61,6 +61,12 @@ export type Budget = {
   amount: number;
 };
 
+export type DashboardData = {
+  transactions: Transaction[];
+  budgets: Budget[];
+  unreadNotificationCount: number;
+};
+
 type UpsertBudgetInput = {
   year: number;
   month: number;
@@ -331,7 +337,7 @@ async function request<T>(
     response = await fetch(`${API_URL}${path}`, {
       ...init,
       headers: {
-        "Content-Type": "application/json",
+        ...(init?.body ? { "Content-Type": "application/json" } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...init?.headers,
       },
@@ -890,6 +896,37 @@ export async function fetchTransactions(
   const query = params.size ? `?${params}` : "";
   const data = await request<RawTransaction[]>(`/transactions${query}`);
   return data.map(normalizeTransaction);
+}
+
+export async function fetchTransactionsInRange(
+  start: string,
+  end: string,
+): Promise<Transaction[]> {
+  const params = new URLSearchParams({ start, end });
+  const data = await request<RawTransaction[]>(`/transactions?${params}`);
+  return data.map(normalizeTransaction);
+}
+
+export async function fetchDashboard(
+  year: number,
+  month: number,
+): Promise<DashboardData> {
+  const params = new URLSearchParams({ year: String(year), month: String(month) });
+  const data = await request<{
+    transactions: RawTransaction[];
+    budgets: Budget[];
+    unreadNotificationCount: number;
+  }>(`/dashboard?${params}`);
+
+  return {
+    transactions: data.transactions.map(normalizeTransaction),
+    budgets: data.budgets
+      .map(normalizeBudget)
+      .filter((budget): budget is Budget => budget !== null),
+    unreadNotificationCount: Number.isFinite(data.unreadNotificationCount)
+      ? Math.max(0, data.unreadNotificationCount)
+      : 0,
+  };
 }
 
 export async function fetchCategories(
