@@ -10,7 +10,6 @@ import {
 } from "@/lib/finance";
 import { useToast } from "@/components/ToastProvider";
 import { CalendarIcon, ChevronLeft, ChevronRight } from "./icons";
-import LoadingState from "./LoadingState";
 
 type ViewMode = "daily" | "weekly" | "monthly" | "yearly";
 
@@ -107,14 +106,12 @@ export default function CalendarView({ year, month }: { year: number; month: num
   const [mode, setMode] = useState<ViewMode>("monthly");
   const [cursor, setCursor] = useState(() => new Date(year, month, 1));
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
 
   const bounds = useMemo(() => periodBounds(mode, cursor), [cursor, mode]);
 
   useEffect(() => {
     let cancelled = false;
     async function loadTransactions() {
-      setLoading(true);
       try {
         const data = await fetchTransactionsInRange(bounds.start, bounds.end);
         if (!cancelled) setTransactions(data);
@@ -125,8 +122,6 @@ export default function CalendarView({ year, month }: { year: number; month: num
             { kind: "error", title: "Calendar unavailable" },
           );
         }
-      } finally {
-        if (!cancelled) setLoading(false);
       }
     }
     void loadTransactions();
@@ -235,28 +230,25 @@ export default function CalendarView({ year, month }: { year: number; month: num
         <div className="p-4 sm:p-5">
           <p className="text-xs font-medium uppercase text-zinc-500">Total cost</p>
           <p className="mt-1 text-2xl font-semibold tabular-nums text-rose-600 dark:text-rose-400">
-            {loading ? "--" : formatCurrency(total)}
+            {formatCurrency(total)}
           </p>
         </div>
         <div className="border-y border-brand/10 p-4 sm:border-x sm:border-y-0 sm:p-5 dark:border-zinc-800">
           <p className="text-xs font-medium uppercase text-zinc-500">Daily average</p>
           <p className="mt-1 text-2xl font-semibold tabular-nums text-brand dark:text-white">
-            {loading ? "--" : formatCurrency(average)}
+            {formatCurrency(average)}
           </p>
         </div>
         <div className="p-4 sm:p-5">
           <p className="text-xs font-medium uppercase text-zinc-500">Transactions</p>
           <p className="mt-1 text-2xl font-semibold tabular-nums text-brand dark:text-white">
-            {loading ? "--" : periodExpenses.length}
+            {periodExpenses.length}
           </p>
         </div>
       </div>
 
       <div className="p-4 sm:p-6">
-        {loading ? (
-          <LoadingState compact label="Loading spending calendar" />
-        ) : (
-          <>
+        <>
             {mode === "weekly" && (
               <WeekGrid cursor={cursor} amountByDay={amountByDay} onSelect={openDay} />
             )}
@@ -304,8 +296,7 @@ export default function CalendarView({ year, month }: { year: number; month: num
                 </ul>
               )}
             </div>
-          </>
-        )}
+        </>
       </div>
     </section>
   );
