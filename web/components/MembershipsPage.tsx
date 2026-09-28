@@ -24,9 +24,9 @@ import AppHeader from "./AppHeader";
 import LoadingState from "./LoadingState";
 import { CheckIcon, ChevronLeft, SpinnerIcon } from "./icons";
 
-const FREE_FEATURES = ["Overview", "Transactions"];
+const FREE_FEATURES = ["Account Snapshot", "Transactions"];
 const PREMIUM_FEATURES = [
-  "Overview",
+  "Account Snapshot",
   "Transactions",
   "Spending Calendar",
   "Budget Tracking",
@@ -436,7 +436,7 @@ export default function MembershipsPage() {
                       className="relative flex min-h-[29rem] flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_12px_28px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_16px_36px_rgba(0,0,0,0.08)] sm:p-7 dark:border-zinc-800 dark:bg-zinc-900"
                     >
                       <div aria-hidden className="absolute inset-x-0 top-0 h-1 bg-zinc-300 dark:bg-zinc-700" />
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-h-[6.5rem] items-start justify-between gap-3">
                         <div>
                           <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500 dark:text-zinc-400">
                             {typeLabel(plan.type)} plan
@@ -451,14 +451,14 @@ export default function MembershipsPage() {
                           </span>
                         )}
                       </div>
-                      <p className="mt-3 min-h-12 text-sm leading-6 text-zinc-500 dark:text-zinc-400">
+                      <p className="mt-3 min-h-[5.25rem] text-sm leading-6 text-zinc-500 dark:text-zinc-400">
                         {plan.description || "A simple way to keep your account active with no subscription cost."}
                       </p>
-                      <div className="my-6 border-y border-zinc-100 py-5 dark:border-zinc-800">
+                      <div className="my-6 flex min-h-[8.25rem] flex-col justify-center border-y border-zinc-100 py-5 dark:border-zinc-800">
                         <span className="text-4xl font-semibold tracking-[-0.04em] text-zinc-900 dark:text-white">৳0</span>
                         <span className="ml-1.5 text-sm font-medium text-zinc-500 dark:text-zinc-400">/ forever</span>
                       </div>
-                      <div className="mt-1">
+                      <div className="mt-1 mb-6">
                         <p className="mb-3 text-xs font-semibold tracking-wide text-zinc-500 uppercase dark:text-zinc-400">
                           Included features
                         </p>
@@ -535,15 +535,15 @@ export default function MembershipsPage() {
                           Best value
                         </div>
                       )}
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
+                      <div className="relative min-h-[6.5rem]">
+                        <div className={isCurrent ? "pr-20" : ""}>
                           <span className="hidden">
                             Premium · {label}
                           </span>
                           <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand dark:text-gold">
                             Premium plan
                           </p>
-                          <h4 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">
+                          <h4 className="mt-2 whitespace-nowrap text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">
                             {label}
                           </h4>
                           <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
@@ -551,15 +551,15 @@ export default function MembershipsPage() {
                           </p>
                         </div>
                         {isCurrent && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:ring-emerald-900">
+                          <span className={`absolute right-0 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:ring-emerald-900 ${isFeatured ? "top-7" : "top-0"}`}>
                             <CheckIcon /> Current
                           </span>
                         )}
                       </div>
-                      <p className="mt-3 min-h-12 text-sm leading-6 text-zinc-500 dark:text-zinc-400">
+                      <p className="mt-3 min-h-[5.25rem] text-sm leading-6 text-zinc-500 dark:text-zinc-400">
                         {plan.description || "Premium access with a billing schedule that works for you."}
                       </p>
-                      <div className="my-6 border-y border-zinc-100 py-5 dark:border-zinc-800">
+                      <div className="my-6 flex min-h-[8.25rem] flex-col justify-center border-y border-zinc-100 py-5 dark:border-zinc-800">
                         <div className="flex items-end justify-between gap-3">
                           <div>
                             <span className="text-4xl font-semibold tracking-[-0.04em] text-zinc-900 dark:text-white">{formatMembershipPrice(price)}</span>
@@ -573,7 +573,7 @@ export default function MembershipsPage() {
                         </div>
                         <p className="mt-2 text-xs font-medium text-zinc-500 dark:text-zinc-400">{note}</p>
                       </div>
-                      <div className="mt-1">
+                      <div className="mt-1 mb-6">
                         <p className="mb-3 text-xs font-semibold tracking-wide text-zinc-500 uppercase dark:text-zinc-400">
                           Included features
                         </p>
