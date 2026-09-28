@@ -163,7 +163,7 @@ export default function AppHeader({
           className="flex min-w-0 items-center gap-2.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/50"
         >
           <Image
-            src="/logo.png"
+            src="/doinik-hisab-logo.png"
             alt=""
             width={32}
             height={32}

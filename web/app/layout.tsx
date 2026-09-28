@@ -23,8 +23,8 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
   },
   icons: {
-    icon: "/logo.png",
-    apple: "/logo.png",
+    icon: "/doinik-hisab-logo.png",
+    apple: "/doinik-hisab-logo.png",
   },
 };
 

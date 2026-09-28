@@ -38,7 +38,7 @@ export default function AuthLayout({
           <div>
             <div className="relative flex items-center gap-2.5 sm:gap-3">
               <Image
-                src="/logo.png"
+                src="/doinik-hisab-logo.png"
                 alt="Doinik Hisab"
                 width={40}
                 height={40}

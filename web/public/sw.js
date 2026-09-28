@@ -1,6 +1,6 @@
-const CACHE_NAME = "daily-hisab-shell-v2";
+const CACHE_NAME = "doinik-hisab-shell-v1";
 const OFFLINE_URL = "/offline";
-const PRECACHE_URLS = ["/", OFFLINE_URL, "/logo.png"];
+const PRECACHE_URLS = ["/", OFFLINE_URL, "/doinik-hisab-logo.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -18,7 +18,11 @@ self.addEventListener("activate", (event) => {
       .then((cacheNames) =>
         Promise.all(
           cacheNames
-            .filter((cacheName) => cacheName.startsWith("daily-hisab-") && cacheName !== CACHE_NAME)
+            .filter(
+              (cacheName) =>
+                (cacheName.startsWith("daily-hisab-") || cacheName.startsWith("doinik-hisab-")) &&
+                cacheName !== CACHE_NAME,
+            )
             .map((cacheName) => caches.delete(cacheName)),
         ),
       )

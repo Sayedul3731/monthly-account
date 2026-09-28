@@ -13,13 +13,13 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#123847",
     icons: [
       {
-        src: "/logo.png",
+        src: "/doinik-hisab-logo.png",
         sizes: "300x300",
         type: "image/png",
         purpose: "any",
       },
       {
-        src: "/logo.png",
+        src: "/doinik-hisab-logo.png",
         sizes: "300x300",
         type: "image/png",
         purpose: "maskable",
