@@ -28,6 +28,8 @@ type GoogleUserInfo = {
   name?: string;
 };
 
+export type AuthSession = AuthResponseDto & { refreshToken: string };
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -37,7 +39,7 @@ export class AuthService {
     private readonly smtpMailer: SmtpMailerService,
   ) {}
 
-  async register(dto: RegisterDto): Promise<AuthResponseDto> {
+  async register(dto: RegisterDto): Promise<AuthSession> {
     const user = await this.usersService.create({
       name: dto.name,
       email: dto.email,
@@ -47,7 +49,7 @@ export class AuthService {
     return this.buildAuthResponse(user);
   }
 
-  async login(dto: LoginDto): Promise<AuthResponseDto> {
+  async login(dto: LoginDto): Promise<AuthSession> {
     const user = await this.usersService.findByEmail(dto.email);
 
     if (
@@ -120,7 +122,7 @@ export class AuthService {
     return this.usersService.createOAuthHandoff(user.id);
   }
 
-  async exchangeOAuthHandoff(code: string): Promise<AuthResponseDto> {
+  async exchangeOAuthHandoff(code: string): Promise<AuthSession> {
     const user = await this.usersService.consumeOAuthHandoff(code);
     if (!user) {
       throw new UnauthorizedException('Invalid or expired OAuth sign-in code');
@@ -137,7 +139,7 @@ export class AuthService {
     return this.frontendUrl('/login', { oauthError: 'google' });
   }
 
-  async refresh(refreshToken: string): Promise<AuthResponseDto> {
+  async refresh(refreshToken: string): Promise<AuthSession> {
     const payload = this.verifyRefreshToken(refreshToken);
     const user = await this.usersService.findByIdWithRefreshToken(payload.sub);
 
@@ -180,8 +182,6 @@ export class AuthService {
     const user = await this.usersService.update(userId, {
       name: dto.name,
       password: dto.password,
-      membershipId: dto.membershipId,
-      billingInterval: dto.billingInterval,
     });
     return this.toPublicUser(user);
   }
@@ -250,7 +250,7 @@ export class AuthService {
 
   private async buildAuthResponse(
     user: UserDocument,
-  ): Promise<AuthResponseDto> {
+  ): Promise<AuthSession> {
     if (!user.role?.name) {
       throw new UnauthorizedException('User role is not loaded');
     }

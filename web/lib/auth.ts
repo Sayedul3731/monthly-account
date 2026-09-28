@@ -21,22 +21,15 @@ export type AuthUser = {
 
 export type AuthResponse = {
   accessToken: string;
-  refreshToken: string;
   user: AuthUser;
 };
 
 const ACCESS_TOKEN_KEY = "daily_hisab_access_token";
-const REFRESH_TOKEN_KEY = "daily_hisab_refresh_token";
 const USER_KEY = "daily_hisab_user";
 
 export function getAccessToken(): string | null {
   if (typeof window === "undefined") return null;
   return localStorage.getItem(ACCESS_TOKEN_KEY);
-}
-
-export function getRefreshToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem(REFRESH_TOKEN_KEY);
 }
 
 export function getStoredUser(): AuthUser | null {
@@ -53,13 +46,9 @@ export function getStoredUser(): AuthUser | null {
 export function setAuthSession(
   accessToken: string,
   user: AuthUser,
-  refreshToken?: string,
 ): void {
   localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
   localStorage.setItem(USER_KEY, JSON.stringify(user));
-  if (refreshToken) {
-    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
-  }
 }
 
 export function updateStoredUser(user: AuthUser): void {
@@ -68,7 +57,7 @@ export function updateStoredUser(user: AuthUser): void {
 
 export function clearAuthSession(): void {
   localStorage.removeItem(ACCESS_TOKEN_KEY);
-  localStorage.removeItem(REFRESH_TOKEN_KEY);
+  localStorage.removeItem("daily_hisab_refresh_token");
   localStorage.removeItem(USER_KEY);
 }
 

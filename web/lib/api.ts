@@ -1,7 +1,6 @@
 import {
   clearAuthSession,
   getAccessToken,
-  getRefreshToken,
   setAuthSession,
   updateStoredUser,
   type AuthResponse,
@@ -92,8 +91,6 @@ type UpdateProfileInput = {
   name?: string;
   password?: string;
   currentPassword?: string;
-  membershipId?: string;
-  billingInterval?: BillingInterval | null;
 };
 
 type RequestEmailChangeInput = {
@@ -259,7 +256,7 @@ function normalizePrice(value: unknown): number {
 
 function applyAuthSession(data: AuthResponse): AuthUser {
   const user = normalizeAuthUser(data.user);
-  setAuthSession(data.accessToken, user, data.refreshToken);
+  setAuthSession(data.accessToken, user);
   return user;
 }
 
@@ -291,14 +288,10 @@ function toApiError(err: unknown): Error {
 let refreshPromise: Promise<boolean> | null = null;
 
 async function performTokenRefresh(): Promise<boolean> {
-  const refreshToken = getRefreshToken();
-  if (!refreshToken) return false;
-
   try {
     const response = await fetch(`${API_URL}/auth/refresh`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refreshToken }),
+      credentials: "include",
     });
 
     if (!response.ok) {
@@ -336,6 +329,7 @@ async function request<T>(
     const token = getAccessToken();
     response = await fetch(`${API_URL}${path}`, {
       ...init,
+      credentials: "include",
       headers: {
         ...(init?.body ? { "Content-Type": "application/json" } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -430,11 +424,6 @@ export async function updateProfile(
   if (input.currentPassword !== undefined) {
     body.currentPassword = input.currentPassword;
   }
-  if (input.membershipId !== undefined) body.membershipId = input.membershipId;
-  if (input.billingInterval !== undefined && input.billingInterval !== null) {
-    body.billingInterval = input.billingInterval;
-  }
-
   const data = await request<AuthUser>("/auth/me", {
     method: "PATCH",
     body: JSON.stringify(body),
@@ -674,13 +663,6 @@ export async function fetchMemberships(
   const params = type ? `?type=${type}` : "";
   const data = await request<unknown[]>(`/memberships${params}`);
   return data.map(normalizeMembershipRecord);
-}
-
-export async function updateMembership(
-  membershipId: string,
-  billingInterval?: BillingInterval,
-): Promise<AuthUser> {
-  return updateProfile({ membershipId, billingInterval });
 }
 
 export async function fetchUsers(): Promise<AdminUser[]> {

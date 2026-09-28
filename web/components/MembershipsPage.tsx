@@ -9,7 +9,6 @@ import {
   fetchMemberships,
   fetchMyManualPayments,
   logoutUser,
-  updateMembership,
   type BillingInterval,
   type ManualPayment,
   type Membership,
@@ -158,34 +157,6 @@ export default function MembershipsPage() {
       router.push(
         `/membership/checkout?plan=${encodeURIComponent(plan.id)}&interval=${billingInterval}`,
       );
-      return;
-    }
-
-    const actionKey = `${plan.id}:${billingInterval ?? "free"}`;
-    const isCurrent =
-      plan.id === user?.membership?.id &&
-      (plan.type === "free" || user?.billingInterval === billingInterval);
-
-    if (!user || isCurrent || switchingKey) return;
-
-    setActionError(null);
-    setActionSuccess(null);
-    setSwitchingKey(actionKey);
-
-    try {
-      const updated = await updateMembership(plan.id, billingInterval);
-      setUser(updated);
-      const intervalText =
-        plan.type === "paid" && billingInterval
-          ? ` (${intervalLabel(billingInterval)})`
-          : "";
-      setActionSuccess(`Switched to the ${plan.name} plan${intervalText}.`);
-    } catch (err) {
-      setActionError(
-        err instanceof Error ? err.message : "Failed to update membership",
-      );
-    } finally {
-      setSwitchingKey(null);
     }
   }
 

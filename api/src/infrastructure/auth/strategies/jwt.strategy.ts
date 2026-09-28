@@ -1,12 +1,16 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import { UsersService } from '../../../modules/users/users.service';
 import { AuthenticatedUser, JwtPayload } from '../jwt-payload.interface';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(config: ConfigService) {
+  constructor(
+    config: ConfigService,
+    private readonly usersService: UsersService,
+  ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
@@ -14,7 +18,16 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  validate(payload: JwtPayload): AuthenticatedUser {
-    return { userId: payload.sub, email: payload.email, role: payload.role };
+  async validate(payload: JwtPayload): Promise<AuthenticatedUser> {
+    try {
+      const user = await this.usersService.findOne(payload.sub);
+      if (!user.role?.name) {
+        throw new UnauthorizedException('User role is unavailable');
+      }
+
+      return { userId: user.id, email: user.email, role: user.role.name };
+    } catch {
+      throw new UnauthorizedException('User account is no longer active');
+    }
   }
 }

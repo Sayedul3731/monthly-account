@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule, JwtModuleOptions } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { RolesModule } from '../../modules/roles/roles.module';
 import { UsersModule } from '../../modules/users/users.module';
 import { AuthController } from './auth.controller';
@@ -17,6 +18,13 @@ import { SmtpMailerService } from './smtp-mailer.service';
     UsersModule,
     RolesModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60_000,
+        limit: 100,
+        blockDuration: 60_000,
+      },
+    ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -37,6 +45,7 @@ import { SmtpMailerService } from './smtp-mailer.service';
     SmtpMailerService,
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
   exports: [AuthService],
 })

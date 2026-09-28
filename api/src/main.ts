@@ -3,11 +3,18 @@ import { ConfigService } from '@nestjs/config';
 import { NestFactory, Reflector } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import express from 'express';
+import express, {
+  type NextFunction,
+  type Request,
+  type Response,
+} from 'express';
 import { AppModule } from './app/app.module';
 import { requestTimingMiddleware } from './shared/middleware/request-timing.middleware';
 
 const expressApp = express();
+// Vercel sits one trusted proxy hop in front of this serverless handler. This
+// lets rate limiting use the client address instead of the platform proxy.
+expressApp.set('trust proxy', process.env.VERCEL === '1' ? 1 : false);
 
 let appPromise: Promise<typeof expressApp> | undefined;
 
@@ -35,8 +42,27 @@ async function bootstrapServer() {
 
   app.enableCors({
     origin: nodeEnv === 'production' ? productionOrigins : true,
+    credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
+  });
+
+  app.use((_request: Request, response: Response, next: NextFunction) => {
+    response.setHeader('X-Content-Type-Options', 'nosniff');
+    response.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    response.setHeader('X-Frame-Options', 'DENY');
+    response.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    if (nodeEnv === 'production') {
+      response.setHeader(
+        'Strict-Transport-Security',
+        'max-age=31536000; includeSubDomains',
+      );
+      response.setHeader(
+        'Content-Security-Policy',
+        "default-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+      );
+    }
+    next();
   });
 
   app.use(requestTimingMiddleware);

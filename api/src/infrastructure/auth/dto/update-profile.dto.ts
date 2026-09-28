@@ -1,7 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
-  IsEnum,
-  IsMongoId,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -9,7 +7,6 @@ import {
   MinLength,
   ValidateIf,
 } from 'class-validator';
-import { BillingInterval } from '../../../modules/memberships/billing-interval.enum';
 
 export class UpdateProfileDto {
   @ApiPropertyOptional({ example: 'Jane Doe', maxLength: 100 })
@@ -43,19 +40,4 @@ export class UpdateProfileDto {
   @MaxLength(72)
   currentPassword?: string;
 
-  @ApiPropertyOptional({
-    description: 'Membership plan to switch to.',
-  })
-  @IsOptional()
-  @IsMongoId()
-  membershipId?: string;
-
-  @ApiPropertyOptional({
-    enum: BillingInterval,
-    description:
-      'Monthly, quarterly, or yearly billing. Required for the paid plan.',
-  })
-  @IsOptional()
-  @IsEnum(BillingInterval)
-  billingInterval?: BillingInterval;
 }
