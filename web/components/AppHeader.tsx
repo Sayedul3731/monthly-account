@@ -167,7 +167,7 @@ export default function AppHeader({
             alt=""
             width={32}
             height={32}
-            className="h-8 w-8 rounded-lg object-contain ring-1 ring-zinc-200/80 dark:ring-zinc-700"
+            className="h-8 w-8 rounded-lg object-contain"
             priority
           />
           <span className="truncate text-sm font-semibold tracking-tight text-brand dark:text-white">

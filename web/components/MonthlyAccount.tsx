@@ -396,7 +396,7 @@ export default function MonthlyAccount() {
             Monthly overview
           </p>
           <h1 className="mt-0.5 text-lg font-semibold leading-tight tracking-tight text-brand sm:text-xl dark:text-white">
-            আমার হিসাব
+            আমার দৈনিক হিসাব
           </h1>
           <p className="mt-0.5 text-[11px] leading-4 text-zinc-500 sm:text-xs dark:text-zinc-400">
             এই মাসের আয়, ব্যয় ও বাজেট
