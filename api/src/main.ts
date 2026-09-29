@@ -62,6 +62,7 @@ async function bootstrapServer() {
         "default-src 'none'; base-uri 'none'; frame-ancestors 'none'",
       );
     }
+    response.setHeader('Cache-Control', 'private, no-store, max-age=0');
     next();
   });
 
