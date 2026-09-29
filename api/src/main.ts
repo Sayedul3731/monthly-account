@@ -1,32 +1,24 @@
 import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory, Reflector } from '@nestjs/core';
-import { ExpressAdapter } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import express, {
-  type NextFunction,
-  type Request,
-  type Response,
+import type {
+  NextFunction,
+  Request,
+  Response,
 } from 'express';
 import { AppModule } from './app/app.module';
 import { requestTimingMiddleware } from './shared/middleware/request-timing.middleware';
 
-const expressApp = express();
-// Vercel sits one trusted proxy hop in front of this serverless handler. This
-// lets rate limiting use the client address instead of the platform proxy.
-expressApp.set('trust proxy', process.env.VERCEL === '1' ? 1 : false);
-
-let appPromise: Promise<typeof expressApp> | undefined;
-
-async function bootstrapServer() {
-  if (appPromise) return appPromise;
-
-  appPromise = (async () => {
-    const app = await NestFactory.create(
-      AppModule,
-      new ExpressAdapter(expressApp),
-    );
-    const config = app.get(ConfigService);
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  // Vercel sits one trusted proxy hop in front of this serverless app. This
+  // lets rate limiting use the client address instead of the platform proxy.
+  app
+    .getHttpAdapter()
+    .getInstance()
+    .set('trust proxy', process.env.VERCEL === '1' ? 1 : false);
+  const config = app.get(ConfigService);
 
   const nodeEnv = config.get<string>('nodeEnv', 'development');
   const frontendUrl = config.get<string>(
@@ -91,28 +83,9 @@ async function bootstrapServer() {
     SwaggerModule.setup('docs', app, document);
   }
 
-    await app.init();
-    return expressApp;
-  })().catch((error: unknown) => {
-    appPromise = undefined;
-    throw error;
-  });
-
-  return appPromise;
+  // Vercel's NestJS runtime detects this conventional bootstrap and manages
+  // it as a single Vercel Function. Locally it starts a normal HTTP server.
+  await app.listen(process.env.PORT || 3001);
 }
 
-// Local dev: run a normal server
-if (process.env.VERCEL !== '1') {
-  bootstrapServer().then((server) => {
-    const port = process.env.PORT || 3001;
-    server.listen(port, () => {
-      console.log(`API running on http://localhost:${port}`);
-    });
-  });
-}
-
-// Vercel: export a serverless handler
-export default async function handler(req: any, res: any) {
-  const server = await bootstrapServer();
-  server(req, res);
-}
+void bootstrap();
