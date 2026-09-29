@@ -68,9 +68,6 @@ $ npm run test:cov
   MongoDB URI.
 - Generate separate `JWT_SECRET` and `JWT_REFRESH_SECRET` values of at least
   32 characters. The API refuses unsafe or duplicate JWT secrets in production.
-- The API uses MongoDB-backed throttling, so login and API limits are shared by
-  every serverless instance. Ensure the configured database user can create the
-  `rate_limit_records` collection and indexes.
 - Review privileged changes through `GET /audit-events` as an administrator.
 
 ### Budget ownership migration
