@@ -6,8 +6,14 @@ import {
   EXPENSE_CATEGORIES,
   CATEGORY_ICONS,
   formatCurrency,
+  formatMonthLabel,
+  getMonthKey,
   type Transaction,
 } from "@/lib/finance";
+import {
+  downloadMonthlyStatementPdf,
+  downloadTransactionWorkbook,
+} from "@/lib/monthly-statement";
 import { EditIcon, MoreHorizontalIcon, TrashIcon } from "./icons";
 
 type Props = {
@@ -34,6 +40,7 @@ export default function BudgetPanel({
   const [saving, setSaving] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [exporting, setExporting] = useState<"excel" | "pdf" | null>(null);
 
   const overallBudget = budgets.find((b) => !b.category);
   const categoryBudgets = budgets.filter((b) => b.category);
@@ -117,6 +124,35 @@ export default function BudgetPanel({
     }
   }
 
+  async function exportBudgetReport() {
+    if (exporting) return;
+    setExporting("excel");
+    try {
+      await downloadTransactionWorkbook({
+        title: `${formatMonthLabel(year, month)} budget report`,
+        filename: `budget-report-${getMonthKey(year, month)}.xlsx`,
+        transactions,
+        budgets,
+      });
+    } catch (err) {
+      onError(err instanceof Error ? err.message : "Budget export failed");
+    } finally {
+      setExporting(null);
+    }
+  }
+
+  async function exportBudgetPdf() {
+    if (exporting || transactions.length === 0) return;
+    setExporting("pdf");
+    try {
+      await downloadMonthlyStatementPdf({ year, month, transactions, budgets });
+    } catch (err) {
+      onError(err instanceof Error ? err.message : "Budget PDF export failed");
+    } finally {
+      setExporting(null);
+    }
+  }
+
   const overallProgress =
     overallBudget && overallBudget.amount > 0
       ? Math.min((expenseTotal / overallBudget.amount) * 100, 100)
@@ -128,12 +164,32 @@ export default function BudgetPanel({
   return (
     <div className="space-y-6">
       <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <h2 className="mb-1 text-base font-semibold text-zinc-900 dark:text-white">
-          Monthly budget
-        </h2>
-        <p className="mb-4 text-sm text-zinc-500">
-          Set a spending limit for the month and track progress.
-        </p>
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="mb-1 text-base font-semibold text-zinc-900 dark:text-white">
+              Monthly budget
+            </h2>
+            <p className="text-sm text-zinc-500">
+              Set a spending limit for the month and track progress.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void exportBudgetReport()}
+            disabled={exporting !== null}
+            className="rounded-lg border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            {exporting === "excel" ? "Creating Excel..." : "Export budget Excel"}
+          </button>
+          <button
+            type="button"
+            onClick={() => void exportBudgetPdf()}
+            disabled={transactions.length === 0 || exporting !== null}
+            className="rounded-lg border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            {exporting === "pdf" ? "Creating PDF..." : "Download budget PDF"}
+          </button>
+        </div>
 
         {overallBudget ? (
           <div className="mb-4 rounded-xl bg-zinc-50 p-4 dark:bg-zinc-800/50">

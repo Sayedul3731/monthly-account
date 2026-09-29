@@ -12,6 +12,7 @@ import {
 import { formatCurrency } from "@/lib/finance";
 import { CloseIcon, EditIcon, PlusIcon, SpinnerIcon } from "../icons";
 import LoadingState from "../LoadingState";
+import ExportExcelButton from "./ExportExcelButton";
 import {
   AdminAlert,
   AdminEmpty,
@@ -199,14 +200,29 @@ export default function MembershipsAdmin({ onError }: Props) {
             Only one free plan and one paid plan can exist at a time.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={openCreate}
-          className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
-        >
-          <PlusIcon />
-          Add plan
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <ExportExcelButton
+            filename="membership-plans.xlsx"
+            sheetName="Memberships"
+            onError={onError}
+            rows={plans.map((plan) => ({
+              Name: plan.name,
+              Type: titleCase(plan.type),
+              "Monthly price (BDT)": plan.monthlyPrice,
+              "Quarterly price (BDT)": plan.quarterlyPrice,
+              "Yearly price (BDT)": plan.yearlyPrice,
+              Description: plan.description ?? "",
+            }))}
+          />
+          <button
+            type="button"
+            onClick={openCreate}
+            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
+          >
+            <PlusIcon />
+            Add plan
+          </button>
+        </div>
       </div>
 
       {success && <AdminAlert kind="success">{success}</AdminAlert>}

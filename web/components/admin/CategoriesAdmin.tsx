@@ -11,6 +11,7 @@ import {
 import type { TransactionType } from "@/lib/finance";
 import { CloseIcon, EditIcon, PlusIcon, SpinnerIcon } from "../icons";
 import LoadingState from "../LoadingState";
+import ExportExcelButton from "./ExportExcelButton";
 import {
   AdminAlert,
   AdminEmpty,
@@ -219,14 +220,26 @@ export default function CategoriesAdmin({ onError }: Props) {
             Shared income and expense categories used on every account.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={openCreate}
-          className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
-        >
-          <PlusIcon />
-          Add category
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <ExportExcelButton
+            filename={`categories-${filter}.xlsx`}
+            sheetName="Categories"
+            onError={onError}
+            rows={visibleCategories.map((category) => ({
+              Category: category.name,
+              Type: titleCase(category.type),
+              Icon: category.icon,
+            }))}
+          />
+          <button
+            type="button"
+            onClick={openCreate}
+            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
+          >
+            <PlusIcon />
+            Add category
+          </button>
+        </div>
       </div>
 
       {success && <AdminAlert kind="success">{success}</AdminAlert>}

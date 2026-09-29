@@ -9,12 +9,18 @@ import {
   parseImportCsv,
   parseImportJson,
 } from "@/lib/api";
+import {
+  downloadMonthlyStatementExcel,
+  downloadMonthlyStatementPdf,
+} from "@/lib/monthly-statement";
 import { formatMonthLabel, getMonthKey, type Transaction } from "@/lib/finance";
+import type { Budget } from "@/lib/api";
 
 type Props = {
   year: number;
   month: number;
   transactions: Transaction[];
+  budgets: Budget[];
   onImported: () => void;
   onError: (message: string) => void;
 };
@@ -23,11 +29,13 @@ export default function ExportImportPanel({
   year,
   month,
   transactions,
+  budgets,
   onImported,
   onError,
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
+  const [exporting, setExporting] = useState<"excel" | "pdf" | null>(null);
 
   const monthKey = getMonthKey(year, month);
   const label = formatMonthLabel(year, month);
@@ -46,6 +54,28 @@ export default function ExportImportPanel({
       `transactions-${monthKey}.csv`,
       "text/csv",
     );
+  }
+
+  async function exportExcel() {
+    setExporting("excel");
+    try {
+      await downloadMonthlyStatementExcel({ year, month, transactions, budgets });
+    } catch (err) {
+      onError(err instanceof Error ? err.message : "Excel export failed");
+    } finally {
+      setExporting(null);
+    }
+  }
+
+  async function exportPdf() {
+    setExporting("pdf");
+    try {
+      await downloadMonthlyStatementPdf({ year, month, transactions, budgets });
+    } catch (err) {
+      onError(err instanceof Error ? err.message : "PDF export failed");
+    } finally {
+      setExporting(null);
+    }
   }
 
   async function handleImport(file: File) {
@@ -93,6 +123,22 @@ export default function ExportImportPanel({
             className="rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
           >
             Export CSV
+          </button>
+          <button
+            type="button"
+            onClick={() => void exportExcel()}
+            disabled={transactions.length === 0 || exporting !== null}
+            className="rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            {exporting === "excel" ? "Creating Excel..." : "Export Excel"}
+          </button>
+          <button
+            type="button"
+            onClick={() => void exportPdf()}
+            disabled={transactions.length === 0 || exporting !== null}
+            className="rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-deep disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {exporting === "pdf" ? "Creating PDF..." : "Download PDF statement"}
           </button>
         </div>
       </section>

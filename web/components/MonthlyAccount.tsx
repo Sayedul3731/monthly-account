@@ -23,6 +23,7 @@ import {
   summarize,
   type Transaction,
 } from "@/lib/finance";
+import { downloadMonthlyStatementPdf } from "@/lib/monthly-statement";
 import AppHeader from "./AppHeader";
 import CategoryChart from "./CategoryChart";
 import {
@@ -71,6 +72,7 @@ export default function MonthlyAccount() {
   const [signingOut, setSigningOut] = useState(false);
   const [offline, setOffline] = useState(false);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+  const [exportingOverviewPdf, setExportingOverviewPdf] = useState(false);
   const transactionFormRef = useRef<HTMLDivElement>(null);
 
   async function handleSignOut() {
@@ -355,6 +357,21 @@ export default function MonthlyAccount() {
     }
   }
 
+  async function downloadOverviewReport() {
+    if (exportingOverviewPdf || transactions.length === 0) return;
+    setExportingOverviewPdf(true);
+    try {
+      await downloadMonthlyStatementPdf({ year, month, transactions, budgets });
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "PDF export failed", {
+        kind: "error",
+        title: "Could not create statement",
+      });
+    } finally {
+      setExportingOverviewPdf(false);
+    }
+  }
+
   const header = (
     <AppHeader
       signedIn={signedIn}
@@ -583,6 +600,18 @@ export default function MonthlyAccount() {
                 </p>
               </div>
             )}
+            <div className="relative mt-5">
+              <button
+                type="button"
+                onClick={() => void downloadOverviewReport()}
+                disabled={transactions.length === 0 || exportingOverviewPdf}
+                className="rounded-xl border border-white/25 bg-white/10 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {exportingOverviewPdf
+                  ? "Creating statement..."
+                  : "Download monthly statement (PDF)"}
+              </button>
+            </div>
           </section>
 
           <div className="grid grid-cols-3 gap-3">
@@ -732,6 +761,7 @@ export default function MonthlyAccount() {
               year={year}
               month={month}
               transactions={transactions}
+              budgets={budgets}
               onImported={() => void handleImportedTransactions()}
               onError={(message) => showToast(message, { kind: "error" })}
             />

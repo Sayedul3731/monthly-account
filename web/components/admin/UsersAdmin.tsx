@@ -15,6 +15,7 @@ import {
 } from "@/lib/api";
 import { CloseIcon, EditIcon, EyeIcon, EyeOffIcon, PlusIcon, SpinnerIcon } from "../icons";
 import LoadingState from "../LoadingState";
+import ExportExcelButton from "./ExportExcelButton";
 import {
   AdminAlert,
   AdminEmpty,
@@ -272,14 +273,29 @@ export default function UsersAdmin({ currentUserId, onError }: Props) {
             Create accounts and assign roles or memberships.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={openCreate}
-          className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
-        >
-          <PlusIcon />
-          Add user
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <ExportExcelButton
+            filename="users.xlsx"
+            sheetName="Users"
+            onError={onError}
+            rows={filtered.map((user) => ({
+              Name: user.name,
+              Email: user.email,
+              Role: titleCase(user.role?.name ?? "user"),
+              Membership: user.membership?.name ?? "",
+              "Billing interval": user.billingInterval ?? "",
+              Joined: formatShortDate(user.createdAt),
+            }))}
+          />
+          <button
+            type="button"
+            onClick={openCreate}
+            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
+          >
+            <PlusIcon />
+            Add user
+          </button>
+        </div>
       </div>
 
       {success && <AdminAlert kind="success">{success}</AdminAlert>}

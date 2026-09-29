@@ -10,6 +10,7 @@ import {
 } from "@/lib/api";
 import { CloseIcon, EditIcon, PlusIcon, SpinnerIcon } from "../icons";
 import LoadingState from "../LoadingState";
+import ExportExcelButton from "./ExportExcelButton";
 import {
   AdminAlert,
   AdminEmpty,
@@ -185,14 +186,26 @@ export default function TransactionTypesAdmin({ onError }: Props) {
             data still matches.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={openCreate}
-          className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
-        >
-          <PlusIcon />
-          Add type
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <ExportExcelButton
+            filename="transaction-types.xlsx"
+            sheetName="Transaction types"
+            onError={onError}
+            rows={types.map((type) => ({
+              Label: type.label,
+              Name: type.name,
+              Icon: type.icon,
+            }))}
+          />
+          <button
+            type="button"
+            onClick={openCreate}
+            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
+          >
+            <PlusIcon />
+            Add type
+          </button>
+        </div>
       </div>
 
       {success && <AdminAlert kind="success">{success}</AdminAlert>}

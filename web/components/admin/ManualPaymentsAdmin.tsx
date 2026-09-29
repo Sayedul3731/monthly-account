@@ -2,8 +2,13 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { fetchManualPayments, type ManualPayment } from "@/lib/api";
+import {
+  downloadFile,
+  fetchManualPayments,
+  type ManualPayment,
+} from "@/lib/api";
 import { formatCurrency } from "@/lib/finance";
+import { downloadTableExcel, exportRowsCsv } from "@/lib/monthly-statement";
 import { ChevronRight } from "../icons";
 import LoadingState from "../LoadingState";
 import { AdminEmpty, formatShortDate, titleCase } from "./ui";
@@ -26,6 +31,7 @@ export default function ManualPaymentsAdmin({ onError }: Props) {
   const [payments, setPayments] = useState<ManualPayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | ManualPayment["status"]>("all");
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -60,6 +66,42 @@ export default function ManualPaymentsAdmin({ onError }: Props) {
   const visiblePayments = filter === "all"
     ? payments
     : payments.filter((payment) => payment.status === filter);
+  const exportRows = visiblePayments.map((payment) => ({
+    Customer: payment.user?.name || "Deleted user",
+    Email: payment.user?.email || "",
+    Plan: payment.membership?.name || "Unavailable plan",
+    Interval: titleCase(payment.billingInterval),
+    "Transaction ID": payment.transactionId,
+    "Amount (BDT)": payment.amount,
+    "Plan starts": formatShortDate(payment.planStartedAt),
+    "Plan ends": formatShortDate(payment.planEndsAt),
+    Submitted: formatShortDate(payment.createdAt),
+    Status: titleCase(payment.status),
+    "Review note": payment.reviewNote || "",
+  }));
+
+  function exportCsv() {
+    downloadFile(
+      exportRowsCsv(exportRows),
+      `manual-payments-${filter}.csv`,
+      "text/csv;charset=utf-8",
+    );
+  }
+
+  async function exportExcel() {
+    setExporting(true);
+    try {
+      await downloadTableExcel({
+        filename: `manual-payments-${filter}.xlsx`,
+        sheetName: "Payments",
+        rows: exportRows,
+      });
+    } catch (err) {
+      onError(err instanceof Error ? err.message : "Excel export failed");
+    } finally {
+      setExporting(false);
+    }
+  }
 
   return (
     <div className="space-y-5">
@@ -68,7 +110,25 @@ export default function ManualPaymentsAdmin({ onError }: Props) {
           <h2 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-white">Payment reviews</h2>
           <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">Open a payment to verify its Nagad transaction ID and make a decision.</p>
         </div>
-        <span className="inline-flex w-fit rounded-full bg-amber-50 px-3 py-1.5 text-sm font-semibold text-amber-800 ring-1 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-200 dark:ring-amber-900">{pendingCount} awaiting review</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex w-fit rounded-full bg-amber-50 px-3 py-1.5 text-sm font-semibold text-amber-800 ring-1 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-200 dark:ring-amber-900">{pendingCount} awaiting review</span>
+          <button
+            type="button"
+            onClick={exportCsv}
+            disabled={exportRows.length === 0 || exporting}
+            className="rounded-lg border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            Export CSV
+          </button>
+          <button
+            type="button"
+            onClick={() => void exportExcel()}
+            disabled={exportRows.length === 0 || exporting}
+            className="rounded-lg border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            {exporting ? "Creating Excel..." : "Export Excel"}
+          </button>
+        </div>
       </div>
 
       <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
