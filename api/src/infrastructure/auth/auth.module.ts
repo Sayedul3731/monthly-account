@@ -3,7 +3,12 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule, JwtModuleOptions } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import {
+  ThrottlerGuard,
+  ThrottlerModule,
+  ThrottlerStorage,
+} from '@nestjs/throttler';
+import { MongooseModule } from '@nestjs/mongoose';
 import { RolesModule } from '../../modules/roles/roles.module';
 import { UsersModule } from '../../modules/users/users.module';
 import { AuthController } from './auth.controller';
@@ -11,6 +16,8 @@ import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { CsrfGuard } from './guards/csrf.guard';
+import { MongoThrottlerStorage } from './mongo-throttler.storage';
+import { RateLimitRecord, RateLimitRecordSchema } from './rate-limit-record.schema';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { SmtpMailerService } from './smtp-mailer.service';
 
@@ -18,6 +25,9 @@ import { SmtpMailerService } from './smtp-mailer.service';
   imports: [
     UsersModule,
     RolesModule,
+    MongooseModule.forFeature([
+      { name: RateLimitRecord.name, schema: RateLimitRecordSchema },
+    ]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     ThrottlerModule.forRoot([
       {
@@ -44,6 +54,8 @@ import { SmtpMailerService } from './smtp-mailer.service';
     AuthService,
     JwtStrategy,
     SmtpMailerService,
+    MongoThrottlerStorage,
+    { provide: ThrottlerStorage, useExisting: MongoThrottlerStorage },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_GUARD, useClass: CsrfGuard },

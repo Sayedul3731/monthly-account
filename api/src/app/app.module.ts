@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from '../infrastructure/auth/auth.module';
+import { AuditModule } from '../modules/audit/audit.module';
 import configuration from '../infrastructure/config/configuration';
 import { ENV_FILE_PATH } from '../infrastructure/config/env.loader';
 import { DatabaseModule } from '../infrastructure/database/database.module';
@@ -36,6 +37,7 @@ import { AppService } from './app.service';
     TransactionTypesModule,
     RolesModule,
     AuthModule,
+    AuditModule,
   ],
   controllers: [AppController],
   providers: [AppService],

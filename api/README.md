@@ -62,6 +62,17 @@ $ npm run test:cov
 
 ## Deployment
 
+### Security deployment checklist
+
+- Set `NODE_ENV=production`, HTTPS `FRONTEND_URL`/`API_URL`, and a production
+  MongoDB URI.
+- Generate separate `JWT_SECRET` and `JWT_REFRESH_SECRET` values of at least
+  32 characters. The API refuses unsafe or duplicate JWT secrets in production.
+- The API uses MongoDB-backed throttling, so login and API limits are shared by
+  every serverless instance. Ensure the configured database user can create the
+  `rate_limit_records` collection and indexes.
+- Review privileged changes through `GET /audit-events` as an administrator.
+
 ### Budget ownership migration
 
 Before deploying the user-scoped budget change, run:
