@@ -385,8 +385,34 @@ export default function MonthlyAccount() {
       {header}
       <div className="mx-auto w-full max-w-2xl px-3 py-3 sm:px-6 sm:py-5">
       {offline && (
-        <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
-          Offline mode — changes are saved on this device and will sync when you reconnect.
+        <div
+          className="mb-3 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100"
+          role="status"
+          aria-live="polite"
+        >
+          <span
+            className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-200"
+            aria-hidden="true"
+          >
+            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none">
+              <path
+                d="M2 8.82a15.91 15.91 0 0 1 20 0M5 12.85a10.94 10.94 0 0 1 14 0M8.7 16.55a5.89 5.89 0 0 1 6.6 0"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+              <path
+                d="M3 3l18 18"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+          </span>
+          <p className="leading-5">
+            <span className="font-semibold">You&apos;re offline.</span>{" "}
+            You&apos;re viewing saved data. New changes will be stored on this device and sync automatically when you reconnect.
+          </p>
         </div>
       )}
       <header className="mb-3 flex flex-col gap-1.5 sm:mb-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
