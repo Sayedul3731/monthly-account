@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { Throttle } from '@nestjs/throttler';
+import { randomBytes } from 'node:crypto';
 import {
   ApiBearerAuth,
   ApiAcceptedResponse,
@@ -35,6 +36,7 @@ import { RegisterDto } from './dto/register.dto';
 import { RequestEmailChangeDto } from './dto/request-email-change.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import type { AuthenticatedUser } from './jwt-payload.interface';
+import { readCookie } from './cookies';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -171,6 +173,17 @@ export class AuthController {
       secure: process.env.NODE_ENV === 'production',
       path: '/auth',
     });
+    response.clearCookie('daily_hisab_access_token', {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+    });
+    response.clearCookie('daily_hisab_csrf_token', {
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+    });
   }
 
   @Get('me')
@@ -241,6 +254,14 @@ export class AuthController {
     response: Response,
     session: AuthSession,
   ): AuthResponseDto {
+    const csrfToken = randomBytes(32).toString('base64url');
+    response.cookie('daily_hisab_access_token', session.accessToken, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 15 * 60 * 1000,
+      path: '/',
+    });
     response.cookie('daily_hisab_refresh_token', session.refreshToken, {
       httpOnly: true,
       sameSite: 'lax',
@@ -248,19 +269,12 @@ export class AuthController {
       maxAge: 7 * 24 * 60 * 60 * 1000,
       path: '/auth',
     });
-    return { accessToken: session.accessToken, user: session.user };
+    response.cookie('daily_hisab_csrf_token', csrfToken, {
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: '/',
+    });
+    return { csrfToken, user: session.user };
   }
-}
-
-function readCookie(
-  header: string | undefined,
-  name: string,
-): string | undefined {
-  if (!header) return undefined;
-  const prefix = `${name}=`;
-  const entry = header
-    .split(';')
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(prefix));
-  return entry ? decodeURIComponent(entry.slice(prefix.length)) : undefined;
 }

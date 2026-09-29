@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   Logger,
@@ -70,6 +71,9 @@ export class RolesService implements OnModuleInit {
     const role = await this.findOne(id);
 
     if (dto.name !== undefined && dto.name !== role.name) {
+      if (Object.values(DefaultRole).includes(role.name as DefaultRole)) {
+        throw new BadRequestException('Built-in roles cannot be renamed');
+      }
       await this.ensureNameAvailable(dto.name);
       role.name = dto.name;
     }
@@ -80,6 +84,10 @@ export class RolesService implements OnModuleInit {
   }
 
   async remove(id: string): Promise<void> {
+    const role = await this.findOne(id);
+    if (Object.values(DefaultRole).includes(role.name as DefaultRole)) {
+      throw new BadRequestException('Built-in roles cannot be deleted');
+    }
     const result = await this.roleModel
       .updateOne(notDeleted({ _id: id }), { deletedAt: new Date() })
       .exec();

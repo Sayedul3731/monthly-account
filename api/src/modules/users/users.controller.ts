@@ -19,6 +19,8 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Roles } from '../../infrastructure/auth/decorators/roles.decorator';
+import { CurrentUser } from '../../infrastructure/auth/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../../infrastructure/auth/jwt-payload.interface';
 import { asPlain } from '../../infrastructure/database/schema.helpers';
 import { ParseObjectIdPipe } from '../../shared/pipes/parse-object-id.pipe';
 import { DefaultRole } from '../roles/app-role.schema';
@@ -65,8 +67,9 @@ export class UsersController {
   async update(
     @Param('id', ParseObjectIdPipe) id: string,
     @Body() dto: UpdateUserDto,
+    @CurrentUser() actor: AuthenticatedUser,
   ) {
-    return asPlain<User>(await this.usersService.update(id, dto));
+    return asPlain<User>(await this.usersService.update(id, dto, actor.userId));
   }
 
   @Delete(':id')
@@ -75,7 +78,10 @@ export class UsersController {
   @ApiParam({ name: 'id' })
   @ApiNoContentResponse({ description: 'User deleted' })
   @ApiNotFoundResponse({ description: 'User not found' })
-  remove(@Param('id', ParseObjectIdPipe) id: string) {
-    return this.usersService.remove(id);
+  remove(
+    @Param('id', ParseObjectIdPipe) id: string,
+    @CurrentUser() actor: AuthenticatedUser,
+  ) {
+    return this.usersService.remove(id, actor.userId);
   }
 }

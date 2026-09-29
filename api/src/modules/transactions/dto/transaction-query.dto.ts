@@ -24,6 +24,24 @@ class YearMonthTogetherConstraint implements ValidatorConstraintInterface {
   }
 }
 
+@ValidatorConstraint({ name: 'dateRangeLimit' })
+class DateRangeLimitConstraint implements ValidatorConstraintInterface {
+  validate(_value: unknown, args: ValidationArguments): boolean {
+    const query = args.object as TransactionQueryDto;
+    if (!query.start || !query.end) return true;
+
+    const start = Date.parse(query.start);
+    const end = Date.parse(query.end);
+    if (!Number.isFinite(start) || !Number.isFinite(end)) return true;
+    const days = (end - start) / (24 * 60 * 60 * 1000);
+    return days >= 0 && days <= 366;
+  }
+
+  defaultMessage(): string {
+    return 'date ranges must be ordered and no longer than 366 days';
+  }
+}
+
 export class TransactionQueryDto {
   @ApiPropertyOptional({ example: 2026, minimum: 2000, maximum: 2100 })
   @Validate(YearMonthTogetherConstraint)
@@ -53,6 +71,7 @@ export class TransactionQueryDto {
   start?: string;
 
   @ApiPropertyOptional({ example: '2026-05-31', format: 'date' })
+  @Validate(DateRangeLimitConstraint)
   @IsOptional()
   @IsDateString()
   end?: string;

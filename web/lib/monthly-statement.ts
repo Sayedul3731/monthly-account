@@ -47,6 +47,120 @@ function categoryBudget(budgets: Budget[], category: string) {
   return budgets.find((budget) => budget.category === category)?.amount ?? null;
 }
 
+type SheetCell = string | number | boolean | null | undefined;
+
+type WorkbookSheet = {
+  name: string;
+  rows: SheetCell[][];
+  widths: number[];
+  currencyCells?: string[];
+  percentageCells?: string[];
+};
+
+function escapeXml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+function columnName(index: number) {
+  let value = index + 1;
+  let name = "";
+  while (value > 0) {
+    const remainder = (value - 1) % 26;
+    name = String.fromCharCode(65 + remainder) + name;
+    value = Math.floor((value - 1) / 26);
+  }
+  return name;
+}
+
+function cellXml(value: SheetCell, reference: string, style = 0) {
+  const styleAttribute = style ? ` s="${style}"` : "";
+  if (value === null || value === undefined || value === "") {
+    return `<c r="${reference}"${styleAttribute}/>`;
+  }
+  if (typeof value === "number") {
+    return `<c r="${reference}"${styleAttribute}><v>${value}</v></c>`;
+  }
+  if (typeof value === "boolean") {
+    return `<c r="${reference}" t="b"><v>${value ? 1 : 0}</v></c>`;
+  }
+  const preserveWhitespace = /^\s|\s$/.test(value) ? ' xml:space="preserve"' : "";
+  return `<c r="${reference}"${styleAttribute} t="inlineStr"><is><t${preserveWhitespace}>${escapeXml(value)}</t></is></c>`;
+}
+
+async function downloadWorkbook(sheets: WorkbookSheet[], filename: string) {
+  const { strToU8, zipSync } = await import("fflate");
+  const files: Record<string, Uint8Array> = {};
+  const toBytes = (xml: string) => strToU8(xml);
+  const formatCells = (cells: string[] | undefined, style: number) =>
+    new Set(cells?.map((cell) => `${cell}:${style}`));
+
+  sheets.forEach((sheet, index) => {
+    const styles = new Set([
+      ...formatCells(sheet.currencyCells, 1),
+      ...formatCells(sheet.percentageCells, 2),
+    ]);
+    const rows = sheet.rows
+      .map((values, rowIndex) => {
+        const cells = values
+          .map((value, columnIndex) => {
+            const reference = `${columnName(columnIndex)}${rowIndex + 1}`;
+            const style =
+              rowIndex === 0
+                ? 3
+                : styles.has(`${reference}:1`)
+                  ? 1
+                  : styles.has(`${reference}:2`)
+                    ? 2
+                    : 0;
+            return cellXml(value, reference, style);
+          })
+          .join("");
+        return `<row r="${rowIndex + 1}">${cells}</row>`;
+      })
+      .join("");
+    const columns = sheet.widths
+      .map(
+        (width, columnIndex) =>
+          `<col min="${columnIndex + 1}" max="${columnIndex + 1}" width="${width}" customWidth="1"/>`,
+      )
+      .join("");
+    files[`xl/worksheets/sheet${index + 1}.xml`] = toBytes(
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><cols>${columns}</cols><sheetData>${rows}</sheetData></worksheet>`,
+    );
+  });
+
+  files["[Content_Types].xml"] = toBytes(
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sheets.map((_, index) => `<Override PartName="/xl/worksheets/sheet${index + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("")}</Types>`,
+  );
+  files["_rels/.rels"] = toBytes(
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`,
+  );
+  files["xl/workbook.xml"] = toBytes(
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${sheets.map((sheet, index) => `<sheet name="${escapeXml(sheet.name)}" sheetId="${index + 1}" r:id="rId${index + 1}"/>`).join("")}</sheets></workbook>`,
+  );
+  files["xl/_rels/workbook.xml.rels"] = toBytes(
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${sheets.map((_, index) => `<Relationship Id="rId${index + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${index + 1}.xml"/>`).join("")}<Relationship Id="rId${sheets.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`,
+  );
+  files["xl/styles.xml"] = toBytes(
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="1"><numFmt numFmtId="164" formatCode="&quot;BDT&quot; #,##0.00"/></numFmts><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="10" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs></styleSheet>`,
+  );
+
+  const blob = new Blob([zipSync(files, { level: 6 })], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 export function exportRowsCsv(rows: ExportRow[]) {
   if (rows.length === 0) return "";
   const headers = Object.keys(rows[0]);
@@ -70,22 +184,21 @@ export async function downloadTableExcel({
   sheetName: string;
   rows: ExportRow[];
 }) {
-  const XLSX = await import("xlsx");
-  const workbook = XLSX.utils.book_new();
-  const worksheet = XLSX.utils.json_to_sheet(rows);
   const headers = rows[0] ? Object.keys(rows[0]) : [];
-  worksheet["!cols"] = headers.map((header) => ({
-    wch: Math.min(
+  await downloadWorkbook([
+    {
+      name: sheetName,
+      rows: [headers, ...rows.map((row) => headers.map((header) => row[header]))],
+      widths: headers.map((header) => Math.min(
       36,
       Math.max(
         12,
         header.length + 2,
         ...rows.map((row) => String(row[header] ?? "").length + 2),
       ),
-    ),
-  }));
-  XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
-  XLSX.writeFileXLSX(workbook, filename);
+      )),
+    },
+  ], filename);
 }
 
 export async function downloadTransactionWorkbook({
@@ -94,13 +207,11 @@ export async function downloadTransactionWorkbook({
   transactions,
   budgets = [],
 }: TransactionWorkbookInput) {
-  const XLSX = await import("xlsx");
-  const statement = XLSX.utils.book_new();
   const summary = summarize(transactions);
   const categories = categoryBreakdown(transactions);
   const overallBudget = budgets.find((budget) => !budget.category)?.amount ?? null;
 
-  const summarySheet = XLSX.utils.aoa_to_sheet([
+  const summaryRows: SheetCell[][] = [
     ["Monthly account statement"],
     ["Period", title],
     ["Generated", new Date().toLocaleString("en-BD")],
@@ -125,41 +236,33 @@ export async function downloadTransactionWorkbook({
         budget === null ? "Not set" : budget - category.amount,
       ];
     }),
-  ]);
-  summarySheet["!cols"] = [
-    { wch: 24 },
-    { wch: 18 },
-    { wch: 14 },
-    { wch: 18 },
-    { wch: 20 },
   ];
-  if (summarySheet.B6) summarySheet.B6.z = '"BDT" #,##0.00';
-  if (summarySheet.B7) summarySheet.B7.z = '"BDT" #,##0.00';
-  if (summarySheet.B8) summarySheet.B8.z = '"BDT" #,##0.00';
-  if (summarySheet.B9) summarySheet.B9.z = "0.0%";
-
-  const transactionSheet = XLSX.utils.json_to_sheet(
-    sortedTransactions(transactions).map((transaction) => ({
-      Date: toCalendarDate(transaction.date),
-      Type: transaction.type === "income" ? "Income" : "Expense",
-      Category: transaction.category,
-      Description: transaction.description ?? "",
-      "Amount (BDT)": transaction.amount,
-      "Sync status": transaction.pendingSync ? "Pending sync" : "Synced",
-    })),
-  );
-  transactionSheet["!cols"] = [
-    { wch: 14 },
-    { wch: 12 },
-    { wch: 20 },
-    { wch: 38 },
-    { wch: 16 },
-    { wch: 16 },
+  const transactionRows: SheetCell[][] = [
+    ["Date", "Type", "Category", "Description", "Amount (BDT)", "Sync status"],
+    ...sortedTransactions(transactions).map((transaction) => [
+      toCalendarDate(transaction.date),
+      transaction.type === "income" ? "Income" : "Expense",
+      transaction.category,
+      transaction.description ?? "",
+      transaction.amount,
+      transaction.pendingSync ? "Pending sync" : "Synced",
+    ]),
   ];
-
-  XLSX.utils.book_append_sheet(statement, summarySheet, "Summary");
-  XLSX.utils.book_append_sheet(statement, transactionSheet, "Transactions");
-  XLSX.writeFileXLSX(statement, filename);
+  await downloadWorkbook([
+    {
+      name: "Summary",
+      rows: summaryRows,
+      widths: [24, 18, 14, 18, 20],
+      currencyCells: ["B6", "B7", "B8", "B11", "B12"],
+      percentageCells: ["B9"],
+    },
+    {
+      name: "Transactions",
+      rows: transactionRows,
+      widths: [14, 12, 20, 38, 16, 16],
+      currencyCells: transactionRows.slice(1).map((_, index) => `E${index + 2}`),
+    },
+  ], filename);
 }
 
 export async function downloadMonthlyStatementExcel({

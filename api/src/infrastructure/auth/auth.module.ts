@@ -10,6 +10,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
+import { CsrfGuard } from './guards/csrf.guard';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { SmtpMailerService } from './smtp-mailer.service';
 
@@ -45,6 +46,7 @@ import { SmtpMailerService } from './smtp-mailer.service';
     SmtpMailerService,
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_GUARD, useClass: CsrfGuard },
     { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
   exports: [AuthService],

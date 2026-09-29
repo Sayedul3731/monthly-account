@@ -20,16 +20,26 @@ export type AuthUser = {
 };
 
 export type AuthResponse = {
-  accessToken: string;
+  csrfToken: string;
   user: AuthUser;
 };
 
-const ACCESS_TOKEN_KEY = "daily_hisab_access_token";
+const SESSION_KEY = "daily_hisab_session";
+const CSRF_TOKEN_KEY = "daily_hisab_csrf_token";
 const USER_KEY = "daily_hisab_user";
 
+/**
+ * Compatibility helper for UI auth gates. It is only a non-sensitive session
+ * hint; the actual access token is held in an HttpOnly API cookie.
+ */
 export function getAccessToken(): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem(ACCESS_TOKEN_KEY);
+  return localStorage.getItem(SESSION_KEY);
+}
+
+export function getCsrfToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(CSRF_TOKEN_KEY);
 }
 
 export function getStoredUser(): AuthUser | null {
@@ -44,10 +54,11 @@ export function getStoredUser(): AuthUser | null {
 }
 
 export function setAuthSession(
-  accessToken: string,
   user: AuthUser,
+  csrfToken: string,
 ): void {
-  localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+  localStorage.setItem(SESSION_KEY, "authenticated");
+  localStorage.setItem(CSRF_TOKEN_KEY, csrfToken);
   localStorage.setItem(USER_KEY, JSON.stringify(user));
 }
 
@@ -56,8 +67,8 @@ export function updateStoredUser(user: AuthUser): void {
 }
 
 export function clearAuthSession(): void {
-  localStorage.removeItem(ACCESS_TOKEN_KEY);
-  localStorage.removeItem("daily_hisab_refresh_token");
+  localStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem(CSRF_TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
 }
 

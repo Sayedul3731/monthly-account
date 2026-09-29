@@ -25,7 +25,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User, UserDocument } from './user.schema';
 
-const SALT_ROUNDS = 10;
+const SALT_ROUNDS = 12;
 const USER_POPULATE = ['role', 'membership'] as const;
 
 @Injectable()
@@ -249,6 +249,7 @@ export class UsersService implements OnModuleInit {
   async create(dto: CreateUserDto): Promise<UserDocument> {
     await this.ensureEmailAvailable(dto.email);
     const roleId = dto.roleId ?? (await this.getDefaultRoleId());
+    await this.rolesService.findOne(roleId);
     const membershipId =
       dto.membershipId ?? (await this.getDefaultMembershipId());
     const membership = await this.membershipsService.findOne(membershipId);
@@ -269,7 +270,11 @@ export class UsersService implements OnModuleInit {
     return this.findOne(user.id);
   }
 
-  async update(id: string, dto: UpdateUserDto): Promise<UserDocument> {
+  async update(
+    id: string,
+    dto: UpdateUserDto,
+    actorId?: string,
+  ): Promise<UserDocument> {
     const user = await this.findOne(id);
 
     if (dto.email !== undefined && dto.email !== user.email) {
@@ -285,6 +290,14 @@ export class UsersService implements OnModuleInit {
     const roleChanged =
       dto.roleId !== undefined && dto.roleId !== user.roleId.toString();
     if (dto.roleId !== undefined) {
+      const nextRole = await this.rolesService.findOne(dto.roleId);
+      if (
+        actorId === user.id &&
+        user.role?.name === DefaultRole.ADMIN &&
+        nextRole.name !== DefaultRole.ADMIN
+      ) {
+        throw new BadRequestException('Administrators cannot remove their own admin access');
+      }
       user.roleId = new Types.ObjectId(dto.roleId);
     }
 
@@ -337,7 +350,19 @@ export class UsersService implements OnModuleInit {
     return this.findOne(user.id);
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string, actorId?: string): Promise<void> {
+    const user = await this.findOne(id);
+    if (actorId === user.id) {
+      throw new BadRequestException('Administrators cannot delete their own account');
+    }
+    if (user.role?.name === DefaultRole.ADMIN) {
+      const activeAdminCount = await this.userModel
+        .countDocuments(notDeleted({ roleId: user.roleId }))
+        .exec();
+      if (activeAdminCount <= 1) {
+        throw new BadRequestException('At least one administrator account must remain active');
+      }
+    }
     const result = await this.userModel
       .updateOne(notDeleted({ _id: id }), { deletedAt: new Date() })
       .exec();

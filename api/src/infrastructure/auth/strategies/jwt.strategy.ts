@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { UsersService } from '../../../modules/users/users.service';
+import { readCookie } from '../cookies';
 import { AuthenticatedUser, JwtPayload } from '../jwt-payload.interface';
 
 @Injectable()
@@ -12,7 +13,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     private readonly usersService: UsersService,
   ) {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+        (request) => readCookie(request?.headers?.cookie, 'daily_hisab_access_token') ?? null,
+      ]),
       ignoreExpiration: false,
       secretOrKey: config.get<string>('jwt.secret')!,
     });

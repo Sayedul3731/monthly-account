@@ -1,6 +1,6 @@
 import {
   clearAuthSession,
-  getAccessToken,
+  getCsrfToken,
   setAuthSession,
   updateStoredUser,
   type AuthResponse,
@@ -256,7 +256,7 @@ function normalizePrice(value: unknown): number {
 
 function applyAuthSession(data: AuthResponse): AuthUser {
   const user = normalizeAuthUser(data.user);
-  setAuthSession(data.accessToken, user);
+  setAuthSession(user, data.csrfToken);
   return user;
 }
 
@@ -326,13 +326,18 @@ async function request<T>(
   let response: Response;
 
   try {
-    const token = getAccessToken();
+    const csrfToken = getCsrfToken();
+    const isUnsafeMethod = !["GET", "HEAD", "OPTIONS"].includes(
+      init?.method ?? "GET",
+    );
     response = await fetch(`${API_URL}${path}`, {
       ...init,
       credentials: "include",
       headers: {
         ...(init?.body ? { "Content-Type": "application/json" } : {}),
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(isUnsafeMethod && csrfToken
+          ? { "X-CSRF-Token": csrfToken }
+          : {}),
         ...init?.headers,
       },
     });

@@ -28,7 +28,11 @@ type GoogleUserInfo = {
   name?: string;
 };
 
-export type AuthSession = AuthResponseDto & { refreshToken: string };
+export type AuthSession = {
+  accessToken: string;
+  refreshToken: string;
+  user: User;
+};
 
 @Injectable()
 export class AuthService {
