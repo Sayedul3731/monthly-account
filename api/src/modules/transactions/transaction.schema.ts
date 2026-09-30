@@ -84,3 +84,4 @@ TransactionSchema.virtual('transactionType', {
 });
 
 TransactionSchema.index({ userId: 1, date: -1 });
+TransactionSchema.index({ userId: 1, deletedAt: 1, date: -1 });

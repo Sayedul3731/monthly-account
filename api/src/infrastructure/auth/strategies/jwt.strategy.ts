@@ -29,7 +29,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         throw new UnauthorizedException('User role is unavailable');
       }
 
-      return { userId: user.id, email: user.email, role: user.role.name };
+      return {
+        userId: user.id,
+        email: user.email,
+        role: user.role.name,
+        membershipType: user.membership?.type,
+        trialEndsAt: user.trialEndsAt,
+        planEndsAt: user.planEndsAt,
+      };
     } catch {
       throw new UnauthorizedException('User account is no longer active');
     }

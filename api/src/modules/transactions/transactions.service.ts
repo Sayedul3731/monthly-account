@@ -7,11 +7,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Category, CategoryDocument } from '../categories/category.schema';
 import { parseCalendarDate, utcMonthRange } from '../../shared/dates';
-import {
-  asPlain,
-  asPlainList,
-  notDeleted,
-} from '../../infrastructure/database/schema.helpers';
+import { asPlain, notDeleted } from '../../infrastructure/database/schema.helpers';
 import {
   TransactionTypeDocument,
   TransactionTypeEntity,
@@ -23,6 +19,17 @@ import { TransactionType } from './transaction-type.enum';
 import { Transaction, TransactionDocument } from './transaction.schema';
 
 const TRANSACTION_POPULATE = ['category', 'transactionType'] as const;
+
+type AggregateTransaction = Omit<
+  Transaction,
+  'id' | 'category' | 'transactionType'
+> & {
+  _id: Types.ObjectId;
+  category?: Omit<Category, 'id'> & { _id: Types.ObjectId };
+  transactionType?: Omit<TransactionTypeEntity, 'id'> & {
+    _id: Types.ObjectId;
+  };
+};
 
 @Injectable()
 export class TransactionsService {
@@ -45,7 +52,7 @@ export class TransactionsService {
     end?: string,
   ): Promise<Transaction[]> {
     const docs = await this.findDocuments(userId, year, month, start, end);
-    return asPlainList<Transaction>(docs);
+    return docs.map((document) => this.toTransaction(document));
   }
 
   async findOne(id: string, userId: string): Promise<Transaction> {
@@ -159,7 +166,7 @@ export class TransactionsService {
     month?: number,
     start?: string,
     end?: string,
-  ): Promise<TransactionDocument[]> {
+  ): Promise<AggregateTransaction[]> {
     const filter: Record<string, unknown> = {
       userId: new Types.ObjectId(userId),
     };
@@ -174,10 +181,57 @@ export class TransactionsService {
     }
 
     return this.transactionModel
-      .find(notDeleted(filter))
-      .populate([...TRANSACTION_POPULATE])
-      .sort({ date: -1 })
+      .aggregate<AggregateTransaction>([
+        { $match: notDeleted(filter) },
+        { $sort: { date: -1 } },
+        {
+          $lookup: {
+            from: 'categories',
+            localField: 'categoryId',
+            foreignField: '_id',
+            as: 'category',
+          },
+        },
+        {
+          $unwind: {
+            path: '$category',
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $lookup: {
+            from: 'transaction_types',
+            localField: 'transactionTypeId',
+            foreignField: '_id',
+            as: 'transactionType',
+          },
+        },
+        {
+          $unwind: {
+            path: '$transactionType',
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+      ])
       .exec();
+  }
+
+  private toTransaction(document: AggregateTransaction): Transaction {
+    const { _id, category, transactionType, ...transaction } = document;
+
+    return {
+      ...transaction,
+      id: _id.toString(),
+      userId: transaction.userId.toString(),
+      categoryId: transaction.categoryId.toString(),
+      transactionTypeId: transaction.transactionTypeId.toString(),
+      category: category
+        ? { ...category, id: category._id.toString() }
+        : undefined,
+      transactionType: transactionType
+        ? { ...transactionType, id: transactionType._id.toString() }
+        : undefined,
+    } as unknown as Transaction;
   }
 
   private async getOwned(

@@ -1,6 +1,5 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { UsersService } from '../../../modules/users/users.service';
 import { MembershipType } from '../../../modules/memberships/membership-type.enum';
 import { DefaultRole } from '../../../modules/roles/app-role.schema';
 import { SUBSCRIPTION_EXEMPT_KEY } from '../decorators/subscription-exempt.decorator';
@@ -9,10 +8,7 @@ import type { AuthenticatedUser } from '../jwt-payload.interface';
 
 @Injectable()
 export class SubscriptionGuard implements CanActivate {
-  constructor(
-    private readonly reflector: Reflector,
-    private readonly usersService: UsersService,
-  ) {}
+  constructor(private readonly reflector: Reflector) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const skip = this.reflector.getAllAndOverride<boolean>(
@@ -28,16 +24,15 @@ export class SubscriptionGuard implements CanActivate {
     const user = context.switchToHttp().getRequest().user as AuthenticatedUser;
     if (user?.role === DefaultRole.ADMIN) return true;
 
-    const account = await this.usersService.findOne(user.userId);
     const now = new Date();
     const isPremiumActive =
-      account.membership?.type === MembershipType.PAID &&
-      !!account.planEndsAt &&
-      account.planEndsAt > now;
+      user.membershipType === MembershipType.PAID &&
+      !!user.planEndsAt &&
+      user.planEndsAt > now;
     const isTrialActive =
-      account.membership?.type === MembershipType.FREE &&
-      !!account.trialEndsAt &&
-      account.trialEndsAt > now;
+      user.membershipType === MembershipType.FREE &&
+      !!user.trialEndsAt &&
+      user.trialEndsAt > now;
 
     if (isPremiumActive || isTrialActive) return true;
 
