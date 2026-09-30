@@ -29,6 +29,7 @@ import { User } from '../../modules/users/user.schema';
 import { AuthService, type AuthSession } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { Public } from './decorators/public.decorator';
+import { SubscriptionExempt } from './decorators/subscription-exempt.decorator';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { LoginDto } from './dto/login.dto';
 import { OAuthExchangeDto } from './dto/oauth-exchange.dto';
@@ -40,6 +41,7 @@ import { readCookie } from './cookies';
 
 @ApiTags('auth')
 @Controller('auth')
+@SubscriptionExempt()
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 

@@ -10,6 +10,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { CurrentUser } from '../../infrastructure/auth/decorators/current-user.decorator';
+import { SubscriptionExempt } from '../../infrastructure/auth/decorators/subscription-exempt.decorator';
 import { Roles } from '../../infrastructure/auth/decorators/roles.decorator';
 import type { AuthenticatedUser } from '../../infrastructure/auth/jwt-payload.interface';
 import { ParseObjectIdPipe } from '../../shared/pipes/parse-object-id.pipe';
@@ -22,6 +23,7 @@ import { ManualPaymentsService } from './manual-payments.service';
 @ApiTags('manual-payments')
 @ApiBearerAuth()
 @Controller('manual-payments')
+@SubscriptionExempt()
 export class ManualPaymentsController {
   constructor(
     private readonly manualPaymentsService: ManualPaymentsService,

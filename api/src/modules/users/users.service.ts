@@ -42,6 +42,7 @@ export class UsersService implements OnModuleInit {
 
   async onModuleInit(): Promise<void> {
     await this.ensureDefaultMembershipsAssigned();
+    await this.ensureTrialWindowsAssigned();
   }
 
   async findAll(): Promise<User[]> {
@@ -208,6 +209,7 @@ export class UsersService implements OnModuleInit {
       roleId: new Types.ObjectId(roleId),
       membershipId: new Types.ObjectId(membershipId),
       billingInterval: null,
+      ...this.createTrialDates(),
     });
 
     return this.findOne(user.id);
@@ -265,6 +267,9 @@ export class UsersService implements OnModuleInit {
       roleId: new Types.ObjectId(roleId),
       membershipId: new Types.ObjectId(membershipId),
       billingInterval,
+      ...(membership.type === MembershipType.FREE
+        ? this.createTrialDates()
+        : {}),
     });
 
     return this.findOne(user.id);
@@ -335,6 +340,17 @@ export class UsersService implements OnModuleInit {
     }
 
     const previousPlan = user.membership?.name ?? 'paid';
+    if (user.planEndsAt && user.planEndsAt > new Date()) {
+      await this.notificationsService.create({
+        userId: user.id,
+        type: NotificationType.MEMBERSHIP_CANCELLED,
+        title: 'Premium cancellation recorded',
+        message: `Your ${previousPlan} access remains active until ${user.planEndsAt.toISOString()}.`,
+        link: '/membership',
+      });
+      return user;
+    }
+
     user.membershipId = new Types.ObjectId(await this.getDefaultMembershipId());
     user.billingInterval = null;
     await user.save();
@@ -420,6 +436,16 @@ export class UsersService implements OnModuleInit {
     );
   }
 
+  private createTrialDates(now = new Date()): {
+    trialStartedAt: Date;
+    trialEndsAt: Date;
+  } {
+    return {
+      trialStartedAt: now,
+      trialEndsAt: new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000),
+    };
+  }
+
   private async getDefaultMembershipId(): Promise<string> {
     const membership = await this.membershipsService.findByType(
       MembershipType.FREE,
@@ -449,6 +475,31 @@ export class UsersService implements OnModuleInit {
     if (result.modifiedCount) {
       this.logger.log(
         `Assigned free membership to ${result.modifiedCount} existing user(s)`,
+      );
+    }
+  }
+
+  private async ensureTrialWindowsAssigned(): Promise<void> {
+    const trialMembershipId = await this.getDefaultMembershipId();
+    const { trialStartedAt, trialEndsAt } = this.createTrialDates();
+    const result = await this.userModel
+      .updateMany(
+        {
+          ...notDeleted({ membershipId: new Types.ObjectId(trialMembershipId) }),
+          $or: [
+            { trialStartedAt: { $exists: false } },
+            { trialStartedAt: null },
+            { trialEndsAt: { $exists: false } },
+            { trialEndsAt: null },
+          ],
+        },
+        { $set: { trialStartedAt, trialEndsAt } },
+      )
+      .exec();
+
+    if (result.modifiedCount) {
+      this.logger.log(
+        `Assigned a 15-day trial to ${result.modifiedCount} existing user(s)`,
       );
     }
   }

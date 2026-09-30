@@ -9,15 +9,15 @@ export const DEFAULT_MEMBERSHIPS: Array<{
   yearlyPrice: number;
 }> = [
   {
-    name: 'Free',
+    name: '15-day Trial',
     type: MembershipType.FREE,
-    description: 'Track income, expenses, and budgets at no cost.',
+    description: 'Full access for 15 days. Upgrade to Premium to continue.',
     monthlyPrice: 0,
     quarterlyPrice: 0,
     yearlyPrice: 0,
   },
   {
-    name: 'Paid',
+    name: 'Premium',
     type: MembershipType.PAID,
     description: 'Premium access with priority support and extra capacity.',
     monthlyPrice: 69,

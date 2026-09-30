@@ -190,6 +190,8 @@ export class ManualPaymentsService {
         .updateOne(notDeleted({ _id: reviewed.userId }), {
           membershipId: reviewed.membershipId,
           billingInterval: reviewed.billingInterval,
+          planStartedAt: reviewed.planStartedAt,
+          planEndsAt: reviewed.planEndsAt,
         })
         .exec();
       if (!result.matchedCount) {

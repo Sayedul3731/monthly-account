@@ -32,6 +32,7 @@ export class MembershipsService implements OnModuleInit {
 
   async onModuleInit(): Promise<void> {
     await this.ensureDefaultMemberships();
+    await this.migrateLegacyDefaultLabels();
   }
 
   async findAll(type?: MembershipType): Promise<Membership[]> {
@@ -161,15 +162,13 @@ export class MembershipsService implements OnModuleInit {
         updateOne: {
           filter: notDeleted({ type: seed.type }),
           update: {
-            $set: {
-              monthlyPrice: seed.monthlyPrice,
-              quarterlyPrice: seed.quarterlyPrice,
-              yearlyPrice: seed.yearlyPrice,
-            },
             $setOnInsert: {
               name: seed.name,
               type: seed.type,
               description: seed.description,
+              monthlyPrice: seed.monthlyPrice,
+              quarterlyPrice: seed.quarterlyPrice,
+              yearlyPrice: seed.yearlyPrice,
             },
             $unset: { price: 1 },
           },
@@ -181,5 +180,22 @@ export class MembershipsService implements OnModuleInit {
     if (result.upsertedCount) {
       this.logger.log(`Seeded ${result.upsertedCount} default membership(s)`);
     }
+  }
+
+  private async migrateLegacyDefaultLabels(): Promise<void> {
+    await this.membershipModel
+      .updateOne(
+        notDeleted({ type: MembershipType.FREE, name: 'Free' }),
+        {
+          name: '15-day Trial',
+          description: 'Full access for 15 days. Upgrade to Premium to continue.',
+        },
+      )
+      .exec();
+    await this.membershipModel
+      .updateOne(notDeleted({ type: MembershipType.PAID, name: 'Paid' }), {
+        name: 'Premium',
+      })
+      .exec();
   }
 }

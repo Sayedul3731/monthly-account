@@ -17,6 +17,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { CurrentUser } from '../../infrastructure/auth/decorators/current-user.decorator';
+import { SubscriptionExempt } from '../../infrastructure/auth/decorators/subscription-exempt.decorator';
 import type { AuthenticatedUser } from '../../infrastructure/auth/jwt-payload.interface';
 import { ParseObjectIdPipe } from '../../shared/pipes/parse-object-id.pipe';
 import { Notification } from './notification.schema';
@@ -25,6 +26,7 @@ import { NotificationsService } from './notifications.service';
 @ApiTags('notifications')
 @ApiBearerAuth()
 @Controller('notifications')
+@SubscriptionExempt()
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 

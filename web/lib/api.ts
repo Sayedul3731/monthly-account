@@ -236,6 +236,10 @@ function normalizeAuthUser(raw: AuthUser): AuthUser {
       : undefined,
     billingInterval: normalizeBillingInterval(raw.billingInterval),
     membership: normalizeMembership(raw.membership),
+    trialStartedAt: asIsoString(raw.trialStartedAt),
+    trialEndsAt: asIsoString(raw.trialEndsAt),
+    planStartedAt: asIsoString(raw.planStartedAt),
+    planEndsAt: asIsoString(raw.planEndsAt),
     createdAt:
       raw.createdAt != null ? String(raw.createdAt) : undefined,
     updatedAt:

@@ -39,7 +39,7 @@ function membershipLabel(membership?: AuthUser["membership"]): string {
 }
 
 function typeLabel(type: Membership["type"]): string {
-  return type === "paid" ? "Paid" : "Free";
+  return type === "paid" ? "Premium" : "15-day Trial";
 }
 
 function intervalLabel(interval?: BillingInterval | null): string {
@@ -50,34 +50,30 @@ function intervalLabel(interval?: BillingInterval | null): string {
       : "monthly";
 }
 
-function intervalPrice(
-  membership: Pick<
-    Membership,
-    "monthlyPrice" | "quarterlyPrice" | "yearlyPrice"
-  >,
-  interval?: BillingInterval | null,
-): number {
-  if (interval === "quarterly") return membership.quarterlyPrice;
-  if (interval === "yearly") return membership.yearlyPrice;
-  return membership.monthlyPrice;
-}
-
 function formatMembershipPrice(value: unknown): string {
   const price = Number(value);
   return Number.isFinite(price) && price >= 0 ? formatCurrency(price) : "—";
 }
 
 function currentPlanDetail(user: AuthUser): string {
-  if (user.membership?.type !== "paid") {
-    return (
-      user.membership?.description ||
-      "Choose Free or Paid based on how you want to use the app."
-    );
+  const expiry = user.membership?.type === "paid"
+    ? user.planEndsAt
+    : user.trialEndsAt;
+  if (expiry) {
+    const expiresAt = new Date(expiry);
+    const dateLabel = expiresAt.toLocaleDateString(undefined, {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+    if (expiresAt <= new Date()) {
+      return "Your access has ended. Choose Premium to restore full access.";
+    }
+    return user.membership?.type === "paid"
+      ? `Premium access is active until ${dateLabel}.`
+      : `Your full-access trial ends on ${dateLabel}.`;
   }
-
-  const price = `${formatMembershipPrice(intervalPrice(user.membership, user.billingInterval))} / ${intervalLabel(user.billingInterval)}`;
-
-  return `Billed ${intervalLabel(user.billingInterval)} at ${price}.`;
+  return user.membership?.description || "Choose Premium to continue.";
 }
 
 function paymentStatusClass(status: ManualPayment["status"]): string {
@@ -186,7 +182,7 @@ export default function MembershipsPage() {
       setCancellationDialogOpen(false);
       setCancellationConfirmation("");
       window.dispatchEvent(new Event("notifications:updated"));
-      setActionSuccess("Your paid membership was cancelled. You are now on the Free plan.");
+      setActionSuccess("Your cancellation was recorded. Premium access remains available until the end of your paid period.");
     } catch (err) {
       setActionError(
         err instanceof Error ? err.message : "Failed to cancel membership",
@@ -287,7 +283,7 @@ export default function MembershipsPage() {
                 id="cancel-membership-description"
                 className="mt-2 text-sm leading-6 text-zinc-600 dark:text-zinc-300"
               >
-                Your account will move to the Free plan immediately and paid access will end. Payments already made are not refunded.
+                Your Premium access will remain available until the end of the paid period. Payments already made are not refunded.
               </p>
               <form
                 className="mt-5"
@@ -476,7 +472,7 @@ export default function MembershipsPage() {
                             : "bg-zinc-900 text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
                         }`}
                       >
-                        {isSwitching ? <><SpinnerIcon className="animate-spin" /> Switching…</> : isCurrent ? <><CheckIcon /> Current plan</> : "Choose Free"}
+                        {isSwitching ? <><SpinnerIcon className="animate-spin" /> Switching…</> : isCurrent ? <><CheckIcon /> Current plan</> : "Trial access"}
                       </button>
                     </article>
                   );
@@ -625,7 +621,7 @@ export default function MembershipsPage() {
               </summary>
               <div className="flex flex-col gap-4 border-t border-zinc-100 px-5 py-4 dark:border-zinc-800 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                  Cancellation switches your account to Free immediately and does not issue a refund.
+                  Cancellation prevents a future renewal and does not issue a refund. Your current Premium access remains active until its end date.
                 </p>
                 <button
                   type="button"

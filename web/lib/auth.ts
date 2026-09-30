@@ -6,6 +6,10 @@ export type AuthUser = {
   email: string;
   role?: { id: string; name: string };
   billingInterval?: BillingInterval | null;
+  trialStartedAt?: string;
+  trialEndsAt?: string;
+  planStartedAt?: string;
+  planEndsAt?: string;
   membership?: {
     id: string;
     name: string;

@@ -89,6 +89,22 @@ export class User {
   @Prop({ type: String, enum: BillingInterval, default: null })
   billingInterval!: BillingInterval | null;
 
+  @ApiPropertyOptional({ format: 'date-time', nullable: true })
+  @Prop({ type: Date, default: null })
+  trialStartedAt!: Date | null;
+
+  @ApiPropertyOptional({ format: 'date-time', nullable: true })
+  @Prop({ type: Date, default: null })
+  trialEndsAt!: Date | null;
+
+  @ApiPropertyOptional({ format: 'date-time', nullable: true })
+  @Prop({ type: Date, default: null })
+  planStartedAt!: Date | null;
+
+  @ApiPropertyOptional({ format: 'date-time', nullable: true })
+  @Prop({ type: Date, default: null })
+  planEndsAt!: Date | null;
+
   @ApiProperty({ format: 'date-time' })
   createdAt!: Date;
 

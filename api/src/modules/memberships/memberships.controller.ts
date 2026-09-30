@@ -21,6 +21,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Roles } from '../../infrastructure/auth/decorators/roles.decorator';
+import { SubscriptionExempt } from '../../infrastructure/auth/decorators/subscription-exempt.decorator';
 import { ParseObjectIdPipe } from '../../shared/pipes/parse-object-id.pipe';
 import { DefaultRole } from '../roles/app-role.schema';
 import { CreateMembershipDto } from './dto/create-membership.dto';
@@ -32,6 +33,7 @@ import { MembershipsService } from './memberships.service';
 @ApiTags('memberships')
 @ApiBearerAuth()
 @Controller('memberships')
+@SubscriptionExempt()
 export class MembershipsController {
   constructor(private readonly membershipsService: MembershipsService) {}
 
