@@ -55,25 +55,39 @@ function formatMembershipPrice(value: unknown): string {
   return Number.isFinite(price) && price >= 0 ? formatCurrency(price) : "—";
 }
 
-function currentPlanDetail(user: AuthUser): string {
-  const expiry = user.membership?.type === "paid"
-    ? user.planEndsAt
-    : user.trialEndsAt;
-  if (expiry) {
-    const expiresAt = new Date(expiry);
-    const dateLabel = expiresAt.toLocaleDateString(undefined, {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-    if (expiresAt <= new Date()) {
-      return "Your access has ended. Choose Premium to restore full access.";
-    }
-    return user.membership?.type === "paid"
-      ? `Premium access is active until ${dateLabel}.`
-      : `Your full-access trial ends on ${dateLabel}.`;
-  }
-  return user.membership?.description || "Choose Premium to continue.";
+function formatPlanDate(value?: string): string {
+  if (!value || Number.isNaN(new Date(value).getTime())) return "Not available";
+  return new Date(value).toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function subscriptionSummary(user: AuthUser) {
+  const isPremium = user.membership?.type === "paid";
+  const startsAt = isPremium ? user.planStartedAt : user.trialStartedAt;
+  const endsAt = isPremium ? user.planEndsAt : user.trialEndsAt;
+  const endDate = endsAt ? new Date(endsAt) : null;
+  const active = Boolean(endDate && endDate > new Date());
+  const daysRemaining = active && endDate
+    ? Math.ceil((endDate.getTime() - Date.now()) / 86_400_000)
+    : 0;
+
+  return {
+    active,
+    startsAt,
+    endsAt,
+    planName: isPremium ? "Premium" : "15-day Trial",
+    status: active
+      ? isPremium ? "Premium active" : "Trial active"
+      : isPremium ? "Premium expired" : "Trial ended",
+    message: active
+      ? isPremium
+        ? `${daysRemaining} day${daysRemaining === 1 ? "" : "s"} of Premium access remaining.`
+        : `${daysRemaining} day${daysRemaining === 1 ? "" : "s"} left in your free trial.`
+      : "Choose a Premium billing option below to restore full access.",
+  };
 }
 
 function paymentStatusClass(status: ManualPayment["status"]): string {
@@ -218,6 +232,7 @@ export default function MembershipsPage() {
 
   const currentId = user.membership?.id;
   const isPaidMembership = user.membership?.type === "paid";
+  const subscription = subscriptionSummary(user);
 
   return (
     <div className="relative min-h-full overflow-x-hidden bg-zinc-50 dark:bg-zinc-950">
@@ -229,7 +244,7 @@ export default function MembershipsPage() {
       <div className="relative">
         <AppHeader
           signedIn
-          user={{ name: user.name, email: user.email }}
+          user={user}
           isAdmin={isAdmin(user)}
           signingOut={signingOut}
           onSignOut={handleSignOut}
@@ -246,7 +261,7 @@ export default function MembershipsPage() {
         </div>
 
         <section className="mb-6 overflow-hidden rounded-2xl border border-zinc-200/80 bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 p-6 text-white shadow-sm sm:p-8">
-          <p className="text-sm font-medium text-emerald-100">Current plan</p>
+          <p className="text-sm font-medium text-emerald-100">Membership status</p>
           <h2 className="mt-1 text-2xl font-semibold tracking-tight">
             {membershipLabel(user.membership)}
             {user.membership?.type === "paid"
@@ -254,8 +269,22 @@ export default function MembershipsPage() {
               : ""}
           </h2>
           <p className="mt-1 text-sm text-emerald-50/90">
-            {currentPlanDetail(user)}
+            {subscription.message}
           </p>
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-xl border border-white/15 bg-white/10 px-4 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-100">Status</p>
+              <p className="mt-1 font-semibold">{subscription.status}</p>
+            </div>
+            <div className="rounded-xl border border-white/15 bg-white/10 px-4 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-100">Started</p>
+              <p className="mt-1 font-semibold">{formatPlanDate(subscription.startsAt)}</p>
+            </div>
+            <div className="rounded-xl border border-white/15 bg-white/10 px-4 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-100">{subscription.active ? "Access ends" : "Ended"}</p>
+              <p className="mt-1 font-semibold">{formatPlanDate(subscription.endsAt)}</p>
+            </div>
+          </div>
         </section>
 
         {cancellationDialogOpen && (

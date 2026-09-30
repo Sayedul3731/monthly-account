@@ -9,11 +9,15 @@ import {
   markNotificationRead,
   type AppNotification,
 } from "@/lib/api";
+import type { AuthUser } from "@/lib/auth";
 import { BellIcon, ChevronDown } from "./icons";
 
 export type AppHeaderUser = {
   name: string;
   email?: string | null;
+  membership?: AuthUser["membership"];
+  trialEndsAt?: string;
+  planEndsAt?: string;
 };
 
 type AppHeaderProps = {
@@ -42,6 +46,29 @@ function menuItemClass(active = false) {
   }`;
 }
 
+function membershipNotice(user?: AppHeaderUser | null): {
+  message: string;
+  active: boolean;
+} | null {
+  const isPremium = user?.membership?.type === "paid";
+  const endAt = isPremium ? user?.planEndsAt : user?.trialEndsAt;
+  if (!endAt || Number.isNaN(new Date(endAt).getTime())) return null;
+
+  const endDate = new Date(endAt);
+  const active = endDate > new Date();
+  const date = endDate.toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+  const name = isPremium ? "Premium" : "Free trial";
+
+  return {
+    active,
+    message: active ? `${name} active until ${date}` : `${name} ended on ${date}`,
+  };
+}
+
 export default function AppHeader({
   signedIn,
   user,
@@ -64,6 +91,7 @@ export default function AppHeader({
   const menuId = useId();
   const notificationsMenuId = useId();
   const currentUserKey = user?.email ?? null;
+  const planNotice = membershipNotice(user);
 
   const adminActive = pathname.startsWith("/admin");
   const profileActive = pathname.startsWith("/profile");
@@ -284,6 +312,23 @@ export default function AppHeader({
                       </p>
                     )}
                   </div>
+
+                  {planNotice && (
+                    <Link
+                      href="/membership"
+                      role="menuitem"
+                      onClick={() => setMenuOpen(false)}
+                      className={`mx-2 my-2 block rounded-lg border px-3 py-2.5 text-xs font-medium transition ${
+                        planNotice.active
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200"
+                          : "border-amber-200 bg-amber-50 text-amber-900 hover:bg-amber-100 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
+                      }`}
+                    >
+                      <span className="block font-semibold">{planNotice.active ? "Membership active" : "Action needed"}</span>
+                      <span className="mt-0.5 block">{planNotice.message}</span>
+                      <span className="mt-1 block font-semibold underline underline-offset-2">{planNotice.active ? "Manage membership" : "View Premium options"}</span>
+                    </Link>
+                  )}
 
                   <div className="p-1">
                     <Link

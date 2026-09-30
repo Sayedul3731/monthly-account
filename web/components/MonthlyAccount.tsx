@@ -394,7 +394,13 @@ export default function MonthlyAccount() {
       signedIn={signedIn}
       user={
         sessionUser
-          ? { name: sessionUser.name, email: sessionUser.email }
+          ? {
+              name: sessionUser.name,
+              email: sessionUser.email,
+              membership: sessionUser.membership,
+              trialEndsAt: sessionUser.trialEndsAt,
+              planEndsAt: sessionUser.planEndsAt,
+            }
           : null
       }
       isAdmin={isAdmin(sessionUser)}
