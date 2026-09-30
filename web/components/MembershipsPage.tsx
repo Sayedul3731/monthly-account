@@ -370,12 +370,18 @@ export default function MembershipsPage() {
                   Payment verification
                 </h3>
                 <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
-                  Track the review status of your Nagad payment submissions.
+                  Latest Nagad payment status.
                 </p>
               </div>
+              <Link
+                href="/membership/payments"
+                className="mt-2 text-sm font-semibold text-emerald-700 hover:text-emerald-800 dark:text-emerald-300 sm:mt-0"
+              >
+                View full history →
+              </Link>
             </div>
             <div className="mt-4 space-y-3">
-              {payments.map((payment) => (
+              {payments.slice(0, 1).map((payment) => (
                 <div
                   key={payment.id}
                   className="flex flex-col gap-3 rounded-xl bg-zinc-50 p-4 dark:bg-zinc-800/70 sm:flex-row sm:items-center sm:justify-between"
@@ -458,20 +464,20 @@ export default function MembershipsPage() {
                   return (
                     <article
                       key={plan.id}
-                      className="relative flex min-h-[29rem] flex-col overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-b from-emerald-50 via-white to-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_12px_28px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_16px_36px_rgba(0,0,0,0.08)] sm:p-7 dark:border-emerald-900/70 dark:from-emerald-950/30 dark:via-zinc-900 dark:to-zinc-900"
+                      className="relative flex min-h-[29rem] flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_12px_28px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_16px_36px_rgba(0,0,0,0.08)] sm:p-7 dark:border-zinc-800 dark:bg-zinc-900"
                     >
                       <div aria-hidden className="absolute inset-x-0 top-0 h-1 bg-emerald-500" />
                       <div className="flex min-h-[6.5rem] items-start">
                         <div>
                           <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">
-                            15-day free trial
+                            15-day Trial
                           </p>
                           <h4 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">
                             {plan.name}
                           </h4>
                         </div>
                       </div>
-                      <p className="mt-3 min-h-[5.25rem] text-sm leading-6 text-zinc-500 dark:text-zinc-400">
+                      <p className="mt-3 min-h-[5.25rem] text-[15px] leading-6 text-zinc-500 dark:text-zinc-400">
                         {plan.description || "Try every Premium feature for 15 days, with no payment details required."}
                       </p>
                       <div className="my-6 flex min-h-[8.25rem] flex-col justify-center border-y border-zinc-100 py-5 dark:border-zinc-800">
@@ -483,7 +489,7 @@ export default function MembershipsPage() {
                         <p className="mb-3 text-xs font-semibold tracking-wide text-zinc-500 uppercase dark:text-zinc-400">
                           Included features
                         </p>
-                        <ul className="space-y-3 text-sm text-zinc-700 dark:text-zinc-300">
+                        <ul className="space-y-3 text-[15px] text-zinc-700 dark:text-zinc-300">
                         {FREE_FEATURES.map((feature) => (
                           <li key={feature} className="flex items-center gap-2.5">
                             <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"><CheckIcon /></span>
