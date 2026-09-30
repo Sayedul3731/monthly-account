@@ -24,7 +24,11 @@ import AppHeader from "./AppHeader";
 import LoadingState from "./LoadingState";
 import { CheckIcon, ChevronLeft, SpinnerIcon } from "./icons";
 
-const FREE_FEATURES = ["Account Snapshot", "Transactions"];
+const FREE_FEATURES = [
+  "Full Premium feature access",
+  "No payment details required",
+  "Ends automatically after 15 days",
+];
 const PREMIUM_FEATURES = [
   "Account Snapshot",
   "Transactions",
@@ -36,10 +40,6 @@ const PREMIUM_FEATURES = [
 function membershipLabel(membership?: AuthUser["membership"]): string {
   if (!membership?.name) return "Free";
   return membership.name;
-}
-
-function typeLabel(type: Membership["type"]): string {
-  return type === "paid" ? "Premium" : "15-day Trial";
 }
 
 function intervalLabel(interval?: BillingInterval | null): string {
@@ -429,13 +429,13 @@ export default function MembershipsPage() {
                   return (
                     <article
                       key={plan.id}
-                      className="relative flex min-h-[29rem] flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_12px_28px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_16px_36px_rgba(0,0,0,0.08)] sm:p-7 dark:border-zinc-800 dark:bg-zinc-900"
+                      className="relative flex min-h-[29rem] flex-col overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-b from-emerald-50 via-white to-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_12px_28px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_16px_36px_rgba(0,0,0,0.08)] sm:p-7 dark:border-emerald-900/70 dark:from-emerald-950/30 dark:via-zinc-900 dark:to-zinc-900"
                     >
-                      <div aria-hidden className="absolute inset-x-0 top-0 h-1 bg-zinc-300 dark:bg-zinc-700" />
+                      <div aria-hidden className="absolute inset-x-0 top-0 h-1 bg-emerald-500" />
                       <div className="flex min-h-[6.5rem] items-start">
                         <div>
-                          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500 dark:text-zinc-400">
-                            {typeLabel(plan.type)} plan
+                          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">
+                            15-day free trial
                           </p>
                           <h4 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">
                             {plan.name}
@@ -443,11 +443,12 @@ export default function MembershipsPage() {
                         </div>
                       </div>
                       <p className="mt-3 min-h-[5.25rem] text-sm leading-6 text-zinc-500 dark:text-zinc-400">
-                        {plan.description || "A simple way to keep your account active with no subscription cost."}
+                        {plan.description || "Try every Premium feature for 15 days, with no payment details required."}
                       </p>
                       <div className="my-6 flex min-h-[8.25rem] flex-col justify-center border-y border-zinc-100 py-5 dark:border-zinc-800">
                         <span className="text-4xl font-semibold tracking-[-0.04em] text-zinc-900 dark:text-white">৳0</span>
-                        <span className="ml-1.5 text-sm font-medium text-zinc-500 dark:text-zinc-400">/ forever</span>
+                        <span className="ml-1.5 text-sm font-medium text-zinc-500 dark:text-zinc-400">/ 15 days</span>
+                        <span className="mt-2 w-fit rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200">No card required</span>
                       </div>
                       <div className="mt-1 mb-6">
                         <p className="mb-3 text-xs font-semibold tracking-wide text-zinc-500 uppercase dark:text-zinc-400">

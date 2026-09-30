@@ -137,19 +137,26 @@ export default function MonthlyAccount() {
       } catch (err) {
         if (cancelled) return;
 
-        if (cached) {
+        const isNetworkFailure =
+          !navigator.onLine ||
+          (err instanceof Error && err.message.startsWith("Cannot reach the API"));
+
+        if (cached && isNetworkFailure) {
           setOffline(true);
           showToast("You are offline. Showing your last saved account data.", {
             kind: "error",
             title: "Offline mode",
           });
         } else {
+          setOffline(false);
           showToast(err instanceof Error ? err.message : "Failed to load data", {
             kind: "error",
             title: "Could not load account",
           });
-          setTransactions([]);
-          setBudgets([]);
+          if (!cached) {
+            setTransactions([]);
+            setBudgets([]);
+          }
         }
       } finally {
         if (!cancelled) setLoading(false);
