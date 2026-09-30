@@ -19,9 +19,12 @@ import { DEFAULT_CATEGORIES } from './default-categories';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 
+const CATALOG_CACHE_TTL_MS = 5 * 60 * 1000;
+
 @Injectable()
 export class CategoriesService implements OnModuleInit {
   private readonly logger = new Logger(CategoriesService.name);
+  private cache: { expiresAt: number; items: Category[] } | null = null;
 
   constructor(
     @InjectModel(Category.name)
@@ -32,15 +35,16 @@ export class CategoriesService implements OnModuleInit {
 
   async onModuleInit(): Promise<void> {
     await this.ensureDefaultCategories();
+    // Warm the catalog during application startup so the first form does not
+    // have to wait for a database round trip.
+    await this.getCachedCategories();
   }
 
   async findAll(type?: TransactionType): Promise<Category[]> {
-    const docs = await this.categoryModel
-      .find(notDeleted(type ? { type } : {}))
-      .sort({ name: 1 })
-      .exec();
-
-    return asPlainList<Category>(docs);
+    const categories = await this.getCachedCategories();
+    return type
+      ? categories.filter((category) => category.type === type)
+      : categories;
   }
 
   async findOne(id: string): Promise<Category> {
@@ -57,6 +61,7 @@ export class CategoriesService implements OnModuleInit {
       icon: dto.icon ?? '',
     });
 
+    this.clearCache();
     return asPlain<Category>(category);
   }
 
@@ -73,7 +78,9 @@ export class CategoriesService implements OnModuleInit {
     category.name = nextName;
     if (dto.icon !== undefined) category.icon = dto.icon;
 
-    return asPlain<Category>(await category.save());
+    const updated = asPlain<Category>(await category.save());
+    this.clearCache();
+    return updated;
   }
 
   async remove(id: string): Promise<void> {
@@ -94,6 +101,7 @@ export class CategoriesService implements OnModuleInit {
     if (!result.matchedCount) {
       throw new NotFoundException(`Category ${id} not found`);
     }
+    this.clearCache();
   }
 
   private async getDocument(id: string): Promise<CategoryDocument> {
@@ -106,6 +114,23 @@ export class CategoriesService implements OnModuleInit {
     }
 
     return category;
+  }
+
+  private async getCachedCategories(): Promise<Category[]> {
+    const now = Date.now();
+    if (this.cache && this.cache.expiresAt > now) return this.cache.items;
+
+    const docs = await this.categoryModel
+      .find(notDeleted())
+      .sort({ name: 1 })
+      .exec();
+    const items = asPlainList<Category>(docs);
+    this.cache = { items, expiresAt: now + CATALOG_CACHE_TTL_MS };
+    return items;
+  }
+
+  private clearCache(): void {
+    this.cache = null;
   }
 
   private async ensureNameAvailable(

@@ -21,9 +21,12 @@ import {
   TransactionTypeEntity,
 } from './transaction-type.schema';
 
+const CATALOG_CACHE_TTL_MS = 5 * 60 * 1000;
+
 @Injectable()
 export class TransactionTypesService implements OnModuleInit {
   private readonly logger = new Logger(TransactionTypesService.name);
+  private cache: { expiresAt: number; items: TransactionTypeEntity[] } | null = null;
 
   constructor(
     @InjectModel(TransactionTypeEntity.name)
@@ -34,15 +37,22 @@ export class TransactionTypesService implements OnModuleInit {
 
   async onModuleInit(): Promise<void> {
     await this.ensureDefaultTypes();
+    // Warm the catalog during application startup so the first form does not
+    // have to wait for a database round trip.
+    await this.findAll();
   }
 
   async findAll(): Promise<TransactionTypeEntity[]> {
+    const now = Date.now();
+    if (this.cache && this.cache.expiresAt > now) return this.cache.items;
+
     const docs = await this.transactionTypeModel
       .find(notDeleted())
       .sort({ name: 1 })
       .exec();
-
-    return asPlainList<TransactionTypeEntity>(docs);
+    const items = asPlainList<TransactionTypeEntity>(docs);
+    this.cache = { items, expiresAt: now + CATALOG_CACHE_TTL_MS };
+    return items;
   }
 
   async findOne(id: string): Promise<TransactionTypeEntity> {
@@ -59,6 +69,7 @@ export class TransactionTypesService implements OnModuleInit {
       icon: dto.icon ?? '',
     });
 
+    this.clearCache();
     return asPlain<TransactionTypeEntity>(transactionType);
   }
 
@@ -76,7 +87,9 @@ export class TransactionTypesService implements OnModuleInit {
     if (dto.label !== undefined) transactionType.label = dto.label.trim();
     if (dto.icon !== undefined) transactionType.icon = dto.icon;
 
-    return asPlain<TransactionTypeEntity>(await transactionType.save());
+    const updated = asPlain<TransactionTypeEntity>(await transactionType.save());
+    this.clearCache();
+    return updated;
   }
 
   async remove(id: string): Promise<void> {
@@ -97,6 +110,7 @@ export class TransactionTypesService implements OnModuleInit {
     if (!result.matchedCount) {
       throw new NotFoundException(`Transaction type ${id} not found`);
     }
+    this.clearCache();
   }
 
   private async getDocument(id: string): Promise<TransactionTypeDocument> {
@@ -122,6 +136,10 @@ export class TransactionTypesService implements OnModuleInit {
     if (existing && existing.id !== excludeId) {
       throw new ConflictException(`Transaction type "${name}" already exists`);
     }
+  }
+
+  private clearCache(): void {
+    this.cache = null;
   }
 
   private async ensureDefaultTypes(): Promise<void> {
