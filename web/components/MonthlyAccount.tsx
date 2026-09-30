@@ -137,6 +137,16 @@ export default function MonthlyAccount() {
       } catch (err) {
         if (cancelled) return;
 
+        const message =
+          err instanceof Error ? err.message : "Failed to load account";
+        if (
+          message ===
+          "Your 15-day trial or Premium plan has ended. Choose Premium to continue."
+        ) {
+          router.replace("/membership");
+          return;
+        }
+
         const isNetworkFailure =
           !navigator.onLine ||
           (err instanceof Error && err.message.startsWith("Cannot reach the API"));
@@ -149,7 +159,7 @@ export default function MonthlyAccount() {
           });
         } else {
           setOffline(false);
-          showToast(err instanceof Error ? err.message : "Failed to load data", {
+          showToast(message, {
             kind: "error",
             title: "Could not load account",
           });
@@ -168,7 +178,7 @@ export default function MonthlyAccount() {
     return () => {
       cancelled = true;
     };
-  }, [authReady, month, sessionUser?.id, showToast, signedIn, year]);
+  }, [authReady, month, router, sessionUser?.id, showToast, signedIn, year]);
 
   useEffect(() => {
     const userId = sessionUser?.id ?? "";
