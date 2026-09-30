@@ -278,7 +278,7 @@ async function parseErrorMessage(response: Response): Promise<string> {
 function toApiError(err: unknown): Error {
   if (err instanceof TypeError) {
     return new Error(
-      "Cannot reach the API. Make sure it is running and NEXT_PUBLIC_API_URL is correct.",
+      `Cannot reach the API at ${API_URL}. Make sure it is running and NEXT_PUBLIC_API_URL is correct.`,
     );
   }
   if (err instanceof Error) return err;

@@ -36,7 +36,7 @@ async function bootstrap() {
     origin: nodeEnv === 'production' ? productionOrigins : true,
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
   });
 
   app.use((_request: Request, response: Response, next: NextFunction) => {
