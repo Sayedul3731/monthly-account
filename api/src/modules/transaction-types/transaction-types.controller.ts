@@ -19,6 +19,7 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import { Public } from '../../infrastructure/auth/decorators/public.decorator';
 import { Roles } from '../../infrastructure/auth/decorators/roles.decorator';
 import { SubscriptionExempt } from '../../infrastructure/auth/decorators/subscription-exempt.decorator';
 import { ParseObjectIdPipe } from '../../shared/pipes/parse-object-id.pipe';
@@ -38,6 +39,7 @@ export class TransactionTypesController {
   ) {}
 
   @Get()
+  @Public()
   @ApiOperation({ summary: 'List transaction types' })
   @ApiOkResponse({ type: TransactionTypeEntity, isArray: true })
   findAll() {
@@ -45,6 +47,7 @@ export class TransactionTypesController {
   }
 
   @Get(':id')
+  @Public()
   @ApiOperation({ summary: 'Get a transaction type by ID' })
   @ApiParam({ name: 'id' })
   @ApiOkResponse({ type: TransactionTypeEntity })

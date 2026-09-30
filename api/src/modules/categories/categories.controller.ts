@@ -20,6 +20,7 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import { Public } from '../../infrastructure/auth/decorators/public.decorator';
 import { Roles } from '../../infrastructure/auth/decorators/roles.decorator';
 import { SubscriptionExempt } from '../../infrastructure/auth/decorators/subscription-exempt.decorator';
 import { ParseObjectIdPipe } from '../../shared/pipes/parse-object-id.pipe';
@@ -38,6 +39,7 @@ export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
   @Get()
+  @Public()
   @ApiOperation({ summary: 'List categories, optionally filtered by type' })
   @ApiOkResponse({ type: Category, isArray: true })
   findAll(@Query() query: CategoryQueryDto) {
@@ -45,6 +47,7 @@ export class CategoriesController {
   }
 
   @Get(':id')
+  @Public()
   @ApiOperation({ summary: 'Get a category by ID' })
   @ApiParam({ name: 'id' })
   @ApiOkResponse({ type: Category })
