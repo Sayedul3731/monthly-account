@@ -147,11 +147,10 @@ export default function MonthlyAccount() {
           return;
         }
 
-        const isNetworkFailure =
-          !navigator.onLine ||
-          (err instanceof Error && err.message.startsWith("Cannot reach the API"));
-
-        if (cached && isNetworkFailure) {
+        // `navigator.onLine` reflects the browser's network state. An API,
+        // CORS, or server error can happen while the device is still online,
+        // so it must not be presented as an offline state.
+        if (cached && !navigator.onLine) {
           setOffline(true);
           showToast("You are offline. Showing your last saved account data.", {
             kind: "error",
