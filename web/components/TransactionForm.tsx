@@ -44,6 +44,24 @@ type Props = {
 const fieldClass =
   "w-full rounded-xl border border-brand/10 bg-paper/60 px-4 py-3 text-zinc-900 outline-none transition focus:border-brand focus:bg-white focus:ring-2 focus:ring-brand/15 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:focus:bg-zinc-800";
 
+type LookupCatalogs = {
+  categories: ApiCategory[];
+  transactionTypes: ApiTransactionType[];
+};
+
+let lookupRefresh: Promise<LookupCatalogs> | null = null;
+
+function refreshLookupCatalogs(): Promise<LookupCatalogs> {
+  if (!lookupRefresh) {
+    lookupRefresh = Promise.all([fetchCategories(), fetchTransactionTypes()])
+      .then(([categories, transactionTypes]) => ({ categories, transactionTypes }))
+      .finally(() => {
+        lookupRefresh = null;
+      });
+  }
+  return lookupRefresh;
+}
+
 export default function TransactionForm({
   year,
   month,
@@ -80,36 +98,36 @@ export default function TransactionForm({
 
   useEffect(() => {
     let cancelled = false;
+    const userId = getStoredUser()?.id ?? "";
+    const cached = getOfflineLookups(userId);
 
-    Promise.all([fetchCategories(), fetchTransactionTypes()])
-      .then(([nextCategories, nextTypes]) => {
-        if (cancelled) return;
-        setCategories(nextCategories);
-        setTransactionTypes(nextTypes);
-        const userId = getStoredUser()?.id;
-        if (userId) saveOfflineLookups(userId, nextCategories, nextTypes);
-
-        if (!editing) {
-          const firstExpense = nextCategories.find(
-            (category) => category.type === "expense",
-          );
-          if (firstExpense) setCategoryId(firstExpense.id);
+    const applyLookups = (nextCategories: ApiCategory[], nextTypes: ApiTransactionType[]) => {
+      setCategories(nextCategories);
+      setTransactionTypes(nextTypes);
+      if (!editing) {
+        const firstExpense = nextCategories.find(
+          (category) => category.type === "expense",
+        );
+        if (firstExpense) {
+          setCategoryId((current) => current || firstExpense.id);
         }
-        setLookupsReady(true);
+      }
+      setLookupsReady(true);
+    };
+
+    // Render previously saved catalogs immediately, then refresh them without
+    // making the transaction form wait for the network.
+    if (cached) applyLookups(cached.categories, cached.transactionTypes);
+
+    refreshLookupCatalogs()
+      .then(({ categories: nextCategories, transactionTypes: nextTypes }) => {
+        if (cancelled) return;
+        applyLookups(nextCategories, nextTypes);
+        if (userId) saveOfflineLookups(userId, nextCategories, nextTypes);
       })
       .catch((err) => {
         if (cancelled) return;
-        const cached = getOfflineLookups(getStoredUser()?.id ?? "");
         if (cached) {
-          setCategories(cached.categories);
-          setTransactionTypes(cached.transactionTypes);
-          if (!editing) {
-            const firstExpense = cached.categories.find(
-              (category) => category.type === "expense",
-            );
-            if (firstExpense) setCategoryId(firstExpense.id);
-          }
-          setLookupsReady(true);
           return;
         }
         onError(

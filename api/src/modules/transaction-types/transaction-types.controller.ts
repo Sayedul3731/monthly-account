@@ -20,6 +20,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Roles } from '../../infrastructure/auth/decorators/roles.decorator';
+import { SubscriptionExempt } from '../../infrastructure/auth/decorators/subscription-exempt.decorator';
 import { ParseObjectIdPipe } from '../../shared/pipes/parse-object-id.pipe';
 import { DefaultRole } from '../roles/app-role.schema';
 import { CreateTransactionTypeDto } from './dto/create-transaction-type.dto';
@@ -30,6 +31,7 @@ import { TransactionTypesService } from './transaction-types.service';
 @ApiTags('transaction-types')
 @ApiBearerAuth()
 @Controller('transaction-types')
+@SubscriptionExempt()
 export class TransactionTypesController {
   constructor(
     private readonly transactionTypesService: TransactionTypesService,

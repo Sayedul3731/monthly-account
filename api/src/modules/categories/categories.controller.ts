@@ -21,6 +21,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Roles } from '../../infrastructure/auth/decorators/roles.decorator';
+import { SubscriptionExempt } from '../../infrastructure/auth/decorators/subscription-exempt.decorator';
 import { ParseObjectIdPipe } from '../../shared/pipes/parse-object-id.pipe';
 import { DefaultRole } from '../roles/app-role.schema';
 import { CategoriesService } from './categories.service';
@@ -32,6 +33,7 @@ import { UpdateCategoryDto } from './dto/update-category.dto';
 @ApiTags('categories')
 @ApiBearerAuth()
 @Controller('categories')
+@SubscriptionExempt()
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
