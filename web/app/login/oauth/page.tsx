@@ -2,28 +2,42 @@
 
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { exchangeOAuthCode } from "@/lib/api";
 
 function OAuthCallbackInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const code = searchParams.get("code");
-  const [exchangeFailed, setExchangeFailed] = useState(false);
+  const [exchangeError, setExchangeError] = useState<string | null>(null);
+  const exchangePromise = useRef<ReturnType<typeof exchangeOAuthCode> | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!code) return;
 
+    // React Strict Mode intentionally re-runs effects in local development.
+    // The OAuth handoff code is single-use, so both runs must await the same
+    // exchange instead of issuing two requests.
+    exchangePromise.current ??= exchangeOAuthCode(code);
+
     let active = true;
-    void exchangeOAuthCode(code)
+    void exchangePromise.current
       .then(() => {
         if (active) {
           router.replace("/");
           router.refresh();
         }
       })
-      .catch(() => {
-        if (active) setExchangeFailed(true);
+      .catch((error: unknown) => {
+        if (active) {
+          setExchangeError(
+            error instanceof Error
+              ? error.message
+              : "Google sign-in could not be completed. Please try again.",
+          );
+        }
       });
 
     return () => {
@@ -33,9 +47,7 @@ function OAuthCallbackInner() {
 
   const error = !code
     ? "Missing Google sign-in code."
-    : exchangeFailed
-      ? "Google sign-in has expired. Please try again."
-      : null;
+    : exchangeError;
 
   if (error) {
     return (

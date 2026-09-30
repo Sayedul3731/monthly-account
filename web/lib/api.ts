@@ -286,6 +286,7 @@ function toApiError(err: unknown): Error {
 }
 
 let refreshPromise: Promise<boolean> | null = null;
+const oauthExchangePromises = new Map<string, Promise<AuthUser>>();
 
 async function performTokenRefresh(): Promise<boolean> {
   try {
@@ -394,11 +395,20 @@ export async function loginUser(input: LoginInput): Promise<AuthUser> {
 }
 
 export async function exchangeOAuthCode(code: string): Promise<AuthUser> {
-  const data = await request<AuthResponse>("/auth/oauth/exchange", {
+  const existingExchange = oauthExchangePromises.get(code);
+  if (existingExchange) return existingExchange;
+
+  const exchange = request<AuthResponse>("/auth/oauth/exchange", {
     method: "POST",
     body: JSON.stringify({ code }),
-  });
-  return applyAuthSession(data);
+  })
+    .then(applyAuthSession)
+    .finally(() => {
+      oauthExchangePromises.delete(code);
+    });
+
+  oauthExchangePromises.set(code, exchange);
+  return exchange;
 }
 
 export async function logoutUser(): Promise<void> {
