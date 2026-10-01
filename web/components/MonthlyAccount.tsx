@@ -259,8 +259,35 @@ export default function MonthlyAccount() {
     overallBudget && overallBudget.amount > 0
       ? (stats.expenses / overallBudget.amount) * 100
       : null;
+  const currentBudgetUsage = budgetUsedPercent ?? 0;
   const budgetProgress = Math.min(budgetUsedPercent ?? 0, 100);
   const isOverBudget = budgetRemaining !== null && budgetRemaining < 0;
+  const budgetAlert =
+    budgetUsedPercent === null
+      ? null
+      : budgetUsedPercent >= 100
+        ? {
+            message: "🔴 আপনার মাসিক বাজেট অতিক্রম হয়েছে।",
+            className:
+              "border-rose-300/30 bg-rose-400/15 text-rose-50",
+          }
+        : budgetUsedPercent >= 90
+          ? {
+              message: "🔴 এই মাসের বাজেট প্রায় শেষ।",
+              className:
+                "border-rose-300/30 bg-rose-400/15 text-rose-50",
+            }
+          : budgetUsedPercent >= 80
+            ? {
+                message: "🟡 আপনার বাজেটের 80% ব্যবহার হয়েছে।",
+                className:
+                  "border-amber-200/30 bg-amber-300/15 text-amber-50",
+              }
+            : {
+                message: "🟢 আপনি বাজেটের মধ্যে আছেন।",
+                className:
+                  "border-emerald-200/30 bg-emerald-300/15 text-emerald-50",
+              };
 
   const recentTransactions = useMemo(
     () =>
@@ -548,7 +575,7 @@ export default function MonthlyAccount() {
                       : "border-gold/40 bg-gold/15 text-gold"
                   }`}
                 >
-                  {isOverBudget ? "বাজেট ছাড়িয়েছে" : "বাজেটের মধ্যে"}
+                  {isOverBudget ? "বাজেট ছাড়িয়েছে" : "বাজেট ট্র্যাকিং"}
                 </span>
               ) : (
                 <button
@@ -577,9 +604,7 @@ export default function MonthlyAccount() {
                   খরচ
                 </p>
                 <p className="mt-1 text-sm font-semibold tabular-nums text-rose-50 sm:text-base">
-                  {budgetUsedPercent === null
-                    ? "—"
-                    : `${budgetUsedPercent.toFixed(1)}%`}
+                  {overallBudget ? formatCurrency(stats.expenses) : "—"}
                 </p>
               </div>
               <div className="rounded-2xl border border-emerald-300/25 bg-emerald-300/10 px-3 py-3 backdrop-blur-sm sm:px-4">
@@ -594,20 +619,30 @@ export default function MonthlyAccount() {
               </div>
             </div>
 
-            {overallBudget && (
+            {overallBudget && budgetAlert && (
               <div className="relative mt-4">
                 <div className="mb-1.5 flex justify-between text-xs text-white/70">
                   <span>বাজেটের ব্যবহার</span>
-                  <span>{budgetUsedPercent?.toFixed(1)}%</span>
+                  <span>{currentBudgetUsage.toFixed(0)}%</span>
                 </div>
                 <div className="h-1.5 overflow-hidden rounded-full bg-white/15">
                   <div
                     className={`h-full rounded-full transition-all duration-500 ${
-                      isOverBudget ? "bg-rose-300" : "bg-gold"
+                      currentBudgetUsage >= 90
+                        ? "bg-rose-300"
+                        : currentBudgetUsage >= 80
+                          ? "bg-amber-300"
+                          : "bg-emerald-300"
                     }`}
                     style={{ width: `${budgetProgress}%` }}
                   />
                 </div>
+                <p
+                  className={`mt-3 rounded-xl border px-3 py-2 text-xs font-medium ${budgetAlert.className}`}
+                  role="status"
+                >
+                  {budgetAlert.message}
+                </p>
               </div>
             )}
 

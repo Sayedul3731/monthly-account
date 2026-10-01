@@ -153,10 +153,31 @@ export default function BudgetPanel({
     }
   }
 
-  const overallProgress =
+  const overallUsagePercent =
     overallBudget && overallBudget.amount > 0
-      ? Math.min((expenseTotal / overallBudget.amount) * 100, 100)
+      ? (expenseTotal / overallBudget.amount) * 100
       : 0;
+  const overallProgress = Math.min(overallUsagePercent, 100);
+  const overallBudgetStatus =
+    overallUsagePercent >= 100
+      ? {
+          message: "🔴 আপনার মাসিক বাজেট অতিক্রম হয়েছে।",
+          className: "text-rose-600 dark:text-rose-400",
+        }
+      : overallUsagePercent >= 90
+        ? {
+            message: "🔴 এই মাসের বাজেট প্রায় শেষ।",
+            className: "text-rose-600 dark:text-rose-400",
+          }
+        : overallUsagePercent >= 80
+          ? {
+              message: "🟡 আপনার বাজেটের 80% ব্যবহার হয়েছে।",
+              className: "text-amber-600 dark:text-amber-400",
+            }
+          : {
+              message: "🟢 আপনি বাজেটের মধ্যে আছেন।",
+              className: "text-emerald-600 dark:text-emerald-400",
+            };
   const allocationDifference = overallBudget
     ? overallBudget.amount - totalCategoryBudget
     : null;
@@ -281,23 +302,26 @@ export default function BudgetPanel({
               <>
                 <div className="mb-1 flex justify-between text-xs text-zinc-500">
                   <span>Spent {formatCurrency(expenseTotal)}</span>
-                  <span>{overallProgress.toFixed(0)}%</span>
+                  <span>{overallUsagePercent.toFixed(0)}%</span>
                 </div>
                 <div className="h-2.5 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
                   <div
                     className={`h-full rounded-full transition-all ${
-                      overallProgress >= 100 ? "bg-rose-500" : "bg-brand"
+                      overallUsagePercent >= 90
+                        ? "bg-rose-500"
+                        : overallUsagePercent >= 80
+                          ? "bg-amber-500"
+                          : "bg-emerald-500"
                     }`}
                     style={{ width: `${overallProgress}%` }}
                   />
                 </div>
-                {overallProgress >= 100 && (
-                  <p className="mt-2 text-xs font-medium text-rose-600 dark:text-rose-400">
-                    Budget exceeded by {formatCurrency(
-                      expenseTotal - overallBudget.amount,
-                    )}
-                  </p>
-                )}
+                <p
+                  className={`mt-2 text-xs font-medium ${overallBudgetStatus.className}`}
+                  role="status"
+                >
+                  {overallBudgetStatus.message}
+                </p>
               </>
             )}
           </div>
