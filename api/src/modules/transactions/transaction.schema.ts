@@ -38,6 +38,13 @@ export class Transaction {
   @ApiProperty({ type: TransactionTypeEntity })
   transactionType?: TransactionTypeEntity;
 
+  @Prop({ type: Types.ObjectId, ref: 'RecurringExpense', default: null })
+  recurringExpenseId?: Types.ObjectId | null;
+
+  /** YYYY-MM marker used to ensure one generated entry per schedule per month. */
+  @Prop({ type: String, default: null })
+  recurringPeriod?: string | null;
+
   @ApiProperty({ example: 49.99 })
   @Prop({ required: true })
   amount!: number;
@@ -85,3 +92,10 @@ TransactionSchema.virtual('transactionType', {
 
 TransactionSchema.index({ userId: 1, date: -1 });
 TransactionSchema.index({ userId: 1, deletedAt: 1, date: -1 });
+TransactionSchema.index(
+  { recurringExpenseId: 1, recurringPeriod: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { recurringExpenseId: { $type: 'objectId' } },
+  },
+);

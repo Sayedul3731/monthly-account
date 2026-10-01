@@ -12,6 +12,7 @@ import { MembershipsModule } from '../modules/memberships/memberships.module';
 import { ManualPaymentsModule } from '../modules/manual-payments/manual-payments.module';
 import { NotificationsModule } from '../modules/notifications/notifications.module';
 import { RolesModule } from '../modules/roles/roles.module';
+import { RecurringExpensesModule } from '../modules/recurring-expenses/recurring-expenses.module';
 import { TransactionTypesModule } from '../modules/transaction-types/transaction-types.module';
 import { TransactionsModule } from '../modules/transactions/transactions.module';
 import { UsersModule } from '../modules/users/users.module';
@@ -36,6 +37,7 @@ import { AppService } from './app.service';
     NotificationsModule,
     TransactionTypesModule,
     RolesModule,
+    RecurringExpensesModule,
     AuthModule,
     AuditModule,
   ],

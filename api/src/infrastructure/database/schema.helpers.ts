@@ -22,6 +22,7 @@ export function documentToJson(
     'userId',
     'categoryId',
     'transactionTypeId',
+    'recurringExpenseId',
     'reviewedById',
   ] as const) {
     const value = ret[key];

@@ -66,6 +66,25 @@ export type DashboardData = {
   unreadNotificationCount: number;
 };
 
+export type RecurringExpense = {
+  id: string;
+  categoryId: string;
+  category?: ApiCategory;
+  amount: number;
+  description: string | null;
+  dayOfMonth: number;
+  startsOn: string;
+  active: boolean;
+};
+
+export type CreateRecurringExpenseInput = {
+  categoryId: string;
+  amount: number;
+  description: string | null;
+  dayOfMonth: number;
+  startsOn?: string;
+};
+
 type UpsertBudgetInput = {
   year: number;
   month: number;
@@ -231,19 +250,15 @@ function normalizeAuthUser(raw: AuthUser): AuthUser {
     id: raw.id,
     name: raw.name,
     email: raw.email,
-    role: raw.role
-      ? { id: raw.role.id, name: raw.role.name }
-      : undefined,
+    role: raw.role ? { id: raw.role.id, name: raw.role.name } : undefined,
     billingInterval: normalizeBillingInterval(raw.billingInterval),
     membership: normalizeMembership(raw.membership),
     trialStartedAt: asIsoString(raw.trialStartedAt),
     trialEndsAt: asIsoString(raw.trialEndsAt),
     planStartedAt: asIsoString(raw.planStartedAt),
     planEndsAt: asIsoString(raw.planEndsAt),
-    createdAt:
-      raw.createdAt != null ? String(raw.createdAt) : undefined,
-    updatedAt:
-      raw.updatedAt != null ? String(raw.updatedAt) : undefined,
+    createdAt: raw.createdAt != null ? String(raw.createdAt) : undefined,
+    updatedAt: raw.updatedAt != null ? String(raw.updatedAt) : undefined,
   };
 }
 
@@ -340,9 +355,7 @@ async function request<T>(
       credentials: "include",
       headers: {
         ...(init?.body ? { "Content-Type": "application/json" } : {}),
-        ...(isUnsafeMethod && csrfToken
-          ? { "X-CSRF-Token": csrfToken }
-          : {}),
+        ...(isUnsafeMethod && csrfToken ? { "X-CSRF-Token": csrfToken } : {}),
         ...init?.headers,
       },
     });
@@ -499,8 +512,7 @@ function normalizeRole(raw: unknown): AppRole | undefined {
   return {
     id,
     name: typeof raw.name === "string" ? raw.name : "",
-    description:
-      typeof raw.description === "string" ? raw.description : null,
+    description: typeof raw.description === "string" ? raw.description : null,
   };
 }
 
@@ -634,7 +646,8 @@ function normalizeManualPayment(raw: unknown): ManualPayment {
     id: extractId(record.id ?? record._id),
     userId: extractId(record.userId) || user?.id || "",
     membershipId: extractId(record.membershipId),
-    billingInterval: normalizeBillingInterval(record.billingInterval) ?? "monthly",
+    billingInterval:
+      normalizeBillingInterval(record.billingInterval) ?? "monthly",
     amount: normalizePrice(record.amount),
     currency: "BDT",
     method: "Nagad",
@@ -912,7 +925,10 @@ export async function fetchDashboard(
   year: number,
   month: number,
 ): Promise<DashboardData> {
-  const params = new URLSearchParams({ year: String(year), month: String(month) });
+  const params = new URLSearchParams({
+    year: String(year),
+    month: String(month),
+  });
   const data = await request<{
     transactions: RawTransaction[];
     budgets: Budget[];
@@ -939,6 +955,33 @@ export async function fetchCategories(
 
 export async function fetchTransactionTypes(): Promise<ApiTransactionType[]> {
   return request<ApiTransactionType[]>("/transaction-types");
+}
+
+export async function fetchRecurringExpenses(): Promise<RecurringExpense[]> {
+  return request<RecurringExpense[]>("/recurring-expenses");
+}
+
+export async function createRecurringExpense(
+  input: CreateRecurringExpenseInput,
+): Promise<RecurringExpense> {
+  return request<RecurringExpense>("/recurring-expenses", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateRecurringExpense(
+  id: string,
+  input: Partial<CreateRecurringExpenseInput> & { active?: boolean },
+): Promise<RecurringExpense> {
+  return request<RecurringExpense>(`/recurring-expenses/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deleteRecurringExpense(id: string): Promise<void> {
+  await request<void>(`/recurring-expenses/${id}`, { method: "DELETE" });
 }
 
 export async function createTransaction(
@@ -986,9 +1029,7 @@ export async function fetchBudgets(
     .filter((budget): budget is Budget => budget !== null);
 }
 
-export async function upsertBudget(
-  input: UpsertBudgetInput,
-): Promise<Budget> {
+export async function upsertBudget(input: UpsertBudgetInput): Promise<Budget> {
   const data = await request<Budget>("/budgets", {
     method: "POST",
     body: JSON.stringify(input),
@@ -1072,7 +1113,9 @@ export async function fetchNotifications(): Promise<AppNotification[]> {
   return data.map(normalizeNotification);
 }
 
-export async function markNotificationRead(id: string): Promise<AppNotification> {
+export async function markNotificationRead(
+  id: string,
+): Promise<AppNotification> {
   const data = await request<unknown>(`/notifications/${id}/read`, {
     method: "PATCH",
   });
@@ -1190,33 +1233,40 @@ export function parseImportJson(raw: string): ImportTransactionInput[] {
 export function parseImportCsv(raw: string): ImportTransactionInput[] {
   const lines = raw.trim().split(/\r?\n/);
   if (lines.length < 2) {
-    throw new Error("CSV must include a header row and at least one transaction");
+    throw new Error(
+      "CSV must include a header row and at least one transaction",
+    );
   }
 
   const header = lines[0].toLowerCase();
   if (!header.includes("date") || !header.includes("amount")) {
-    throw new Error("CSV must include date, type, category, description, and amount columns");
+    throw new Error(
+      "CSV must include date, type, category, description, and amount columns",
+    );
   }
 
-  return lines.slice(1).filter(Boolean).map((line, index) => {
-    const match = line.match(
-      /^([^,]+),([^,]+),([^,]+),("(?:[^"]|"")*"|[^,]*),([^,]+)$/,
-    );
-    if (!match) {
-      throw new Error(`Invalid CSV row at line ${index + 2}`);
-    }
+  return lines
+    .slice(1)
+    .filter(Boolean)
+    .map((line, index) => {
+      const match = line.match(
+        /^([^,]+),([^,]+),([^,]+),("(?:[^"]|"")*"|[^,]*),([^,]+)$/,
+      );
+      if (!match) {
+        throw new Error(`Invalid CSV row at line ${index + 2}`);
+      }
 
-    const [, date, type, category, description, amount] = match;
-    const cleanDescription = description.startsWith('"')
-      ? description.slice(1, -1).replace(/""/g, '"')
-      : description;
+      const [, date, type, category, description, amount] = match;
+      const cleanDescription = description.startsWith('"')
+        ? description.slice(1, -1).replace(/""/g, '"')
+        : description;
 
-    return {
-      type: type as TransactionType,
-      amount: parseFloat(amount),
-      description: cleanDescription.trim() || null,
-      category,
-      date: toCalendarDate(date),
-    };
-  });
+      return {
+        type: type as TransactionType,
+        amount: parseFloat(amount),
+        description: cleanDescription.trim() || null,
+        category,
+        date: toCalendarDate(date),
+      };
+    });
 }
