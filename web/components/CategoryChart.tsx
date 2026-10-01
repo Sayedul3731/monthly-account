@@ -18,14 +18,14 @@ const CATEGORY_COLORS = [
 ];
 
 const CATEGORY_LABELS: Record<string, string> = {
-  Bills: "বিল",
-  Entertainment: "বিনোদন",
-  Food: "খাবার",
-  Health: "স্বাস্থ্য",
-  Installment: "কিস্তি",
-  Other: "অন্যান্য",
-  Shopping: "কেনাকাটা",
-  Transport: "যাতায়াত",
+  Bills: "Bills",
+  Entertainment: "Entertainment",
+  Food: "Food",
+  Health: "Health",
+  Installment: "Installment",
+  Other: "Other",
+  Shopping: "Shopping",
+  Transport: "Transport",
 };
 
 type Props = {
