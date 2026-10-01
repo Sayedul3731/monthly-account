@@ -19,13 +19,7 @@ export default function MonthlyInsight({ insight }: MonthlyInsightProps) {
           {insight.icon}
         </span>
         <div>
-          <h2
-            id="monthly-insight-heading"
-            className="text-[11px] font-bold uppercase tracking-[0.14em] text-amber-900 dark:text-gold"
-          >
-            Insight
-          </h2>
-          <p className="mt-0.5 text-sm font-semibold leading-5 text-amber-950 dark:text-amber-50">
+          <p className="mt-0.5 text-sm font-semibold text-amber-950 dark:text-amber-50">
             {insight.message}
           </p>
         </div>
