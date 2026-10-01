@@ -682,9 +682,14 @@ export default function MonthlyAccount() {
           </div>
 
           <section className="rounded-2xl border border-brand/10 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <h2 className="mb-4 text-base font-semibold text-brand dark:text-white">
-              Category breakdown
-            </h2>
+            <div className="mb-5">
+              <h2 className="text-base font-semibold text-brand dark:text-white">
+                এই মাসের খরচ কোথায় গেল?
+              </h2>
+              <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                ক্যাটাগরি অনুযায়ী খরচের হিসাব
+              </p>
+            </div>
             <CategoryChart transactions={transactions} />
           </section>
 
