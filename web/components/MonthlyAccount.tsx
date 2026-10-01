@@ -30,6 +30,7 @@ import {
   CalendarIcon,
   ChevronLeft,
   ChevronRight,
+  PlusIcon,
   WalletIcon,
 } from "./icons";
 import { useToast } from "@/components/ToastProvider";
@@ -71,6 +72,7 @@ export default function MonthlyAccount() {
   const [offline, setOffline] = useState(false);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const [exportingOverviewPdf, setExportingOverviewPdf] = useState(false);
+  const [quickExpenseOpen, setQuickExpenseOpen] = useState(false);
   const transactionFormRef = useRef<HTMLDivElement>(null);
 
   async function handleSignOut() {
@@ -286,6 +288,7 @@ export default function MonthlyAccount() {
   ) {
     const wasEditing = Boolean(editing);
     setEditing(null);
+    setQuickExpenseOpen(false);
 
     showToast(
       queuedOffline
@@ -357,6 +360,15 @@ export default function MonthlyAccount() {
     setFocusTransactionForm(true);
   }
 
+  function openQuickExpense() {
+    if (!signedIn) {
+      router.push("/login");
+      return;
+    }
+    setEditing(null);
+    setQuickExpenseOpen(true);
+  }
+
   async function handleImportedTransactions() {
     setLoading(true);
     try {
@@ -421,7 +433,7 @@ export default function MonthlyAccount() {
   return (
     <>
       {header}
-      <div className="mx-auto w-full max-w-2xl px-3 py-3 sm:px-6 sm:py-5">
+      <div className="mx-auto w-full max-w-2xl px-3 py-3 pb-28 sm:px-6 sm:py-5 sm:pb-28">
       {offline && (
         <div
           className="mb-3 flex gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100"
@@ -833,6 +845,44 @@ export default function MonthlyAccount() {
         )
       )}
     </div>
+    <button
+      type="button"
+      onClick={openQuickExpense}
+      className="fixed bottom-[calc(env(safe-area-inset-bottom)+1rem)] right-4 z-40 inline-flex min-h-12 items-center gap-2 rounded-2xl border border-white/15 bg-rose-500 px-4 py-3 text-sm font-semibold text-white shadow-xl shadow-rose-500/30 transition duration-200 hover:-translate-y-0.5 hover:bg-rose-600 hover:shadow-2xl hover:shadow-rose-500/35 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rose-500/30 active:translate-y-0 active:scale-[0.98] dark:border-white/10 sm:bottom-[calc(env(safe-area-inset-bottom)+1.5rem)] sm:right-6"
+      aria-label="খরচ যোগ করুন"
+    >
+      <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-white/15" aria-hidden="true">
+        <PlusIcon />
+      </span>
+      <span>খরচ যোগ করুন</span>
+    </button>
+    {quickExpenseOpen && (
+      <div
+        className="fixed inset-0 z-50 flex items-end bg-zinc-950/45 p-3 backdrop-blur-sm sm:items-center sm:justify-center sm:p-6"
+        role="presentation"
+        onMouseDown={(event) => {
+          if (event.target === event.currentTarget) setQuickExpenseOpen(false);
+        }}
+      >
+        <div
+          className="max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto sm:max-h-[calc(100dvh-3rem)]"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="quick-expense-title"
+        >
+          <TransactionForm
+            key="quick-expense"
+            year={year}
+            month={month}
+            editing={null}
+            quickExpense
+            onSaved={handleSaved}
+            onCancelEdit={() => setQuickExpenseOpen(false)}
+            onError={(message) => showToast(message, { kind: "error" })}
+          />
+        </div>
+      </div>
+    )}
     </>
   );
 }

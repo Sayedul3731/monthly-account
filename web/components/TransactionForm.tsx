@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   createTransaction,
   fetchCategories,
@@ -39,6 +39,7 @@ type Props = {
   ) => void;
   onCancelEdit: () => void;
   onError: (message: string) => void;
+  quickExpense?: boolean;
 };
 
 const fieldClass =
@@ -69,6 +70,7 @@ export default function TransactionForm({
   onSaved,
   onCancelEdit,
   onError,
+  quickExpense = false,
 }: Props) {
   const mode: FormMode = editing ? "edit" : "create";
   const bounds = monthDateBounds(year, month);
@@ -81,7 +83,7 @@ export default function TransactionForm({
         : bounds.max;
 
   const [type, setType] = useState<TransactionType>(
-    editing?.type ?? "expense",
+    quickExpense ? "expense" : (editing?.type ?? "expense"),
   );
   const [amount, setAmount] = useState(
     editing ? String(editing.amount) : "",
@@ -95,6 +97,12 @@ export default function TransactionForm({
     ApiTransactionType[]
   >([]);
   const [lookupsReady, setLookupsReady] = useState(false);
+  const amountInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!quickExpense) return;
+    amountInputRef.current?.focus();
+  }, [quickExpense]);
 
   useEffect(() => {
     let cancelled = false;
@@ -104,7 +112,7 @@ export default function TransactionForm({
     const applyLookups = (nextCategories: ApiCategory[], nextTypes: ApiTransactionType[]) => {
       setCategories(nextCategories);
       setTransactionTypes(nextTypes);
-      if (!editing) {
+      if (!editing && !quickExpense) {
         const firstExpense = nextCategories.find(
           (category) => category.type === "expense",
         );
@@ -140,7 +148,7 @@ export default function TransactionForm({
     return () => {
       cancelled = true;
     };
-  }, [editing, onError]);
+  }, [editing, onError, quickExpense]);
 
   const categoriesForType = useMemo(
     () => categories.filter((category) => category.type === type),
@@ -249,6 +257,102 @@ export default function TransactionForm({
     }
   }
 
+  if (quickExpense) {
+    return (
+      <section className="w-full overflow-hidden rounded-3xl bg-white shadow-2xl dark:bg-zinc-900">
+        <div className="flex items-center justify-between border-b border-brand/10 px-5 py-4 dark:border-zinc-800">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-gold">
+              দ্রুত এন্ট্রি
+            </p>
+            <h2 id="quick-expense-title" className="mt-0.5 text-lg font-semibold text-brand dark:text-white">
+              খরচ যোগ করুন
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={onCancelEdit}
+            className="rounded-full p-2 text-zinc-500 transition hover:bg-brand/5 hover:text-brand dark:hover:bg-zinc-800 dark:hover:text-white"
+            aria-label="বন্ধ করুন"
+          >
+            <CloseIcon />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-5 p-5">
+          <div>
+            <label htmlFor="quick-expense-amount" className="mb-2 block text-sm font-semibold text-zinc-800 dark:text-zinc-100">
+              কত টাকা?
+            </label>
+            <div className="relative">
+              <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xl font-semibold text-brand/60 dark:text-zinc-400">
+                ৳
+              </span>
+              <input
+                ref={amountInputRef}
+                id="quick-expense-amount"
+                type="number"
+                inputMode="decimal"
+                min="0"
+                step="0.01"
+                placeholder="0"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className={`${fieldClass} py-4 pl-10 text-2xl font-bold tabular-nums`}
+                required
+              />
+            </div>
+          </div>
+
+          <fieldset>
+            <legend className="mb-2.5 text-sm font-semibold text-zinc-800 dark:text-zinc-100">
+              ক্যাটাগরি
+            </legend>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {!lookupsReady ? (
+                <p className="col-span-full rounded-xl bg-brand/5 px-3 py-4 text-center text-sm text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                  ক্যাটাগরি লোড হচ্ছে...
+                </p>
+              ) : categoriesForType.length === 0 ? (
+                <p className="col-span-full rounded-xl bg-amber-50 px-3 py-4 text-center text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+                  কোনো খরচের ক্যাটাগরি পাওয়া যায়নি।
+                </p>
+              ) : (
+                categoriesForType.map((category) => {
+                  const selected = categoryId === category.id;
+                  return (
+                    <button
+                      key={category.id}
+                      type="button"
+                      onClick={() => setCategoryId(category.id)}
+                      aria-pressed={selected}
+                      className={`flex min-h-16 items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
+                        selected
+                          ? "border-brand bg-brand text-white shadow-sm"
+                          : "border-brand/10 bg-paper/50 text-zinc-700 hover:border-brand/30 hover:bg-brand/5 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+                      }`}
+                    >
+                      <span className="text-xl" aria-hidden="true">{category.icon || "📦"}</span>
+                      <span className="min-w-0 truncate">{category.name}</span>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </fieldset>
+
+          <button
+            type="submit"
+            disabled={submitting || !lookupsReady || !categoryId}
+            className="w-full rounded-xl bg-rose-500 py-3.5 text-sm font-semibold text-white shadow-lg shadow-rose-500/20 transition hover:bg-rose-600 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {submitting ? "সেভ হচ্ছে..." : "সেভ করুন"}
+          </button>
+        </form>
+      </section>
+    );
+  }
+
   return (
     <section
       className={`overflow-hidden rounded-2xl border bg-white shadow-sm dark:bg-zinc-900 ${
@@ -327,6 +431,7 @@ export default function TransactionForm({
                   ৳
                 </span>
                 <input
+                  ref={amountInputRef}
                   id="amount"
                   type="number"
                   min="0"
