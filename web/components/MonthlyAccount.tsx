@@ -525,7 +525,7 @@ export default function MonthlyAccount() {
                   )}ের হিসাব
                 </p>
                 <p className="mt-3 text-sm font-medium text-white/70">
-                  মোট খরচ
+                  এই মাসে মোট খরচ
                 </p>
                 <p className="mt-1 text-4xl font-bold tracking-tight sm:text-5xl">
                   {formatCurrency(stats.expenses)}
