@@ -630,8 +630,8 @@ export default function MonthlyAccount() {
                 className="rounded-xl border border-white/25 bg-white/10 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {exportingOverviewPdf
-                  ? "স্টেটমেন্ট তৈরি হচ্ছে..."
-                  : "মাসিক স্টেটমেন্ট ডাউনলোড করুন (PDF)"}
+                  ? "Creating statement..."
+                  : "Download monthly statement (PDF)"}
               </button>
             </div>
           </section>
