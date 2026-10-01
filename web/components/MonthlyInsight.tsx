@@ -7,12 +7,13 @@ type MonthlyInsightProps = {
 export default function MonthlyInsight({ insight }: MonthlyInsightProps) {
   return (
     <section
-      className="rounded-2xl border border-amber-200/80 bg-amber-50 p-4 shadow-sm dark:border-amber-900/60 dark:bg-amber-950/25"
+      className="relative overflow-hidden rounded-xl border border-gold/40 bg-gradient-to-r from-amber-50 via-yellow-50 to-amber-100 px-3.5 py-3 shadow-sm shadow-amber-900/10 dark:border-gold/30 dark:from-amber-950/60 dark:via-amber-950/40 dark:to-brand-deep"
       aria-labelledby="monthly-insight-heading"
     >
-      <div className="flex items-start gap-3">
+      <div className="pointer-events-none absolute -right-5 -top-8 h-20 w-20 rounded-full bg-gold/20 blur-2xl" />
+      <div className="relative flex items-start gap-2.5">
         <span
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-lg dark:bg-amber-900/50"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gold/25 text-base shadow-sm dark:bg-gold/20"
           aria-hidden="true"
         >
           {insight.icon}
@@ -20,11 +21,11 @@ export default function MonthlyInsight({ insight }: MonthlyInsightProps) {
         <div>
           <h2
             id="monthly-insight-heading"
-            className="text-sm font-semibold text-amber-950 dark:text-amber-100"
+            className="text-[11px] font-bold uppercase tracking-[0.14em] text-amber-900 dark:text-gold"
           >
             Insight
           </h2>
-          <p className="mt-0.5 text-sm leading-6 text-amber-900 dark:text-amber-200">
+          <p className="mt-0.5 text-sm font-semibold leading-5 text-amber-950 dark:text-amber-50">
             {insight.message}
           </p>
         </div>

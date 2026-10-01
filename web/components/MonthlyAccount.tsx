@@ -602,6 +602,8 @@ export default function MonthlyAccount() {
 
         {tab === "overview" && (
           <div className="space-y-6">
+            {monthlyInsight && <MonthlyInsight insight={monthlyInsight} />}
+
             <section className="relative overflow-hidden rounded-3xl bg-brand bg-gradient-to-br from-brand via-brand to-brand-deep p-6 text-white shadow-xl shadow-brand/25">
               <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-gold/40 via-gold to-gold/40" />
               <div className="pointer-events-none absolute -right-10 -top-12 h-44 w-44 rounded-full bg-gold/15 blur-3xl" />
@@ -770,8 +772,6 @@ export default function MonthlyAccount() {
                 </p>
               </div>
             </div>
-
-            {monthlyInsight && <MonthlyInsight insight={monthlyInsight} />}
 
             <section className="rounded-2xl border border-brand/10 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
               <div className="mb-5">
