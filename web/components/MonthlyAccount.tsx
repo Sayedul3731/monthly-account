@@ -81,6 +81,9 @@ export default function MonthlyAccount() {
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const [exportingOverviewPdf, setExportingOverviewPdf] = useState(false);
   const [quickExpenseOpen, setQuickExpenseOpen] = useState(false);
+  const [dismissedInsightMessage, setDismissedInsightMessage] = useState<
+    string | null
+  >(null);
   const transactionFormRef = useRef<HTMLDivElement>(null);
 
   async function handleSignOut() {
@@ -297,6 +300,8 @@ export default function MonthlyAccount() {
       }),
     [budgetRemaining, budgetUsedPercent, previousTransactions, transactions],
   );
+  const isMonthlyInsightVisible =
+    monthlyInsight && dismissedInsightMessage !== monthlyInsight.message;
   const budgetAlert =
     budgetUsedPercent === null
       ? null
@@ -604,14 +609,17 @@ export default function MonthlyAccount() {
 
         {tab === "overview" && (
           <div className="space-y-6">
-            {monthlyInsight && (
+            {isMonthlyInsightVisible && (
               <div className="!mb-2">
-                <MonthlyInsight insight={monthlyInsight} />
+                <MonthlyInsight
+                  insight={monthlyInsight}
+                  onDismiss={() => setDismissedInsightMessage(monthlyInsight.message)}
+                />
               </div>
             )}
 
             <section
-              className={`relative overflow-hidden rounded-3xl bg-brand bg-gradient-to-br from-brand via-brand to-brand-deep p-6 text-white shadow-xl shadow-brand/25 ${monthlyInsight ? "!mt-0" : ""}`}
+              className={`relative overflow-hidden rounded-3xl bg-brand bg-gradient-to-br from-brand via-brand to-brand-deep p-6 text-white shadow-xl shadow-brand/25 ${isMonthlyInsightVisible ? "!mt-0" : ""}`}
             >
               <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-gold/40 via-gold to-gold/40" />
               <div className="pointer-events-none absolute -right-10 -top-12 h-44 w-44 rounded-full bg-gold/15 blur-3xl" />
