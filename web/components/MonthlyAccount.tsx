@@ -23,9 +23,11 @@ import {
   summarize,
   type Transaction,
 } from "@/lib/finance";
+import { getMonthlyInsight } from "@/lib/monthly-insights";
 import { downloadMonthlyStatementPdf } from "@/lib/monthly-statement";
 import AppHeader from "./AppHeader";
 import CategoryChart from "./CategoryChart";
+import MonthlyInsight from "./MonthlyInsight";
 import {
   CalendarIcon,
   ChevronLeft,
@@ -60,6 +62,9 @@ export default function MonthlyAccount() {
   const router = useRouter();
   const { showToast } = useToast();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [previousTransactions, setPreviousTransactions] = useState<
+    Transaction[]
+  >([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [loading, setLoading] = useState(true);
   const [year, setYear] = useState(today.getFullYear());
@@ -86,6 +91,7 @@ export default function MonthlyAccount() {
       setSignedIn(false);
       setSessionUser(null);
       setTransactions([]);
+      setPreviousTransactions([]);
       setBudgets([]);
       router.push("/login");
     } finally {
@@ -113,6 +119,7 @@ export default function MonthlyAccount() {
     }
 
     async function loadData() {
+      setPreviousTransactions([]);
       const cached = getOfflineAccount(sessionUser?.id ?? "", year, month);
       if (cached) {
         setTransactions(cached.transactions);
@@ -137,6 +144,18 @@ export default function MonthlyAccount() {
           );
         }
         setOffline(false);
+
+        const previousMonth = new Date(year, month - 1, 1);
+        try {
+          const previous = await fetchTransactions(
+            previousMonth.getFullYear(),
+            previousMonth.getMonth(),
+          );
+          if (!cancelled) setPreviousTransactions(previous);
+        } catch {
+          // The overview remains useful without a month-over-month comparison.
+          if (!cancelled) setPreviousTransactions([]);
+        }
       } catch (err) {
         if (cancelled) return;
 
@@ -168,6 +187,7 @@ export default function MonthlyAccount() {
           if (!cached) {
             setTransactions([]);
             setBudgets([]);
+            setPreviousTransactions([]);
           }
         }
       } finally {
@@ -267,6 +287,16 @@ export default function MonthlyAccount() {
   const currentBudgetUsage = budgetUsedPercent ?? 0;
   const budgetProgress = Math.min(budgetUsedPercent ?? 0, 100);
   const isOverBudget = budgetRemaining !== null && budgetRemaining < 0;
+  const monthlyInsight = useMemo(
+    () =>
+      getMonthlyInsight({
+        transactions,
+        previousTransactions,
+        budgetRemaining,
+        budgetUsedPercent,
+      }),
+    [budgetRemaining, budgetUsedPercent, previousTransactions, transactions],
+  );
   const budgetAlert =
     budgetUsedPercent === null
       ? null
@@ -740,6 +770,8 @@ export default function MonthlyAccount() {
                 </p>
               </div>
             </div>
+
+            {monthlyInsight && <MonthlyInsight insight={monthlyInsight} />}
 
             <section className="rounded-2xl border border-brand/10 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
               <div className="mb-5">
