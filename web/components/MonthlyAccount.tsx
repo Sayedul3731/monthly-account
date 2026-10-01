@@ -467,9 +467,6 @@ export default function MonthlyAccount() {
       )}
       <header className="mb-3 flex flex-col gap-1.5 sm:mb-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gold sm:tracking-[0.2em]">
-            Monthly overview
-          </p>
           <h1 className="mt-0.5 text-lg font-semibold leading-tight tracking-tight text-brand sm:text-xl dark:text-white">
             আপনার টাকা কোথায় যাচ্ছে জানুন
           </h1>

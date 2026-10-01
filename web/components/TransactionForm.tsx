@@ -304,6 +304,25 @@ export default function TransactionForm({
             </div>
           </div>
 
+          <div>
+            <label
+              htmlFor="quick-expense-date"
+              className="mb-2 block text-sm font-semibold text-zinc-800 dark:text-zinc-100"
+            >
+              {"\u09A4\u09BE\u09B0\u09BF\u0996"}
+            </label>
+            <input
+              id="quick-expense-date"
+              type="date"
+              value={date}
+              min={bounds.min}
+              max={bounds.max}
+              onChange={(e) => setDate(e.target.value)}
+              className={fieldClass}
+              required
+            />
+          </div>
+
           <fieldset>
             <legend className="mb-2.5 text-sm font-semibold text-zinc-800 dark:text-zinc-100">
               ক্যাটাগরি
