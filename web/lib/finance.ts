@@ -50,7 +50,7 @@ export function formatCurrency(amount: number): string {
   const formattedAmount = new Intl.NumberFormat("en-BD", {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
-  }).format(amount);
+  }).format(Math.abs(amount));
 
   return `৳${formattedAmount}`;
 }
