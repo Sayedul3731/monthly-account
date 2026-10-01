@@ -581,7 +581,9 @@ export default function MonthlyAccount() {
           )}
         </header>
 
-        <nav className="mb-6 flex gap-1 overflow-x-auto rounded-xl border border-brand/10 bg-white p-1 dark:border-zinc-800 dark:bg-zinc-900">
+        <nav
+          className={`${tab === "overview" && monthlyInsight ? "mb-1" : "mb-1"} flex gap-1 overflow-x-auto rounded-xl border border-brand/10 bg-white p-1 dark:border-zinc-800 dark:bg-zinc-900`}
+        >
           {TABS.map(({ id, label }) => (
             <button
               key={id}
@@ -602,9 +604,15 @@ export default function MonthlyAccount() {
 
         {tab === "overview" && (
           <div className="space-y-6">
-            {monthlyInsight && <MonthlyInsight insight={monthlyInsight} />}
+            {monthlyInsight && (
+              <div className="!mb-2">
+                <MonthlyInsight insight={monthlyInsight} />
+              </div>
+            )}
 
-            <section className="relative overflow-hidden rounded-3xl bg-brand bg-gradient-to-br from-brand via-brand to-brand-deep p-6 text-white shadow-xl shadow-brand/25">
+            <section
+              className={`relative overflow-hidden rounded-3xl bg-brand bg-gradient-to-br from-brand via-brand to-brand-deep p-6 text-white shadow-xl shadow-brand/25 ${monthlyInsight ? "!mt-0" : ""}`}
+            >
               <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-gold/40 via-gold to-gold/40" />
               <div className="pointer-events-none absolute -right-10 -top-12 h-44 w-44 rounded-full bg-gold/15 blur-3xl" />
               <div className="pointer-events-none absolute -bottom-16 -left-10 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
