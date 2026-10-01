@@ -459,10 +459,10 @@ export default function MonthlyAccount() {
             Monthly overview
           </p>
           <h1 className="mt-0.5 text-lg font-semibold leading-tight tracking-tight text-brand sm:text-xl dark:text-white">
-            আমার দৈনিক হিসাব
+            আপনার টাকা কোথায় যাচ্ছে জানুন
           </h1>
           <p className="mt-0.5 text-[11px] leading-4 text-zinc-500 sm:text-xs dark:text-zinc-400">
-            এই মাসের আয়, ব্যয় ও বাজেট
+            আয়, খরচ ও সঞ্চয়ের পুরো হিসাব এক জায়গায়।
           </p>
         </div>
         {tab !== "calendar" && <div className="flex items-center gap-0.5 self-start rounded-full border border-brand/15 bg-white p-px shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:gap-1 sm:p-0.5 sm:self-auto">
