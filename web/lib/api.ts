@@ -159,7 +159,8 @@ export type AppNotification = {
     | "payment_submitted"
     | "payment_approved"
     | "payment_rejected"
-    | "membership_cancelled";
+    | "membership_cancelled"
+    | "monthly_summary";
   title: string;
   message: string;
   link: string | null;
@@ -678,7 +679,8 @@ function normalizeNotification(raw: unknown): AppNotification {
     type:
       record.type === "payment_submitted" ||
       record.type === "payment_rejected" ||
-      record.type === "membership_cancelled"
+      record.type === "membership_cancelled" ||
+      record.type === "monthly_summary"
         ? record.type
         : "payment_approved",
     title: typeof record.title === "string" ? record.title : "Notification",

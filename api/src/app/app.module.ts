@@ -10,6 +10,7 @@ import { BudgetsModule } from '../modules/budgets/budgets.module';
 import { CategoriesModule } from '../modules/categories/categories.module';
 import { MembershipsModule } from '../modules/memberships/memberships.module';
 import { ManualPaymentsModule } from '../modules/manual-payments/manual-payments.module';
+import { MonthlySummariesModule } from '../modules/monthly-summaries/monthly-summaries.module';
 import { NotificationsModule } from '../modules/notifications/notifications.module';
 import { RolesModule } from '../modules/roles/roles.module';
 import { RecurringExpensesModule } from '../modules/recurring-expenses/recurring-expenses.module';
@@ -34,6 +35,7 @@ import { AppService } from './app.service';
     CategoriesModule,
     MembershipsModule,
     ManualPaymentsModule,
+    MonthlySummariesModule,
     NotificationsModule,
     TransactionTypesModule,
     RolesModule,

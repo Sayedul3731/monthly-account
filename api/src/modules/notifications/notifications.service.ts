@@ -32,6 +32,7 @@ export class NotificationsService {
     title: string;
     message: string;
     link?: string | null;
+    summaryPeriod?: string | null;
   }): Promise<Notification> {
     const notification = await this.notificationModel.create({
       userId: new Types.ObjectId(input.userId),
@@ -39,8 +40,40 @@ export class NotificationsService {
       title: input.title.trim(),
       message: input.message.trim(),
       link: input.link?.trim() || null,
+      summaryPeriod: input.summaryPeriod ?? null,
     });
     return asPlain<Notification>(notification);
+  }
+
+  /**
+   * Stores a period-end summary at most once per user and calendar month.
+   * The database index is the final guard when two cron invocations overlap.
+   */
+  async createMonthlySummary(input: {
+    userId: string;
+    period: string;
+    title: string;
+    message: string;
+    link?: string | null;
+  }): Promise<boolean> {
+    try {
+      await this.create({
+        ...input,
+        type: NotificationType.MONTHLY_SUMMARY,
+        summaryPeriod: input.period,
+      });
+      return true;
+    } catch (error: unknown) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        error.code === 11000
+      ) {
+        return false;
+      }
+      throw error;
+    }
   }
 
   async findMine(userId: string): Promise<Notification[]> {

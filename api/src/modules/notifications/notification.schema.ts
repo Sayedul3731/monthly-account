@@ -36,6 +36,11 @@ export class Notification {
   @Prop({ type: String, default: null, maxlength: 255 })
   link!: string | null;
 
+  /** YYYY-MM marker that makes each user's monthly summary idempotent. */
+  @ApiHideProperty()
+  @Prop({ type: String, default: null, maxlength: 7 })
+  summaryPeriod!: string | null;
+
   @ApiPropertyOptional({ format: 'date-time', nullable: true })
   @Prop({ type: Date, default: null })
   readAt!: Date | null;
@@ -54,3 +59,10 @@ export class Notification {
 export const NotificationSchema = SchemaFactory.createForClass(Notification);
 
 NotificationSchema.index({ userId: 1, readAt: 1, createdAt: -1 });
+NotificationSchema.index(
+  { userId: 1, type: 1, summaryPeriod: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { summaryPeriod: { $type: 'string' } },
+  },
+);
