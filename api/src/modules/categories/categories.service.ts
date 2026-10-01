@@ -35,9 +35,6 @@ export class CategoriesService implements OnModuleInit {
 
   async onModuleInit(): Promise<void> {
     await this.ensureDefaultCategories();
-    // Warm the catalog during application startup so the first form does not
-    // have to wait for a database round trip.
-    await this.getCachedCategories();
   }
 
   async findAll(type?: TransactionType): Promise<Category[]> {

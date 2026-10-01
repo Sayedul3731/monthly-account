@@ -88,4 +88,9 @@ async function bootstrap() {
   await app.listen(process.env.PORT || 3001);
 }
 
-void bootstrap();
+void bootstrap().catch((error: unknown) => {
+  // Vercel's generic FUNCTION_INVOCATION_FAILED page hides the application
+  // error from users. Keep the detailed cause in the function logs.
+  console.error('API bootstrap failed', error);
+  process.exitCode = 1;
+});

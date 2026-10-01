@@ -37,9 +37,6 @@ export class TransactionTypesService implements OnModuleInit {
 
   async onModuleInit(): Promise<void> {
     await this.ensureDefaultTypes();
-    // Warm the catalog during application startup so the first form does not
-    // have to wait for a database round trip.
-    await this.findAll();
   }
 
   async findAll(): Promise<TransactionTypeEntity[]> {
