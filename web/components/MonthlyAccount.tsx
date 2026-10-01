@@ -30,8 +30,6 @@ import {
   CalendarIcon,
   ChevronLeft,
   ChevronRight,
-  TrendDownIcon,
-  TrendUpIcon,
   WalletIcon,
 } from "./icons";
 import { useToast } from "@/components/ToastProvider";
@@ -243,11 +241,6 @@ export default function MonthlyAccount() {
   }, [focusTransactionForm, tab]);
 
   const stats = useMemo(() => summarize(transactions), [transactions]);
-  const hasIncome = stats.income > 0;
-  const hasSurplus = stats.balance >= 0;
-
-  const expenseShare =
-    hasIncome ? Math.min((stats.expenses / stats.income) * 100, 100) : 0;
 
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const isCurrentMonth =
@@ -260,6 +253,12 @@ export default function MonthlyAccount() {
   const budgetRemaining = overallBudget
     ? overallBudget.amount - stats.expenses
     : null;
+  const budgetUsedPercent =
+    overallBudget && overallBudget.amount > 0
+      ? (stats.expenses / overallBudget.amount) * 100
+      : null;
+  const budgetProgress = Math.min(budgetUsedPercent ?? 0, 100);
+  const isOverBudget = budgetRemaining !== null && budgetRemaining < 0;
 
   const recentTransactions = useMemo(
     () =>
@@ -517,84 +516,102 @@ export default function MonthlyAccount() {
             <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-gold/40 via-gold to-gold/40" />
             <div className="pointer-events-none absolute -right-10 -top-12 h-44 w-44 rounded-full bg-gold/15 blur-3xl" />
             <div className="pointer-events-none absolute -bottom-16 -left-10 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
-            <div className="pointer-events-none absolute right-6 top-8 hidden h-24 w-24 rounded-full border border-gold/20 sm:block" />
 
             <div className="relative flex items-start justify-between gap-3">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gold">
-                  {formatMonthLabel(year, month)} overview
+                  {new Intl.DateTimeFormat("bn-BD", { month: "long" }).format(
+                    new Date(year, month),
+                  )}ের হিসাব
                 </p>
-                {hasIncome ? (
-                  <>
-                    <p className="mt-3 text-sm font-medium text-white/70">
-                      {hasSurplus ? "Net balance" : "Amount to cover"}
-                    </p>
-                    <p className="mt-1 text-4xl font-bold tracking-tight sm:text-5xl">
-                      {formatCurrency(Math.abs(stats.balance))}
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <h2 className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl">
-                      খরচের হিসাব থাকুক হাতের মুঠোয়।
-                    </h2>
-                    <p className="mt-2 max-w-md text-sm leading-6 text-white/70">
-                      Record your expenses and income to maintain a clear view
-                      of your monthly balance and savings progress.
-                    </p>
-                  </>
-                )}
-              </div>
-              {hasIncome && (
-                <span
-                  className={`mt-1 shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${
-                    hasSurplus
-                      ? "border-gold/40 bg-gold/15 text-gold"
-                      : "border-rose-300/40 bg-rose-400/15 text-rose-100"
-                  }`}
-                >
-                  {hasSurplus ? "On track" : "Needs attention"}
-                </span>
-              )}
-            </div>
-
-            <div
-              className={`relative mt-6 grid gap-3 ${
-                hasIncome ? "grid-cols-2" : "grid-cols-1"
-              }`}
-            >
-              {hasIncome && (
-                <div className="rounded-2xl border border-emerald-300/25 bg-emerald-300/10 px-4 py-3 backdrop-blur-sm">
-                  <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-emerald-50/80">
-                    <TrendUpIcon className="text-emerald-200" />
-                    Income
-                  </p>
-                  <p className="mt-1 text-lg font-semibold text-emerald-50">
-                    {formatCurrency(stats.income)}
-                  </p>
-                </div>
-              )}
-              <div className="rounded-2xl border border-rose-300/25 bg-rose-400/10 px-4 py-3 backdrop-blur-sm">
-                <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-rose-50/80">
-                  <TrendDownIcon className="text-rose-200" />
-                  {hasIncome ? "Expenses" : "Spending tracked"}
+                <p className="mt-3 text-sm font-medium text-white/70">
+                  মোট খরচ
                 </p>
-                <p className="mt-1 text-lg font-semibold text-rose-50">
+                <p className="mt-1 text-4xl font-bold tracking-tight sm:text-5xl">
                   {formatCurrency(stats.expenses)}
                 </p>
               </div>
+              {overallBudget ? (
+                <span
+                  className={`mt-1 shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${
+                    isOverBudget
+                      ? "border-rose-300/40 bg-rose-400/15 text-rose-100"
+                      : "border-gold/40 bg-gold/15 text-gold"
+                  }`}
+                >
+                  {isOverBudget ? "বাজেট ছাড়িয়েছে" : "বাজেটের মধ্যে"}
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setTab("budgets")}
+                  className="mt-1 shrink-0 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-semibold text-white transition hover:bg-white/20"
+                >
+                  বাজেট সেট করুন
+                </button>
+              )}
             </div>
+
+            <div className="relative mt-6 grid grid-cols-3 gap-2.5 sm:gap-3">
+              <div className="rounded-2xl border border-white/15 bg-white/10 px-3 py-3 backdrop-blur-sm sm:px-4">
+                <p className="text-[10px] font-medium uppercase tracking-wide text-white/65 sm:text-xs">
+                  বাজেট
+                </p>
+                <p className="mt-1 text-sm font-semibold tabular-nums text-white sm:text-base">
+                  {overallBudget
+                    ? formatCurrency(overallBudget.amount)
+                    : "সেট করা হয়নি"}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-rose-300/25 bg-rose-400/10 px-3 py-3 backdrop-blur-sm sm:px-4">
+                <p className="text-[10px] font-medium uppercase tracking-wide text-rose-50/80 sm:text-xs">
+                  খরচ
+                </p>
+                <p className="mt-1 text-sm font-semibold tabular-nums text-rose-50 sm:text-base">
+                  {budgetUsedPercent === null
+                    ? "—"
+                    : `${budgetUsedPercent.toFixed(1)}%`}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-emerald-300/25 bg-emerald-300/10 px-3 py-3 backdrop-blur-sm sm:px-4">
+                <p className="text-[10px] font-medium uppercase tracking-wide text-emerald-50/80 sm:text-xs">
+                  {isOverBudget ? "বেশি হয়েছে" : "বাকি"}
+                </p>
+                <p className="mt-1 text-sm font-semibold tabular-nums text-emerald-50 sm:text-base">
+                  {budgetRemaining === null
+                    ? "—"
+                    : formatCurrency(Math.abs(budgetRemaining))}
+                </p>
+              </div>
+            </div>
+
+            {overallBudget && (
+              <div className="relative mt-4">
+                <div className="mb-1.5 flex justify-between text-xs text-white/70">
+                  <span>বাজেটের ব্যবহার</span>
+                  <span>{budgetUsedPercent?.toFixed(1)}%</span>
+                </div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-white/15">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      isOverBudget ? "bg-rose-300" : "bg-gold"
+                    }`}
+                    style={{ width: `${budgetProgress}%` }}
+                  />
+                </div>
+              </div>
+            )}
 
             <div className="relative mt-5">
               <div className="mb-1.5 flex justify-between text-xs text-white/70">
                 <span className="flex items-center gap-1.5">
                   <CalendarIcon />
                   {isCurrentMonth
-                    ? `Day ${elapsedDays} of ${daysInMonth}`
-                    : `${daysInMonth} days in month`}
+                    ? `দিন ${elapsedDays} / ${daysInMonth}`
+                    : `${daysInMonth} দিন`}
                 </span>
                 <span>
-                  {isCurrentMonth ? `${daysLeft} days left` : "Closed month"}
+                  {isCurrentMonth ? `${daysLeft} দিন বাকি` : "শেষ মাস"}
                 </span>
               </div>
               <div className="h-1.5 overflow-hidden rounded-full bg-white/15">
@@ -605,23 +622,6 @@ export default function MonthlyAccount() {
               </div>
             </div>
 
-            {hasIncome && (
-              <div className="relative mt-4">
-                <div className="mb-1.5 flex justify-between text-xs text-white/70">
-                  <span>Spent of income</span>
-                  <span>{expenseShare.toFixed(0)}%</span>
-                </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-white/15">
-                  <div
-                    className="h-full rounded-full bg-white/80 transition-all duration-500"
-                    style={{ width: `${expenseShare}%` }}
-                  />
-                </div>
-                <p className="mt-2 text-xs text-white/60">
-                  Savings rate {stats.savingsRate.toFixed(0)}%
-                </p>
-              </div>
-            )}
             <div className="relative mt-5">
               <button
                 type="button"
@@ -630,8 +630,8 @@ export default function MonthlyAccount() {
                 className="rounded-xl border border-white/25 bg-white/10 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {exportingOverviewPdf
-                  ? "Creating statement..."
-                  : "Download monthly statement (PDF)"}
+                  ? "স্টেটমেন্ট তৈরি হচ্ছে..."
+                  : "মাসিক স্টেটমেন্ট ডাউনলোড করুন (PDF)"}
               </button>
             </div>
           </section>
@@ -639,37 +639,35 @@ export default function MonthlyAccount() {
           <div className="grid grid-cols-3 gap-3">
             <div className="rounded-2xl border border-brand/10 bg-white p-3.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-                Saved
+                আয়
               </p>
               <p className="mt-1 text-base font-semibold tabular-nums text-brand dark:text-white">
-                {stats.income > 0 ? `${stats.savingsRate.toFixed(0)}%` : "0%"}
+                {formatCurrency(stats.income)}
               </p>
             </div>
             <div className="rounded-2xl border border-brand/10 bg-white p-3.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-                Activity
-              </p>
-              <p className="mt-1 text-base font-semibold tabular-nums text-brand dark:text-white">
-                {transactions.length}
-                <span className="ml-1 text-xs font-medium text-zinc-400">
-                  tx
-                </span>
-              </p>
-            </div>
-            <div className="rounded-2xl border border-brand/10 bg-white p-3.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-                {budgetRemaining !== null && budgetRemaining < 0
-                  ? "Over budget"
-                  : "Budget left"}
+                নেট ব্যালেন্স
               </p>
               <p
                 className={`mt-1 text-base font-semibold tabular-nums ${
-                  budgetRemaining !== null && budgetRemaining < 0
+                  stats.balance < 0
                     ? "text-rose-600 dark:text-rose-400"
                     : "text-brand dark:text-white"
                 }`}
               >
-                {formatCurrency(Math.abs(budgetRemaining ?? 0))}
+                {formatCurrency(stats.balance)}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-brand/10 bg-white p-3.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                লেনদেন
+              </p>
+              <p className="mt-1 text-base font-semibold tabular-nums text-brand dark:text-white">
+                {transactions.length}
+                <span className="ml-1 text-xs font-medium text-zinc-400">
+                  টি
+                </span>
               </p>
             </div>
           </div>
