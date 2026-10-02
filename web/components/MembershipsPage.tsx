@@ -88,7 +88,9 @@ function subscriptionSummary(user: AuthUser) {
       ? isPremium
         ? `${daysRemaining} day${daysRemaining === 1 ? "" : "s"} of Premium access remaining.`
         : `${daysRemaining} day${daysRemaining === 1 ? "" : "s"} left in your free trial.`
-      : "Choose a Premium billing option below to restore full access.",
+      : isPremium
+        ? "Your Premium access has ended. Choose a plan below to restore access."
+        : "Your free trial has ended. Upgrade to Premium to restore access.",
   };
 }
 
@@ -272,9 +274,19 @@ export default function MembershipsPage() {
               ? ` · ${intervalLabel(user.billingInterval)}`
               : ""}
           </h2>
-          <p className="mt-1 text-sm text-emerald-50/90">
-            {subscription.message}
-          </p>
+          {subscription.active ? (
+            <p className="mt-1 text-sm text-emerald-50/90">
+              {subscription.message}
+            </p>
+          ) : (
+            <p
+              role="alert"
+              className="mt-3 rounded-lg border border-amber-200/80 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-950 shadow-sm"
+            >
+              <span className="font-semibold">Action required: </span>
+              {subscription.message}
+            </p>
+          )}
           <div className="mt-5 grid gap-3 sm:grid-cols-3">
             <div className="rounded-xl border border-white/15 bg-white/10 px-4 py-3">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-100">Status</p>
@@ -463,6 +475,7 @@ export default function MembershipsPage() {
               {plans.flatMap((plan) => {
                 if (plan.type === "free") {
                   const isCurrent = plan.id === currentId;
+                  const isExpiredTrial = isCurrent && !subscription.active;
                   const isSwitching = switchingKey === `${plan.id}:free`;
 
                   return (
@@ -482,12 +495,19 @@ export default function MembershipsPage() {
                         </div>
                       </div>
                       <p className="mt-3 min-h-[5.25rem] text-[15px] leading-6 text-zinc-500 dark:text-zinc-400">
-                        {plan.description || "Try every Premium feature for 15 days, with no payment details required."}
+                        {isExpiredTrial
+                          ? "Your free trial has ended. Upgrade to Premium to restore access."
+                          : plan.description ||
+                            "Try every Premium feature for 15 days, with no payment details required."}
                       </p>
                       <div className="my-6 flex min-h-[8.25rem] flex-col justify-center border-y border-zinc-100 py-5 dark:border-zinc-800">
                         <span className="text-4xl font-semibold tracking-[-0.04em] text-zinc-900 dark:text-white">৳0</span>
                         <span className="ml-1.5 text-sm font-medium text-zinc-500 dark:text-zinc-400">/ 15 days</span>
-                        <span className="mt-2 w-fit rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200">No card required</span>
+                        <span className={`mt-2 w-fit rounded-full px-2.5 py-1 text-xs font-semibold ${
+                          isExpiredTrial
+                            ? "bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-200"
+                            : "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200"
+                        }`}>{isExpiredTrial ? "Trial ended" : "No card required"}</span>
                       </div>
                       <div className="mt-1 mb-6">
                         <p className="mb-3 text-xs font-semibold tracking-wide text-zinc-500 uppercase dark:text-zinc-400">
@@ -507,12 +527,14 @@ export default function MembershipsPage() {
                         onClick={() => handleSelect(plan)}
                         disabled={Boolean(switchingKey) || isCurrent}
                         className={`mt-auto inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-default ${
-                          isCurrent
+                          isExpiredTrial
+                            ? "bg-amber-50 text-amber-900 ring-1 ring-amber-300 dark:bg-amber-950/50 dark:text-amber-200 dark:ring-amber-800"
+                            : isCurrent
                             ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:ring-emerald-900"
                             : "bg-zinc-900 text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
                         }`}
                       >
-                        {isSwitching ? <><SpinnerIcon className="animate-spin" /> Switching…</> : isCurrent ? <><CheckIcon /> Current plan</> : "Trial access"}
+                        {isSwitching ? <><SpinnerIcon className="animate-spin" /> Switching…</> : isExpiredTrial ? "Trial ended" : isCurrent ? <><CheckIcon /> Current plan</> : "Trial access"}
                       </button>
                     </article>
                   );

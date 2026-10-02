@@ -56,10 +56,12 @@ function membershipNotice(user?: AppHeaderUser | null): {
 
   const endDate = new Date(endAt);
   const active = endDate > new Date();
-  const date = endDate.toLocaleString(undefined, {
+  const date = endDate.toLocaleDateString(undefined, {
     day: "numeric",
     month: "short",
     year: "numeric",
+  });
+  const time = endDate.toLocaleTimeString(undefined, {
     hour: "numeric",
     minute: "2-digit",
   });
@@ -67,7 +69,11 @@ function membershipNotice(user?: AppHeaderUser | null): {
 
   return {
     active,
-    message: active ? `${name} active until ${date}` : `${name} ended on ${date}`,
+    message: active
+      ? `${name} active until ${date} at ${time}.`
+      : isPremium
+        ? `Your Premium access has ended. Upgrade to continue. Access ended on ${date} at ${time}.`
+        : `Your free trial has ended. Upgrade to Premium to restore access. Trial ended on ${date} at ${time}.`,
   };
 }
 
