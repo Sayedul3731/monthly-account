@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { ClientSession, Model, Types } from 'mongoose';
 import {
   asPlain,
   asPlainList,
@@ -24,6 +24,7 @@ import { CreateManualPaymentDto } from './dto/create-manual-payment.dto';
 import { ReviewManualPaymentDto } from './dto/review-manual-payment.dto';
 import { ManualPayment, ManualPaymentDocument } from './manual-payment.schema';
 import { ManualPaymentStatus } from './manual-payment-status.enum';
+import { paidPlanDates } from './plan-dates';
 
 const PAYMENT_POPULATE = ['user', 'membership', 'reviewedBy'] as const;
 const REVIEW_ORDER: Record<ManualPaymentStatus, number> = {
@@ -144,63 +145,14 @@ export class ManualPaymentsService {
     reviewerId: string,
     dto: ReviewManualPaymentDto,
   ): Promise<ManualPayment> {
-    const payment = await this.manualPaymentModel
-      .findOne(notDeleted({ _id: id }))
-      .exec();
-    if (!payment) throw new NotFoundException(`Payment ${id} not found`);
-    if (payment.status !== ManualPaymentStatus.PENDING) {
-      throw new ConflictException('This payment has already been reviewed');
-    }
-
-    if (dto.status === ManualPaymentStatus.APPROVED) {
-      await Promise.all([
-        this.findUser(payment.userId.toString()),
-        this.findPaidMembership(payment.membershipId.toString()),
-      ]);
-    }
-
-    const reviewedAt = new Date();
-    const planDates =
+    // Approval and access must commit together. A failed activation leaves the
+    // payment pending so the administrator can safely retry the review.
+    const reviewed =
       dto.status === ManualPaymentStatus.APPROVED
-        ? await this.createPlanDates(
-            payment.userId,
-            payment.billingInterval,
-            reviewedAt,
+        ? await this.manualPaymentModel.db.transaction((session) =>
+            this.reviewPayment(id, reviewerId, dto, session),
           )
-        : { planStartedAt: null, planEndsAt: null };
-    const reviewed = await this.manualPaymentModel
-      .findOneAndUpdate(
-        notDeleted({ _id: id, status: ManualPaymentStatus.PENDING }),
-        {
-          status: dto.status,
-          reviewedById: new Types.ObjectId(reviewerId),
-          reviewedAt,
-          reviewNote: dto.reviewNote?.trim() || null,
-          ...planDates,
-        },
-        { new: true },
-      )
-      .exec();
-    if (!reviewed) {
-      throw new ConflictException('This payment has already been reviewed');
-    }
-
-    if (dto.status === ManualPaymentStatus.APPROVED) {
-      const result = await this.userModel
-        .updateOne(notDeleted({ _id: reviewed.userId }), {
-          membershipId: reviewed.membershipId,
-          billingInterval: reviewed.billingInterval,
-          planStartedAt: reviewed.planStartedAt,
-          planEndsAt: reviewed.planEndsAt,
-          cancelledAt: null,
-        })
-        .exec();
-      if (!result.matchedCount) {
-        throw new NotFoundException(
-          `User ${reviewed.userId.toString()} not found`,
-        );
-      }
-    }
+        : await this.reviewPayment(id, reviewerId, dto);
 
     await this.notificationsService.create({
       userId: reviewed.userId.toString(),
@@ -222,6 +174,76 @@ export class ManualPaymentsService {
     return this.findOne(id);
   }
 
+  private async reviewPayment(
+    id: string,
+    reviewerId: string,
+    dto: ReviewManualPaymentDto,
+    session?: ClientSession,
+  ): Promise<ManualPaymentDocument> {
+    const payment = await this.manualPaymentModel
+      .findOne(notDeleted({ _id: id }))
+      .session(session ?? null)
+      .exec();
+    if (!payment) throw new NotFoundException(`Payment ${id} not found`);
+    if (payment.status !== ManualPaymentStatus.PENDING) {
+      throw new ConflictException('This payment has already been reviewed');
+    }
+
+    if (dto.status === ManualPaymentStatus.APPROVED) {
+      // MongoDB transactions require sequential operations on their session.
+      await this.findUser(payment.userId.toString(), session);
+      await this.findPaidMembership(payment.membershipId.toString(), session);
+    }
+
+    const reviewedAt = new Date();
+    const planDates =
+      dto.status === ManualPaymentStatus.APPROVED
+        ? await this.createPlanDates(
+            payment.userId,
+            payment.billingInterval,
+            reviewedAt,
+            session,
+          )
+        : { planStartedAt: null, planEndsAt: null };
+    const reviewed = await this.manualPaymentModel
+      .findOneAndUpdate(
+        notDeleted({ _id: id, status: ManualPaymentStatus.PENDING }),
+        {
+          status: dto.status,
+          reviewedById: new Types.ObjectId(reviewerId),
+          reviewedAt,
+          reviewNote: dto.reviewNote?.trim() || null,
+          ...planDates,
+        },
+        { new: true },
+      )
+      .session(session ?? null)
+      .exec();
+    if (!reviewed) {
+      throw new ConflictException('This payment has already been reviewed');
+    }
+
+    if (dto.status === ManualPaymentStatus.APPROVED) {
+      const result = await this.userModel
+        .updateOne(notDeleted({ _id: reviewed.userId }), {
+          membershipId: reviewed.membershipId,
+          billingInterval: reviewed.billingInterval,
+          planStartedAt: reviewed.planStartedAt,
+          planEndsAt: reviewed.planEndsAt,
+          cancelledAt: null,
+        })
+        .session(session ?? null)
+        .exec();
+      if (!result.matchedCount) {
+        throw new NotFoundException(
+          `User ${reviewed.userId.toString()} not found`,
+        );
+      }
+    }
+
+    return reviewed;
+  }
+
   async findOne(id: string): Promise<ManualPayment> {
     const payment = await this.manualPaymentModel
       .findOne(notDeleted({ _id: id }))
@@ -231,15 +253,25 @@ export class ManualPaymentsService {
     return asPlain<ManualPayment>(payment);
   }
 
-  private async findUser(id: string): Promise<UserDocument> {
-    const user = await this.userModel.findOne(notDeleted({ _id: id })).exec();
+  private async findUser(
+    id: string,
+    session?: ClientSession,
+  ): Promise<UserDocument> {
+    const user = await this.userModel
+      .findOne(notDeleted({ _id: id }))
+      .session(session ?? null)
+      .exec();
     if (!user) throw new NotFoundException(`User ${id} not found`);
     return user;
   }
 
-  private async findPaidMembership(id: string): Promise<MembershipDocument> {
+  private async findPaidMembership(
+    id: string,
+    session?: ClientSession,
+  ): Promise<MembershipDocument> {
     const membership = await this.membershipModel
       .findOne(notDeleted({ _id: id, type: MembershipType.PAID }))
+      .session(session ?? null)
       .exec();
     if (!membership)
       throw new NotFoundException(`Paid membership ${id} not found`);
@@ -257,6 +289,7 @@ export class ManualPaymentsService {
     userId: Types.ObjectId,
     interval: BillingInterval,
     now: Date,
+    session?: ClientSession,
   ): Promise<{ planStartedAt: Date; planEndsAt: Date }> {
     const activePayment = await this.manualPaymentModel
       .findOne(
@@ -267,34 +300,13 @@ export class ManualPaymentsService {
         }),
       )
       .sort({ planEndsAt: -1 })
+      .session(session ?? null)
       .exec();
     const planStartedAt =
       activePayment?.planEndsAt && activePayment.planEndsAt > now
         ? activePayment.planEndsAt
         : now;
-    const months =
-      interval === BillingInterval.YEARLY
-        ? 12
-        : interval === BillingInterval.QUARTERLY
-          ? 3
-          : 1;
-
-    return {
-      planStartedAt,
-      planEndsAt: this.addCalendarMonths(planStartedAt, months),
-    };
-  }
-
-  private addCalendarMonths(date: Date, months: number): Date {
-    const result = new Date(date);
-    const day = result.getUTCDate();
-    result.setUTCDate(1);
-    result.setUTCMonth(result.getUTCMonth() + months);
-    const lastDay = new Date(
-      Date.UTC(result.getUTCFullYear(), result.getUTCMonth() + 1, 0),
-    ).getUTCDate();
-    result.setUTCDate(Math.min(day, lastDay));
-    return result;
+    return paidPlanDates(planStartedAt, interval);
   }
 
   private isDuplicateKeyError(error: unknown): boolean {

@@ -41,6 +41,84 @@ function loadSource(path, dependencies = {}) {
 
 const statusModule = loadSource("../lib/membership-status.ts");
 const { subscriptionSummary } = statusModule;
+const checkoutStatusModule = loadSource("../lib/checkout-payment-status.ts", {
+  "./membership-status": statusModule,
+});
+
+function renderCheckout(account, payments) {
+  const state = [account, premium, { nagadNumber: "01800000000" }, payments, "", false, false, null, null, false];
+  let stateIndex = 0;
+  const icon = () => React.createElement("span", { "aria-hidden": true });
+  const { default: Page } = loadSource("../components/CheckoutPage.tsx", {
+    react: { ...React, useEffect: () => {}, useState: () => [state[stateIndex++], () => {}] },
+    "react/jsx-runtime": jsxRuntime,
+    "next/link": { default: ({ children, ...props }) => React.createElement("a", props, children) },
+    "next/navigation": {
+      useRouter: () => ({ push: () => {}, replace: () => {} }),
+      useSearchParams: () => new URLSearchParams({ plan: premium.id, interval: "monthly" }),
+    },
+    "@/lib/api": {},
+    "@/lib/auth": { isAdmin: () => false },
+    "@/lib/finance": { formatCurrency: (amount) => `Tk ${amount}` },
+    "@/lib/membership-status": statusModule,
+    "@/lib/checkout-payment-status": checkoutStatusModule,
+    "./AppHeader": { default: () => null },
+    "./LoadingState": { default: () => null },
+    "./icons": { ChevronLeft: icon, SpinnerIcon: icon },
+  });
+  return renderToStaticMarkup(React.createElement(Page));
+}
+
+const approvedPayment = {
+  id: "payment", membershipId: premium.id, billingInterval: "monthly",
+  transactionId: "PREVIOUS123", status: "approved",
+};
+
+test("checkout separates an earlier monthly approval from the active quarterly membership", () => {
+  const account = { ...user, membership: premium, billingInterval: "quarterly", planEndsAt: future };
+  const html = renderCheckout(account, [{ ...approvedPayment, planEndsAt: future }]);
+  assert.match(html, /Current membership: Premium active.*Quarterly/);
+  assert.match(html, /Previous payment approved/);
+  assert.match(html, /A new submission is a separate purchase/);
+  assert.match(html, /Paid access ends:/);
+  assert.doesNotMatch(html, /<button[^>]*disabled=""[^>]*>Submit for verification/);
+});
+
+test("checkout permits renewal after an earlier approved payment expires", () => {
+  const html = renderCheckout({ ...user, membership: trial, trialEndsAt: past }, [
+    { ...approvedPayment, planEndsAt: past },
+  ]);
+  assert.match(html, /Current membership: Trial ended/);
+  assert.match(html, /Previous payment approved/);
+  assert.match(html, /access period has ended/);
+  assert.doesNotMatch(html, /<button[^>]*disabled=""[^>]*>Submit for verification/);
+});
+
+test("checkout blocks another payment when approval has not activated Premium", () => {
+  for (const planEndsAt of [undefined, future]) {
+    const html = renderCheckout({ ...user, membership: trial, trialEndsAt: past }, [
+      { ...approvedPayment, planEndsAt },
+    ]);
+    assert.match(html, /Current membership: Trial ended/);
+    assert.match(html, /Contact the administrator before sending another payment/);
+    assert.match(html, /<button[^>]*disabled=""[^>]*>Submit for verification/);
+  }
+});
+
+test("checkout never shows another billing interval's approval for a new monthly purchase", () => {
+  const html = renderCheckout({ ...user, trialEndsAt: past }, [
+    { ...approvedPayment, billingInterval: "quarterly", planEndsAt: past },
+  ]);
+  assert.doesNotMatch(html, /Previous payment approved|PREVIOUS123/);
+});
+
+test("a pending payment for any interval blocks duplicate submissions", () => {
+  const html = renderCheckout({ ...user, trialEndsAt: past }, [
+    { ...approvedPayment, status: "pending", billingInterval: "quarterly" },
+  ]);
+  assert.match(html, /A payment is already awaiting review/);
+  assert.match(html, /<button[^>]*disabled=""[^>]*>Submit for verification/);
+});
 
 // Render the actual page with loaded API state, without browser sessions or
 // network access. The fixture catches conflicting summary/card states.

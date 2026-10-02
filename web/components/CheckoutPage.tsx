@@ -22,6 +22,8 @@ import {
   type AuthUser,
 } from "@/lib/auth";
 import { formatCurrency } from "@/lib/finance";
+import { subscriptionSummary } from "@/lib/membership-status";
+import { checkoutPaymentStatus } from "@/lib/checkout-payment-status";
 import AppHeader from "./AppHeader";
 import LoadingState from "./LoadingState";
 import { ChevronLeft, SpinnerIcon } from "./icons";
@@ -52,14 +54,6 @@ function intervalPrice(plan: Membership, interval: BillingInterval): number {
   if (interval === "quarterly") return plan.quarterlyPrice;
   if (interval === "yearly") return plan.yearlyPrice;
   return plan.monthlyPrice;
-}
-
-function paymentStatus(payment: ManualPayment): string {
-  return payment.status === "approved"
-    ? "Approved"
-    : payment.status === "rejected"
-      ? "Rejected"
-      : "Awaiting review";
 }
 
 function CheckoutContent() {
@@ -182,17 +176,19 @@ function CheckoutContent() {
   }
 
   const price = intervalPrice(plan, interval);
+  const subscription = subscriptionSummary(user);
   const pendingPayment = payments.find((payment) => payment.status === "pending");
   const latestForSelection = payments.find(
     (payment) => payment.membershipId === plan.id && payment.billingInterval === interval,
   );
-  const canSubmit = Boolean(settings?.nagadNumber) && !pendingPayment;
+  const previousPayment = latestForSelection ? checkoutPaymentStatus(latestForSelection, user) : null;
+  const canSubmit = Boolean(settings?.nagadNumber) && !pendingPayment && !previousPayment?.needsAttention;
 
   return (
     <div className="relative min-h-full overflow-x-hidden bg-zinc-50 dark:bg-zinc-950">
       <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_40%_at_50%_-10%,rgba(16,185,129,0.12),transparent)] dark:bg-[radial-gradient(ellipse_70%_40%_at_50%_-10%,rgba(16,185,129,0.1),transparent)]" />
       <div className="relative">
-        <AppHeader signedIn user={{ name: user.name, email: user.email }} isAdmin={isAdmin(user)} signingOut={signingOut} onSignOut={handleSignOut} />
+        <AppHeader signedIn user={user} isAdmin={isAdmin(user)} signingOut={signingOut} onSignOut={handleSignOut} />
         <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
           <Link href="/membership" className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-600 hover:text-emerald-700 dark:text-emerald-400">
             <ChevronLeft /> Back to plans
@@ -203,6 +199,10 @@ function CheckoutContent() {
               <h1 className="mt-1 text-2xl font-semibold tracking-tight">Pay and submit your transaction ID</h1>
             </div>
             <div className="space-y-6 p-6 sm:p-8">
+              <div className="text-sm text-zinc-600 dark:text-zinc-300">
+                <p className="font-semibold">Current membership: {subscription.status}{user.membership?.type === "paid" && user.billingInterval ? ` · ${intervalLabel(user.billingInterval)}` : ""}</p>
+                <p className="mt-1">{subscription.message}</p>
+              </div>
               <div className="rounded-xl bg-zinc-50 p-4 dark:bg-zinc-800/70">
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -230,10 +230,12 @@ function CheckoutContent() {
                 </section>
               )}
 
-              {latestForSelection && (
-                <div className={`rounded-xl border p-4 text-sm ${latestForSelection.status === "approved" ? "border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100" : latestForSelection.status === "rejected" ? "border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-100" : "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100"}`}>
-                  <p className="font-semibold">{paymentStatus(latestForSelection)}</p>
+              {latestForSelection && previousPayment && (
+                <div className={`rounded-xl border p-4 text-sm ${latestForSelection.status === "approved" && !previousPayment.needsAttention ? "border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100" : latestForSelection.status === "rejected" ? "border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-100" : "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100"}`}>
+                  <p className="font-semibold">{previousPayment.title}</p>
+                  <p className="mt-1 leading-6">{previousPayment.message}</p>
                   <p className="mt-1">Transaction ID: <span className="font-mono font-semibold">{latestForSelection.transactionId}</span></p>
+                  {latestForSelection.status === "approved" && latestForSelection.planEndsAt && Number.isFinite(Date.parse(latestForSelection.planEndsAt)) && <p className="mt-1">Paid access ends: {new Date(latestForSelection.planEndsAt).toLocaleString()}</p>}
                   {latestForSelection.reviewNote && <p className="mt-1">Admin note: {latestForSelection.reviewNote}</p>}
                 </div>
               )}
