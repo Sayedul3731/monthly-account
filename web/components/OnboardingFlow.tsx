@@ -787,7 +787,7 @@ export default function OnboardingFlow() {
                   ) : (
                     <ChevronRight />
                   )}
-                  আমার হিসাব দেখুন
+                  মাসিক হিসাব দেখুন
                 </button>
               </div>
             </div>
