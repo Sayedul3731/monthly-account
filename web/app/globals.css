@@ -54,8 +54,26 @@ input[type="number"] {
   animation: toast-enter 180ms ease-out;
 }
 
+@keyframes loading-track {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(200%);
+  }
+}
+
+.loading-track {
+  animation: loading-track 1.6s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .toast-enter {
     animation: none;
+  }
+
+  .loading-track {
+    animation: none;
+    transform: translateX(50%);
   }
 }

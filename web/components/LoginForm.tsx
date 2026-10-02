@@ -6,6 +6,7 @@ import { Suspense, useId, useState } from "react";
 import { googleOAuthUrl, loginUser } from "@/lib/api";
 import { signedInDestination } from "@/lib/auth";
 import { EyeIcon, EyeOffIcon, SpinnerIcon } from "./icons";
+import LoadingState from "./LoadingState";
 
 function LoginFormInner() {
   const router = useRouter();
@@ -274,7 +275,7 @@ export default function LoginForm() {
     <Suspense
       fallback={
         <div className="flex min-h-[20rem] items-center justify-center rounded-2xl border border-zinc-200/80 bg-white/90 dark:border-zinc-800 dark:bg-zinc-900/90">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
+          <LoadingState compact label="Preparing sign-in" />
         </div>
       }
     >

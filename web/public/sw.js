@@ -1,4 +1,4 @@
-const CACHE_NAME = "doinik-hisab-shell-v2";
+const CACHE_NAME = "doinik-hisab-shell-v3";
 const OFFLINE_URL = "/offline";
 const PRECACHE_URLS = ["/", OFFLINE_URL, "/doinik-hisab-logo.png"];
 
