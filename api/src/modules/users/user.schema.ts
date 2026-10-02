@@ -105,6 +105,14 @@ export class User {
   @Prop({ type: Date, default: null })
   planEndsAt!: Date | null;
 
+  @ApiPropertyOptional({
+    format: 'date-time',
+    nullable: true,
+    description: 'When the user cancelled renewal of the current paid period.',
+  })
+  @Prop({ type: Date, default: null })
+  cancelledAt!: Date | null;
+
   @ApiProperty({ format: 'date-time' })
   createdAt!: Date;
 

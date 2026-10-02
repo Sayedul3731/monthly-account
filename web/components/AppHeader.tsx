@@ -56,10 +56,12 @@ function membershipNotice(user?: AppHeaderUser | null): {
 
   const endDate = new Date(endAt);
   const active = endDate > new Date();
-  const date = endDate.toLocaleDateString(undefined, {
+  const date = endDate.toLocaleString(undefined, {
     day: "numeric",
     month: "short",
     year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
   });
   const name = isPremium ? "Premium" : "Free trial";
 

@@ -43,6 +43,7 @@ export class UsersService implements OnModuleInit {
   async onModuleInit(): Promise<void> {
     await this.ensureDefaultMembershipsAssigned();
     await this.ensureTrialWindowsAssigned();
+    await this.ensurePaidPlanWindowsAssigned();
   }
 
   async findAll(): Promise<User[]> {
@@ -259,6 +260,10 @@ export class UsersService implements OnModuleInit {
       membership.type,
       dto.billingInterval,
     );
+    const accessDates =
+      membership.type === MembershipType.FREE
+        ? this.createTrialDates()
+        : this.createPaidPlanDates(billingInterval!);
 
     const user = await this.userModel.create({
       name: dto.name,
@@ -267,9 +272,7 @@ export class UsersService implements OnModuleInit {
       roleId: new Types.ObjectId(roleId),
       membershipId: new Types.ObjectId(membershipId),
       billingInterval,
-      ...(membership.type === MembershipType.FREE
-        ? this.createTrialDates()
-        : {}),
+      ...accessDates,
     });
 
     return this.findOne(user.id);
@@ -324,6 +327,17 @@ export class UsersService implements OnModuleInit {
         membership.type,
         dto.billingInterval ?? user.billingInterval,
       );
+      if (
+        membership.type === MembershipType.PAID &&
+        (membershipChanged || intervalChanged)
+      ) {
+        Object.assign(user, this.createPaidPlanDates(user.billingInterval!));
+        user.cancelledAt = null;
+      } else if (membership.type === MembershipType.FREE && membershipChanged) {
+        user.planStartedAt = null;
+        user.planEndsAt = null;
+        user.cancelledAt = null;
+      }
     }
 
     await user.save();
@@ -341,18 +355,24 @@ export class UsersService implements OnModuleInit {
 
     const previousPlan = user.membership?.name ?? 'paid';
     if (user.planEndsAt && user.planEndsAt > new Date()) {
+      if (user.cancelledAt) return user;
+      user.cancelledAt = new Date();
+      await user.save();
       await this.notificationsService.create({
         userId: user.id,
         type: NotificationType.MEMBERSHIP_CANCELLED,
-        title: 'Premium cancellation recorded',
-        message: `Your ${previousPlan} access remains active until ${user.planEndsAt.toISOString()}.`,
+        title: 'Renewal cancellation confirmed',
+        message: `Your ${previousPlan} access remains active until ${user.planEndsAt.toISOString()} and will not renew automatically.`,
         link: '/membership',
       });
-      return user;
+      return this.findOne(user.id);
     }
 
     user.membershipId = new Types.ObjectId(await this.getDefaultMembershipId());
     user.billingInterval = null;
+    user.planStartedAt = null;
+    user.planEndsAt = null;
+    user.cancelledAt = null;
     await user.save();
 
     await this.notificationsService.create({
@@ -446,6 +466,28 @@ export class UsersService implements OnModuleInit {
     };
   }
 
+  private createPaidPlanDates(
+    interval: BillingInterval,
+    now = new Date(),
+  ): { planStartedAt: Date; planEndsAt: Date } {
+    const months =
+      interval === BillingInterval.YEARLY
+        ? 12
+        : interval === BillingInterval.QUARTERLY
+          ? 3
+          : 1;
+    const planEndsAt = new Date(now);
+    const day = planEndsAt.getUTCDate();
+    planEndsAt.setUTCDate(1);
+    planEndsAt.setUTCMonth(planEndsAt.getUTCMonth() + months);
+    const lastDay = new Date(
+      Date.UTC(planEndsAt.getUTCFullYear(), planEndsAt.getUTCMonth() + 1, 0),
+    ).getUTCDate();
+    planEndsAt.setUTCDate(Math.min(day, lastDay));
+
+    return { planStartedAt: now, planEndsAt };
+  }
+
   private async getDefaultMembershipId(): Promise<string> {
     const membership = await this.membershipsService.findByType(
       MembershipType.FREE,
@@ -500,6 +542,52 @@ export class UsersService implements OnModuleInit {
     if (result.modifiedCount) {
       this.logger.log(
         `Assigned a 15-day trial to ${result.modifiedCount} existing user(s)`,
+      );
+    }
+  }
+
+  /**
+   * Repairs legacy admin-assigned paid memberships that predate plan windows.
+   * Approved manual payments already have their own period and are unaffected.
+   */
+  private async ensurePaidPlanWindowsAssigned(): Promise<void> {
+    const paidMembership = await this.membershipsService.findByType(
+      MembershipType.PAID,
+    );
+    if (!paidMembership) return;
+
+    const intervals = [
+      BillingInterval.MONTHLY,
+      BillingInterval.QUARTERLY,
+      BillingInterval.YEARLY,
+    ];
+    let repairedCount = 0;
+
+    for (const interval of intervals) {
+      const planDates = this.createPaidPlanDates(interval);
+      const result = await this.userModel
+        .updateMany(
+          {
+            ...notDeleted({
+              membershipId: paidMembership._id,
+              billingInterval: interval,
+            }),
+            $or: [
+              { planStartedAt: { $exists: false } },
+              { planStartedAt: null },
+              { planEndsAt: { $exists: false } },
+              { planEndsAt: null },
+            ],
+          },
+          { $set: { ...planDates, cancelledAt: null } },
+        )
+        .exec();
+      repairedCount += result.modifiedCount;
+    }
+
+    if (repairedCount) {
+      this.logger.log(
+        `Assigned paid access windows to ${repairedCount} legacy user(s)`,
       );
     }
   }

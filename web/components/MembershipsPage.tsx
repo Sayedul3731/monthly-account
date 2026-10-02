@@ -55,12 +55,14 @@ function formatMembershipPrice(value: unknown): string {
   return Number.isFinite(price) && price >= 0 ? formatCurrency(price) : "—";
 }
 
-function formatPlanDate(value?: string): string {
+function formatPlanDateTime(value?: string): string {
   if (!value || Number.isNaN(new Date(value).getTime())) return "Not available";
-  return new Date(value).toLocaleDateString(undefined, {
+  return new Date(value).toLocaleString(undefined, {
     day: "numeric",
     month: "short",
     year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
   });
 }
 
@@ -196,7 +198,9 @@ export default function MembershipsPage() {
       setCancellationDialogOpen(false);
       setCancellationConfirmation("");
       window.dispatchEvent(new Event("notifications:updated"));
-      setActionSuccess("Your cancellation was recorded. Premium access remains available until the end of your paid period.");
+      setActionSuccess(
+        "Renewal cancellation confirmed. Premium access remains available until the end of your paid period.",
+      );
     } catch (err) {
       setActionError(
         err instanceof Error ? err.message : "Failed to cancel membership",
@@ -278,11 +282,11 @@ export default function MembershipsPage() {
             </div>
             <div className="rounded-xl border border-white/15 bg-white/10 px-4 py-3">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-100">Started</p>
-              <p className="mt-1 font-semibold">{formatPlanDate(subscription.startsAt)}</p>
+              <p className="mt-1 font-semibold">{formatPlanDateTime(subscription.startsAt)}</p>
             </div>
             <div className="rounded-xl border border-white/15 bg-white/10 px-4 py-3">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-100">{subscription.active ? "Access ends" : "Ended"}</p>
-              <p className="mt-1 font-semibold">{formatPlanDate(subscription.endsAt)}</p>
+              <p className="mt-1 font-semibold">{formatPlanDateTime(subscription.endsAt)}</p>
             </div>
           </div>
         </section>
@@ -306,13 +310,13 @@ export default function MembershipsPage() {
                 id="cancel-membership-title"
                 className="mt-4 text-lg font-semibold text-zinc-900 dark:text-white"
               >
-                Cancel paid membership
+                Confirm no renewal
               </h3>
               <p
                 id="cancel-membership-description"
                 className="mt-2 text-sm leading-6 text-zinc-600 dark:text-zinc-300"
               >
-                Your Premium access will remain available until the end of the paid period. Payments already made are not refunded.
+                This one-time payment will not renew automatically. Your Premium access remains available until the end of the paid period.
               </p>
               <form
                 className="mt-5"
@@ -347,14 +351,14 @@ export default function MembershipsPage() {
                     disabled={Boolean(switchingKey)}
                     className="inline-flex justify-center rounded-xl border border-zinc-300 px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
                   >
-                    Keep paid plan
+                    Keep current plan
                   </button>
                   <button
                     type="submit"
                     disabled={cancellationConfirmation !== "CANCEL" || Boolean(switchingKey)}
                     className="inline-flex justify-center rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {switchingKey === "cancel-membership" ? "Cancelling…" : "Cancel membership"}
+                    {switchingKey === "cancel-membership" ? "Confirming…" : "Confirm no renewal"}
                   </button>
                 </div>
               </form>
@@ -400,7 +404,7 @@ export default function MembershipsPage() {
                     </p>
                     {payment.planStartedAt && payment.planEndsAt && (
                       <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                        Access: {new Date(payment.planStartedAt).toLocaleDateString()} – {new Date(payment.planEndsAt).toLocaleDateString()}
+                        Access: {formatPlanDateTime(payment.planStartedAt)} – {formatPlanDateTime(payment.planEndsAt)}
                       </p>
                     )}
                     {payment.reviewNote && (
@@ -638,16 +642,20 @@ export default function MembershipsPage() {
           )}
         </section>
 
-        {isPaidMembership && (
+        {isPaidMembership && subscription.active && (
           <section className="mt-8">
             <details className="group rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-sm text-zinc-600 transition hover:bg-zinc-50 [&::-webkit-details-marker]:hidden dark:text-zinc-300 dark:hover:bg-zinc-800/70">
                 <span>
                   <span className="block font-medium text-zinc-800 dark:text-zinc-100">
-                    Need to cancel your membership?
+                    {user.cancelledAt
+                      ? "Renewal cancellation confirmed"
+                      : "Need to cancel your membership?"}
                   </span>
                   <span className="mt-0.5 block text-xs text-zinc-500 dark:text-zinc-400">
-                    Your paid plan stays active unless you choose to cancel it.
+                    {user.cancelledAt
+                      ? "Your plan will end automatically at the time shown above."
+                      : "This one-time paid plan does not renew automatically."}
                   </span>
                 </span>
                 <span className="shrink-0 text-xs font-semibold text-zinc-500 group-open:text-zinc-700 dark:text-zinc-400 dark:group-open:text-zinc-200">
@@ -657,16 +665,20 @@ export default function MembershipsPage() {
               </summary>
               <div className="flex flex-col gap-4 border-t border-zinc-100 px-5 py-4 dark:border-zinc-800 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                  Cancellation prevents a future renewal and does not issue a refund. Your current Premium access remains active until its end date.
+                  {user.cancelledAt
+                    ? "No future renewal will be created. Your current Premium access remains available until the end of this paid period."
+                    : "There is no automatic charge or renewal. Your Premium access ends automatically at the time shown above."}
                 </p>
-                <button
-                  type="button"
-                  onClick={openCancellationDialog}
-                  disabled={Boolean(switchingKey)}
-                  className="inline-flex shrink-0 items-center justify-center rounded-xl border border-rose-200 px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950/30"
-                >
-                  Cancel paid plan
-                </button>
+                {!user.cancelledAt && (
+                  <button
+                    type="button"
+                    onClick={openCancellationDialog}
+                    disabled={Boolean(switchingKey)}
+                    className="inline-flex shrink-0 items-center justify-center rounded-xl border border-rose-200 px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950/30"
+                  >
+                    Confirm no renewal
+                  </button>
+                )}
               </div>
             </details>
           </section>

@@ -258,6 +258,7 @@ function normalizeAuthUser(raw: AuthUser): AuthUser {
     trialEndsAt: asIsoString(raw.trialEndsAt),
     planStartedAt: asIsoString(raw.planStartedAt),
     planEndsAt: asIsoString(raw.planEndsAt),
+    cancelledAt: asIsoString(raw.cancelledAt),
     createdAt: raw.createdAt != null ? String(raw.createdAt) : undefined,
     updatedAt: raw.updatedAt != null ? String(raw.updatedAt) : undefined,
   };

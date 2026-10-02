@@ -215,7 +215,7 @@ export class AuthController {
   @Post('me/cancel-membership')
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Cancel the current paid membership and switch to Free',
+    summary: 'Cancel renewal of the current paid membership at period end',
   })
   @ApiOkResponse({ type: User })
   cancelMembership(@CurrentUser() user: AuthenticatedUser) {

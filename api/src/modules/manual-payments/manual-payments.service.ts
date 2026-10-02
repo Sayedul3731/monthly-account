@@ -192,6 +192,7 @@ export class ManualPaymentsService {
           billingInterval: reviewed.billingInterval,
           planStartedAt: reviewed.planStartedAt,
           planEndsAt: reviewed.planEndsAt,
+          cancelledAt: null,
         })
         .exec();
       if (!result.matchedCount) {

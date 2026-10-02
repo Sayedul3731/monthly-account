@@ -10,6 +10,7 @@ export type AuthUser = {
   trialEndsAt?: string;
   planStartedAt?: string;
   planEndsAt?: string;
+  cancelledAt?: string;
   membership?: {
     id: string;
     name: string;
