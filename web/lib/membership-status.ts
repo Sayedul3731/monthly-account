@@ -1,5 +1,30 @@
 import type { AuthUser } from "./auth";
 
+function premiumTimeRemaining(now: number, daysRemaining: number): string {
+  const start = new Date(now);
+  const end = new Date(now + daysRemaining * 86_400_000);
+  let months = (end.getUTCFullYear() - start.getUTCFullYear()) * 12
+    + end.getUTCMonth() - start.getUTCMonth();
+
+  function afterMonths(count: number): Date {
+    const date = new Date(start);
+    date.setUTCDate(1);
+    date.setUTCMonth(date.getUTCMonth() + count);
+    const lastDay = new Date(Date.UTC(
+      date.getUTCFullYear(), date.getUTCMonth() + 1, 0,
+    )).getUTCDate();
+    date.setUTCDate(Math.min(start.getUTCDate(), lastDay));
+    return date;
+  }
+
+  if (afterMonths(months) > end) months -= 1;
+  const days = Math.round((end.getTime() - afterMonths(months).getTime()) / 86_400_000);
+  const parts: string[] = [];
+  if (months > 0) parts.push(`${months} month${months === 1 ? "" : "s"}`);
+  if (days > 0) parts.push(`${days} day${days === 1 ? "" : "s"}`);
+  return parts.join(" and ");
+}
+
 export function subscriptionSummary(user: AuthUser, now = Date.now()) {
   const isPremium = user.membership?.type === "paid";
   const startsAt = isPremium ? user.planStartedAt : user.trialStartedAt;
@@ -25,7 +50,7 @@ export function subscriptionSummary(user: AuthUser, now = Date.now()) {
         : "Access unavailable",
     message: active
       ? isPremium
-        ? `${daysRemaining} day${daysRemaining === 1 ? "" : "s"} of Premium access remaining.`
+        ? `${premiumTimeRemaining(now, daysRemaining)} of Premium access remaining.`
         : `${daysRemaining} day${daysRemaining === 1 ? "" : "s"} remaining in your 15-day trial.`
       : expired
         ? isPremium
