@@ -1,7 +1,7 @@
 {
-  "name": "daily-hisab-api",
+  "name": "protidiner-hisab-api",
   "version": "0.0.1",
-  "description": "Doinik Hisab API",
+  "description": "প্রতিদিনের হিসাব API",
   "author": "",
   "private": true,
   "license": "UNLICENSED",

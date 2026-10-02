@@ -22,7 +22,7 @@ export default function OfflinePage() {
       <section className="relative w-full max-w-sm rounded-[1.75rem] border border-white/80 bg-white/95 p-8 shadow-[0_24px_60px_-32px_rgba(15,61,56,0.45)] backdrop-blur dark:border-white/10 dark:bg-zinc-900/95 sm:p-10">
         <div className="mx-auto flex w-fit items-center gap-2.5 text-left">
           <Image
-            src="/doinik-hisab-logo.png"
+            src="/protidiner-hisab-logo.png"
             alt="প্রতিদিনের হিসাব"
             width={40}
             height={40}

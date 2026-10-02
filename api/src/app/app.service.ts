@@ -5,7 +5,7 @@ export class AppService {
   getHealth() {
     return {
       status: 'ok',
-      service: 'daily-hisab-api',
+      service: 'protidiner-hisab-api',
     };
   }
 }

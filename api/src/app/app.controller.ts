@@ -13,7 +13,7 @@ export class AppController {
   @ApiOperation({ summary: 'Health check' })
   @ApiOkResponse({
     schema: {
-      example: { status: 'ok', service: 'daily-hisab-api' },
+      example: { status: 'ok', service: 'protidiner-hisab-api' },
     },
   })
   health() {

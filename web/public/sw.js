@@ -1,6 +1,6 @@
-const CACHE_NAME = "doinik-hisab-shell-v5";
+const CACHE_NAME = "protidiner-hisab-shell-v8";
 const OFFLINE_URL = "/offline";
-const PRECACHE_URLS = ["/", OFFLINE_URL, "/doinik-hisab-logo.png"];
+const PRECACHE_URLS = ["/", OFFLINE_URL, "/protidiner-hisab-logo.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -20,7 +20,10 @@ self.addEventListener("activate", (event) => {
           cacheNames
             .filter(
               (cacheName) =>
-                (cacheName.startsWith("daily-hisab-") || cacheName.startsWith("doinik-hisab-")) &&
+                // Include previous brand prefixes to clear outdated app shells.
+                (cacheName.startsWith("daily-hisab-") ||
+                  cacheName.startsWith("doinik-hisab-") ||
+                  cacheName.startsWith("protidiner-hisab-")) &&
                 cacheName !== CACHE_NAME,
             )
             .map((cacheName) => caches.delete(cacheName)),

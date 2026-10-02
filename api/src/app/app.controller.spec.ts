@@ -18,7 +18,7 @@ describe('AppController', () => {
     it('should return health status', () => {
       expect(appController.health()).toEqual({
         status: 'ok',
-        service: 'daily-hisab-api',
+        service: 'protidiner-hisab-api',
       });
     });
   });

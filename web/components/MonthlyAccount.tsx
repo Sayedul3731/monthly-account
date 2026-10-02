@@ -33,7 +33,6 @@ import {
   ChevronLeft,
   ChevronRight,
   PlusIcon,
-  WalletIcon,
 } from "./icons";
 import { useToast } from "@/components/ToastProvider";
 
@@ -47,6 +46,7 @@ const RecurringExpensesPanel = dynamic(
 );
 
 const today = new Date();
+const banglaNumber = new Intl.NumberFormat("bn-BD", { maximumFractionDigits: 0 });
 
 type Tab = "overview" | "transactions" | "recurring" | "calendar" | "budgets";
 
@@ -291,7 +291,9 @@ export default function MonthlyAccount() {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const isCurrentMonth =
     year === today.getFullYear() && month === today.getMonth();
-  const elapsedDays = isCurrentMonth ? today.getDate() : daysInMonth;
+  const isPastMonth =
+    new Date(year, month, 1) < new Date(today.getFullYear(), today.getMonth(), 1);
+  const elapsedDays = isCurrentMonth ? today.getDate() : isPastMonth ? daysInMonth : 0;
   const monthProgress = (elapsedDays / daysInMonth) * 100;
   const daysLeft = isCurrentMonth
     ? Math.max(daysInMonth - today.getDate(), 0)
@@ -325,21 +327,23 @@ export default function MonthlyAccount() {
       ? null
       : budgetUsedPercent >= 100
         ? {
-            message: "🔴 আপনার মাসিক বাজেট অতিক্রম হয়েছে।",
+            message: isOverBudget
+              ? "নির্ধারিত বাজেটের চেয়ে খরচ বেশি হয়েছে।"
+              : "নির্ধারিত বাজেটের পুরো টাকা খরচ হয়েছে।",
             className: "border-rose-300/30 bg-rose-400/15 text-rose-50",
           }
         : budgetUsedPercent >= 90
           ? {
-              message: "🔴 এই মাসের বাজেট প্রায় শেষ।",
+              message: "মাসিক বাজেটের প্রায় পুরো টাকা খরচ হয়েছে।",
               className: "border-rose-300/30 bg-rose-400/15 text-rose-50",
             }
           : budgetUsedPercent >= 80
             ? {
-                message: "🟡 আপনার বাজেটের 80% ব্যবহার হয়েছে।",
+                message: `মাসিক বাজেটের ${banglaNumber.format(currentBudgetUsage)}% খরচ হয়েছে।`,
                 className: "border-amber-200/30 bg-amber-300/15 text-amber-50",
               }
             : {
-                message: "🟢 আপনি বাজেটের মধ্যে আছেন।",
+                message: "আপনার খরচ নির্ধারিত বাজেটের মধ্যে রয়েছে।",
                 className:
                   "border-emerald-200/30 bg-emerald-300/15 text-emerald-50",
               };
@@ -491,9 +495,9 @@ export default function MonthlyAccount() {
     try {
       await downloadMonthlyStatementPdf({ year, month, transactions, budgets });
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "PDF export failed", {
+      showToast(err instanceof Error ? err.message : "মাসিক রিপোর্ট ডাউনলোড করা যায়নি।", {
         kind: "error",
-        title: "Could not create statement",
+        title: "রিপোর্ট তৈরি করা যায়নি",
       });
     } finally {
       setExportingOverviewPdf(false);
@@ -637,6 +641,7 @@ export default function MonthlyAccount() {
             )}
 
             <section
+              lang="bn"
               className={`relative overflow-hidden rounded-3xl bg-brand bg-gradient-to-br from-brand via-brand to-brand-deep p-6 text-white shadow-xl shadow-brand/25 ${isMonthlyInsightVisible ? "!mt-0" : ""}`}
             >
               <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-gold/40 via-gold to-gold/40" />
@@ -644,15 +649,14 @@ export default function MonthlyAccount() {
               <div className="pointer-events-none absolute -bottom-16 -left-10 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
 
               <div className="relative flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gold">
-                    {new Intl.DateTimeFormat("bn-BD", { month: "long" }).format(
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold leading-5 text-gold">
+                    {new Intl.DateTimeFormat("bn-BD", { month: "long", year: "numeric" }).format(
                       new Date(year, month),
                     )}
-                    ের হিসাব
                   </p>
                   <p className="mt-3 text-sm font-medium text-white/70">
-                    এই মাসে মোট খরচ
+                    মাসের মোট খরচ
                   </p>
                   <p className="mt-1 text-4xl font-bold tracking-tight sm:text-5xl">
                     {formatCurrency(stats.expenses)}
@@ -666,7 +670,7 @@ export default function MonthlyAccount() {
                         : "border-gold/40 bg-gold/15 text-gold"
                     }`}
                   >
-                    {isOverBudget ? "বাজেট ছাড়িয়েছে" : "বাজেট ট্র্যাকিং"}
+                    {isOverBudget ? "বাজেট অতিক্রম করেছে" : "বাজেট নির্ধারিত"}
                   </span>
                 ) : (
                   <button
@@ -674,35 +678,35 @@ export default function MonthlyAccount() {
                     onClick={() => setTab("budgets")}
                     className="mt-1 shrink-0 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-semibold text-white transition hover:bg-white/20"
                   >
-                    বাজেট সেট করুন
+                    বাজেট নির্ধারণ করুন
                   </button>
                 )}
               </div>
 
               <div className="relative mt-6 grid grid-cols-3 gap-2.5 sm:gap-3">
                 <div className="rounded-2xl border border-white/15 bg-white/10 px-3 py-3 backdrop-blur-sm sm:px-4">
-                  <p className="text-[10px] font-medium uppercase tracking-wide text-white/65 sm:text-xs">
-                    বাজেট
+                  <p className="text-[10px] font-medium leading-5 text-white/65 sm:text-xs">
+                    মাসিক বাজেট
                   </p>
                   <p className="mt-1 text-sm font-semibold tabular-nums text-white sm:text-base">
                     {overallBudget
                       ? formatCurrency(overallBudget.amount)
-                      : "সেট করা হয়নি"}
+                      : "নির্ধারিত হয়নি"}
                   </p>
                 </div>
                 <div className="rounded-2xl border border-rose-300/25 bg-rose-400/10 px-3 py-3 backdrop-blur-sm sm:px-4">
-                  <p className="text-[10px] font-medium uppercase tracking-wide text-rose-50/80 sm:text-xs">
-                    খরচ
+                  <p className="text-[10px] font-medium leading-5 text-rose-50/80 sm:text-xs">
+                    মোট খরচ
                   </p>
                   <p className="mt-1 text-sm font-semibold tabular-nums text-rose-50 sm:text-base">
-                    {overallBudget ? formatCurrency(stats.expenses) : "—"}
+                    {formatCurrency(stats.expenses)}
                   </p>
                 </div>
-                <div className="rounded-2xl border border-emerald-300/25 bg-emerald-300/10 px-3 py-3 backdrop-blur-sm sm:px-4">
-                  <p className="text-[10px] font-medium uppercase tracking-wide text-emerald-50/80 sm:text-xs">
-                    {isOverBudget ? "বেশি হয়েছে" : "বাকি"}
+                <div className={`rounded-2xl border px-3 py-3 backdrop-blur-sm sm:px-4 ${isOverBudget ? "border-rose-300/25 bg-rose-400/10 text-rose-50" : "border-emerald-300/25 bg-emerald-300/10 text-emerald-50"}`}>
+                  <p className="text-[10px] font-medium leading-5 opacity-80 sm:text-xs">
+                    {isOverBudget ? "অতিরিক্ত খরচ" : "অবশিষ্ট বাজেট"}
                   </p>
-                  <p className="mt-1 text-sm font-semibold tabular-nums text-emerald-50 sm:text-base">
+                  <p className="mt-1 text-sm font-semibold tabular-nums sm:text-base">
                     {budgetRemaining === null
                       ? "—"
                       : formatCurrency(Math.abs(budgetRemaining))}
@@ -710,11 +714,17 @@ export default function MonthlyAccount() {
                 </div>
               </div>
 
+              {!overallBudget && (
+                <p className="relative mt-3 text-xs leading-5 text-white/65">
+                  বাজেট নির্ধারণ করলে খরচের সীমা ও অবশিষ্ট টাকার হিসাব দেখতে পারবেন।
+                </p>
+              )}
+
               {overallBudget && budgetAlert && (
                 <div className="relative mt-4">
                   <div className="mb-1.5 flex justify-between text-xs text-white/70">
-                    <span>বাজেটের ব্যবহার</span>
-                    <span>{currentBudgetUsage.toFixed(0)}%</span>
+                    <span>বাজেটের কতটুকু খরচ হয়েছে</span>
+                    <span>{banglaNumber.format(currentBudgetUsage)}%</span>
                   </div>
                   <div className="h-1.5 overflow-hidden rounded-full bg-white/15">
                     <div
@@ -742,11 +752,13 @@ export default function MonthlyAccount() {
                   <span className="flex items-center gap-1.5">
                     <CalendarIcon />
                     {isCurrentMonth
-                      ? `দিন ${elapsedDays} / ${daysInMonth}`
-                      : `${daysInMonth} দিন`}
+                      ? `মাসের ${banglaNumber.format(elapsedDays)} / ${banglaNumber.format(daysInMonth)} দিন`
+                      : `মোট ${banglaNumber.format(daysInMonth)} দিন`}
                   </span>
                   <span>
-                    {isCurrentMonth ? `${daysLeft} দিন বাকি` : "শেষ মাস"}
+                    {isCurrentMonth
+                      ? `আর ${banglaNumber.format(daysLeft)} দিন বাকি`
+                      : isPastMonth ? "মাস সম্পন্ন" : "মাস শুরু হয়নি"}
                   </span>
                 </div>
                 <div className="h-1.5 overflow-hidden rounded-full bg-white/15">
@@ -765,9 +777,14 @@ export default function MonthlyAccount() {
                   className="rounded-xl border border-white/25 bg-white/10 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {exportingOverviewPdf
-                    ? "Creating statement..."
-                    : "Download monthly statement (PDF)"}
+                    ? "মাসিক রিপোর্ট তৈরি হচ্ছে…"
+                    : "মাসিক রিপোর্ট ডাউনলোড (PDF)"}
                 </button>
+                {transactions.length === 0 && (
+                  <p className="mt-2 text-xs leading-5 text-white/65">
+                    প্রথম লেনদেন যোগ করলে মাসিক রিপোর্ট ডাউনলোড করতে পারবেন।
+                  </p>
+                )}
               </div>
             </section>
 
@@ -808,23 +825,28 @@ export default function MonthlyAccount() {
             </div>
 
             <section className="rounded-2xl border border-brand/10 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-              <div className="mb-5">
-                <h2 className="text-base font-semibold text-brand dark:text-white">
-                  এই মাসের খরচ কোথায় গেল?
-                </h2>
-                <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                  ক্যাটাগরি অনুযায়ী খরচের হিসাব
-                </p>
-              </div>
-              <CategoryChart transactions={transactions} />
+              {transactions.some((entry) => entry.type === "expense") && (
+                <div className="mb-5">
+                  <h2 className="text-base font-semibold text-brand dark:text-white">
+                    এই মাসের খরচ কোথায় গেল?
+                  </h2>
+                  <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                    ক্যাটাগরি অনুযায়ী খরচের হিসাব
+                  </p>
+                </div>
+              )}
+              <CategoryChart
+                transactions={transactions}
+                onAddExpense={openQuickExpense}
+              />
             </section>
 
-            <section className="rounded-2xl border border-brand/10 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-base font-semibold text-brand dark:text-white">
-                  Recent activity
-                </h2>
-                {transactions.length > 0 && (
+            {recentTransactions.length > 0 && (
+              <section className="rounded-2xl border border-brand/10 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="text-base font-semibold text-brand dark:text-white">
+                    Recent activity
+                  </h2>
                   <button
                     type="button"
                     onClick={showTransactions}
@@ -832,67 +854,46 @@ export default function MonthlyAccount() {
                   >
                     View all
                   </button>
-                )}
-              </div>
-
-              {recentTransactions.length === 0 ? (
-                <div className="py-6 text-center">
-                  <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/5 text-brand">
-                    <WalletIcon />
-                  </div>
-                  <p className="font-medium text-zinc-700 dark:text-zinc-300">
-                    No activity this month
-                  </p>
-                  <p className="mt-1 text-sm text-zinc-500">
-                    Start the ledger with an income or expense.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={openNewTransaction}
-                    className="mt-4 inline-flex items-center justify-center rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-brand/20 transition hover:bg-brand-deep"
-                  >
-                    Add a transaction
-                  </button>
                 </div>
-              ) : (
+
                 <ul className="divide-y divide-brand/5 dark:divide-zinc-800">
-                  {recentTransactions.map((entry) => (
-                    <li
-                      key={entry.id}
-                      className="flex items-center gap-3 py-3 first:pt-0 last:pb-0"
-                    >
-                      <span
-                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-base ${
-                          entry.type === "income"
-                            ? "bg-brand/10"
-                            : "bg-rose-50 dark:bg-rose-950/40"
-                        }`}
+                    {recentTransactions.map((entry) => (
+                      <li
+                        key={entry.id}
+                        className="flex items-center gap-3 py-3 first:pt-0 last:pb-0"
                       >
-                        {entry.categoryIcon || "📌"}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-zinc-900 dark:text-white">
-                          {entry.description || "No description"}
+                        <span
+                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-base ${
+                            entry.type === "income"
+                              ? "bg-brand/10"
+                              : "bg-rose-50 dark:bg-rose-950/40"
+                          }`}
+                        >
+                          {entry.categoryIcon || "📌"}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-zinc-900 dark:text-white">
+                            {entry.description || "No description"}
+                          </p>
+                          <p className="text-xs text-zinc-500">
+                            {entry.category}
+                          </p>
+                        </div>
+                        <p
+                          className={`shrink-0 text-sm font-semibold tabular-nums ${
+                            entry.type === "income"
+                              ? "text-brand"
+                              : "text-rose-600 dark:text-rose-400"
+                          }`}
+                        >
+                          {entry.type === "income" ? "+" : ""}
+                          {formatCurrency(entry.amount)}
                         </p>
-                        <p className="text-xs text-zinc-500">
-                          {entry.category}
-                        </p>
-                      </div>
-                      <p
-                        className={`shrink-0 text-sm font-semibold tabular-nums ${
-                          entry.type === "income"
-                            ? "text-brand"
-                            : "text-rose-600 dark:text-rose-400"
-                        }`}
-                      >
-                        {entry.type === "income" ? "+" : ""}
-                        {formatCurrency(entry.amount)}
-                      </p>
-                    </li>
-                  ))}
+                      </li>
+                    ))}
                 </ul>
-              )}
-            </section>
+              </section>
+            )}
           </div>
         )}
 
@@ -912,6 +913,7 @@ export default function MonthlyAccount() {
               </div>
               <TransactionList
                 transactions={transactions}
+                onAddExpense={openQuickExpense}
                 onEdit={handleEdit}
                 onDeleted={(id) => {
                   setTransactions((prev) => prev.filter((t) => t.id !== id));

@@ -11,9 +11,11 @@ import {
   type TransactionType,
 } from "@/lib/finance";
 import { EditIcon, SearchIcon, TrashIcon, WalletIcon } from "./icons";
+import ExpenseEmptyState from "./ExpenseEmptyState";
 
 type Props = {
   transactions: Transaction[];
+  onAddExpense: () => void;
   onEdit: (transaction: Transaction) => void;
   onDeleted: (id: string) => void;
   onError: (message: string) => void;
@@ -49,6 +51,7 @@ function formatRowDate(date: string) {
 
 export default function TransactionList({
   transactions,
+  onAddExpense,
   onEdit,
   onDeleted,
   onError,
@@ -232,22 +235,20 @@ export default function TransactionList({
         </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {transactions.length === 0 ? (
+        <ExpenseEmptyState onAddExpense={onAddExpense} />
+      ) : filtered.length === 0 ? (
         <div className="px-5 py-12 text-center">
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/5 text-brand">
             <WalletIcon />
           </div>
           <p className="font-medium text-zinc-700 dark:text-zinc-300">
-            {transactions.length === 0
-              ? "No entries this month"
-              : "No matching transactions"}
+            No matching transactions
           </p>
           <p className="mt-1 text-sm text-zinc-500">
-            {transactions.length === 0
-              ? "Post an income or expense above to start the register."
-              : "Try adjusting your search or filters."}
+            Try adjusting your search or filters.
           </p>
-          {hasActiveFilters && transactions.length > 0 && (
+          {hasActiveFilters && (
             <button
               type="button"
               onClick={() => {

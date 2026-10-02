@@ -1,5 +1,7 @@
 "use client";
 
+import ExpenseEmptyState from "./ExpenseEmptyState";
+
 import {
   categoryBreakdown,
   formatCurrency,
@@ -30,9 +32,10 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 type Props = {
   transactions: Transaction[];
+  onAddExpense: () => void;
 };
 
-export default function CategoryChart({ transactions }: Props) {
+export default function CategoryChart({ transactions, onAddExpense }: Props) {
   const expenses = categoryBreakdown(transactions, "expense");
   const total = expenses.reduce((sum, item) => sum + item.amount, 0);
   const donutStops = expenses.map((item, index) => {
@@ -45,19 +48,7 @@ export default function CategoryChart({ transactions }: Props) {
   });
 
   if (expenses.length === 0) {
-    return (
-      <div className="py-8 text-center">
-        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-50 text-xl dark:bg-rose-950/40">
-          📊
-        </div>
-        <p className="font-medium text-zinc-700 dark:text-zinc-200">
-          এখনো কোনো খরচ নেই
-        </p>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          খরচ যোগ করলে ক্যাটাগরি অনুযায়ী হিসাব এখানে দেখা যাবে।
-        </p>
-      </div>
-    );
+    return <ExpenseEmptyState onAddExpense={onAddExpense} />;
   }
 
   return (

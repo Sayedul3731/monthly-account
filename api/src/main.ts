@@ -85,7 +85,7 @@ function createApplication(): Promise<INestApplication> {
       const document = SwaggerModule.createDocument(
         app,
         new DocumentBuilder()
-          .setTitle('Doinik Hisab API')
+          .setTitle('প্রতিদিনের হিসাব API')
           .setDescription('API for tracking monthly income and expenses')
           .setVersion('1.0')
           .addBearerAuth()

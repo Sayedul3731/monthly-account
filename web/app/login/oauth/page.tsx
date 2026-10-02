@@ -93,7 +93,7 @@ function OAuthCallbackInner() {
       >
         <div className="mx-auto flex w-fit items-center gap-2.5 text-left">
           <Image
-            src="/doinik-hisab-logo.png"
+            src="/protidiner-hisab-logo.png"
             alt="প্রতিদিনের হিসাব"
             width={40}
             height={40}

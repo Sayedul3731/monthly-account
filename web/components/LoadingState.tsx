@@ -36,7 +36,7 @@ export default function LoadingState({
       <div className="flex w-full max-w-xs flex-col items-center text-center">
         <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-brand/10 bg-white shadow-[0_4px_16px_rgba(18,56,71,0.06)] dark:border-white/10 dark:bg-zinc-900">
           <Image
-            src="/doinik-hisab-logo.png"
+            src="/protidiner-hisab-logo.png"
             alt=""
             width={44}
             height={44}

@@ -341,7 +341,7 @@ export default function OnboardingFlow() {
       <header className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <Image
-            src="/doinik-hisab-logo.png"
+            src="/protidiner-hisab-logo.png"
             alt=""
             width={40}
             height={40}
