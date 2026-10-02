@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "You are offline | Doinik Hisab",
+  title: "You are offline | Protidiner Hisab",
   robots: { index: false, follow: false },
 };
 
@@ -23,7 +23,7 @@ export default function OfflinePage() {
         <div className="mx-auto flex w-fit items-center gap-2.5 text-left">
           <Image
             src="/doinik-hisab-logo.png"
-            alt="Doinik Hisab"
+            alt="Protidiner Hisab"
             width={40}
             height={40}
             className="h-10 w-10 rounded-xl bg-white object-contain p-1 shadow-sm ring-1 ring-zinc-100 dark:ring-zinc-700"
@@ -31,7 +31,7 @@ export default function OfflinePage() {
           />
           <div>
             <p className="text-sm font-semibold tracking-tight text-brand dark:text-white">
-              Doinik Hisab
+              Protidiner Hisab
             </p>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
               Personal finance, simplified

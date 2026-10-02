@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import MembershipsPage from "@/components/MembershipsPage";
 
 export const metadata: Metadata = {
-  title: "Membership · Doinik Hisab",
+  title: "Membership · Protidiner Hisab",
   description: "View and switch between Free and Paid membership plans.",
 };
 

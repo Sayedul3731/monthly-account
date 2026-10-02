@@ -93,7 +93,7 @@ export default function RegisterForm() {
   return (
     <div className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-[0_12px_30px_-18px_rgba(15,61,56,0.28)] dark:border-zinc-800 dark:bg-zinc-900 sm:p-8 sm:shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.04)]">
       <div className="mb-5 sm:mb-6">
-        <h2 className="text-lg font-semibold tracking-tight text-zinc-900 sm:text-xl dark:text-white">Create your Doinik Hisab</h2>
+        <h2 className="text-lg font-semibold tracking-tight text-zinc-900 sm:text-xl dark:text-white">Create your Protidiner Hisab</h2>
         <p className="mt-1 text-[13px] text-zinc-500 sm:text-sm dark:text-zinc-400">Free to start. No credit card required.</p>
       </div>
 

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import PaymentReviewPage from "@/components/admin/PaymentReviewPage";
 
 export const metadata: Metadata = {
-  title: "Payment review · Doinik Hisab",
+  title: "Payment review · Protidiner Hisab",
   description: "Review a submitted manual payment.",
 };
 

@@ -349,7 +349,7 @@ export default function OnboardingFlow() {
             priority
           />
           <span className="text-sm font-semibold sm:text-base">
-            Doinik Hisab
+            Protidiner Hisab
           </span>
         </div>
         {user && (
@@ -430,7 +430,7 @@ export default function OnboardingFlow() {
             className="mt-3 text-2xl font-semibold leading-relaxed tracking-tight outline-none sm:text-3xl"
           >
             {step === 0
-              ? "Doinik Hisab-এ স্বাগতম 👋"
+              ? "Protidiner Hisab-এ স্বাগতম 👋"
               : step === 1
                 ? "আপনার মাসিক আয় কত?"
                 : step === 2

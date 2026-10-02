@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import OnboardingFlow from "@/components/OnboardingFlow";
 
 export const metadata: Metadata = {
-  title: "আপনার মাসিক হিসাব শুরু করুন | Doinik Hisab",
+  title: "আপনার মাসিক হিসাব শুরু করুন | Protidiner Hisab",
   description: "মাসিক আয়, বাজেট ও প্রথম খরচ যোগ করে আপনার মাসের হিসাব দেখুন।",
 };
 
