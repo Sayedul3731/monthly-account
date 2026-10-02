@@ -20,11 +20,12 @@ import {
   type AuthUser,
 } from "@/lib/auth";
 import { formatCurrency } from "@/lib/finance";
+import { subscriptionSummary } from "@/lib/membership-status";
 import AppHeader from "./AppHeader";
 import LoadingState from "./LoadingState";
 import { CheckIcon, ChevronLeft, SpinnerIcon } from "./icons";
 
-const FREE_FEATURES = [
+const TRIAL_FEATURES = [
   "Full Premium feature access",
   "No payment details required",
   "Ends automatically after 15 days",
@@ -36,11 +37,6 @@ const PREMIUM_FEATURES = [
   "Budget Tracking",
   "Categories",
 ];
-
-function membershipLabel(membership?: AuthUser["membership"]): string {
-  if (!membership?.name) return "Free";
-  return membership.name;
-}
 
 function intervalLabel(interval?: BillingInterval | null): string {
   return interval === "quarterly"
@@ -64,34 +60,6 @@ function formatPlanDateTime(value?: string): string {
     hour: "numeric",
     minute: "2-digit",
   });
-}
-
-function subscriptionSummary(user: AuthUser) {
-  const isPremium = user.membership?.type === "paid";
-  const startsAt = isPremium ? user.planStartedAt : user.trialStartedAt;
-  const endsAt = isPremium ? user.planEndsAt : user.trialEndsAt;
-  const endDate = endsAt ? new Date(endsAt) : null;
-  const active = Boolean(endDate && endDate > new Date());
-  const daysRemaining = active && endDate
-    ? Math.ceil((endDate.getTime() - Date.now()) / 86_400_000)
-    : 0;
-
-  return {
-    active,
-    startsAt,
-    endsAt,
-    planName: isPremium ? "Premium" : "15-day Trial",
-    status: active
-      ? isPremium ? "Premium active" : "Trial active"
-      : isPremium ? "Premium expired" : "Trial ended",
-    message: active
-      ? isPremium
-        ? `${daysRemaining} day${daysRemaining === 1 ? "" : "s"} of Premium access remaining.`
-        : `${daysRemaining} day${daysRemaining === 1 ? "" : "s"} left in your free trial.`
-      : isPremium
-        ? "Your Premium access has ended. Choose a plan below to restore access."
-        : "Your free trial has ended. Upgrade to Premium to restore access.",
-  };
 }
 
 function paymentStatusClass(status: ManualPayment["status"]): string {
@@ -170,14 +138,9 @@ export default function MembershipsPage() {
 
   async function handleSelect(
     plan: Membership,
-    billingInterval?: BillingInterval,
+    billingInterval: BillingInterval,
   ) {
-    if (plan.type === "free" && user?.membership?.type === "paid") {
-      openCancellationDialog();
-      return;
-    }
-
-    if (plan.type === "paid" && billingInterval) {
+    if (plan.type === "paid") {
       router.push(
         `/membership/checkout?plan=${encodeURIComponent(plan.id)}&interval=${billingInterval}`,
       );
@@ -239,6 +202,8 @@ export default function MembershipsPage() {
   const currentId = user.membership?.id;
   const isPaidMembership = user.membership?.type === "paid";
   const subscription = subscriptionSummary(user);
+  const availablePlans = plans.filter((plan) => !isPaidMembership || plan.type === "paid");
+  const hasPremiumPlans = availablePlans.some((plan) => plan.type === "paid");
 
   return (
     <div className="relative min-h-full overflow-x-hidden bg-zinc-50 dark:bg-zinc-950">
@@ -266,41 +231,40 @@ export default function MembershipsPage() {
           </p>
         </div>
 
-        <section className="mb-6 overflow-hidden rounded-2xl border border-zinc-200/80 bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 p-6 text-white shadow-sm sm:p-8">
-          <p className="text-sm font-medium text-emerald-100">Membership status</p>
-          <h2 className="mt-1 text-2xl font-semibold tracking-tight">
-            {membershipLabel(user.membership)}
-            {user.membership?.type === "paid"
-              ? ` · ${intervalLabel(user.billingInterval)}`
-              : ""}
-          </h2>
-          {subscription.active ? (
-            <p className="mt-1 text-sm text-emerald-50/90">
-              {subscription.message}
-            </p>
-          ) : (
-            <p
-              role="alert"
-              className="mt-3 rounded-lg border border-amber-200/80 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-950 shadow-sm"
-            >
-              <span className="font-semibold">Action required: </span>
-              {subscription.message}
-            </p>
-          )}
-          <div className="mt-5 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-xl border border-white/15 bg-white/10 px-4 py-3">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-100">Status</p>
-              <p className="mt-1 font-semibold">{subscription.status}</p>
+        <section aria-labelledby="membership-status-title" className="mb-8 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-7 dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="max-w-xl">
+              <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Membership status</p>
+              <div className="mt-3 flex items-center gap-3">
+                <span aria-hidden="true" className={`h-2.5 w-2.5 shrink-0 rounded-full ${subscription.active ? "bg-emerald-500" : "bg-amber-500"}`} />
+                <h2 id="membership-status-title" className="text-2xl font-semibold tracking-tight text-brand dark:text-white">
+                  {subscription.status}
+                </h2>
+              </div>
+              <p className="mt-2 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+                {subscription.message}
+              </p>
             </div>
-            <div className="rounded-xl border border-white/15 bg-white/10 px-4 py-3">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-100">Started</p>
-              <p className="mt-1 font-semibold">{formatPlanDateTime(subscription.startsAt)}</p>
-            </div>
-            <div className="rounded-xl border border-white/15 bg-white/10 px-4 py-3">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-100">{subscription.active ? "Access ends" : "Ended"}</p>
-              <p className="mt-1 font-semibold">{formatPlanDateTime(subscription.endsAt)}</p>
-            </div>
+            {!subscription.active && hasPremiumPlans && (
+              <a href="#membership-plans" className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-brand px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
+                View Premium plans
+              </a>
+            )}
           </div>
+          <dl className="mt-6 grid gap-4 border-t border-zinc-100 pt-5 text-sm sm:grid-cols-3 dark:border-zinc-800">
+            <div>
+              <dt className="text-xs text-zinc-500 dark:text-zinc-400">Access type</dt>
+              <dd className="mt-1 font-medium text-zinc-800 dark:text-zinc-200">{subscription.planName}{isPaidMembership ? ` · ${intervalLabel(user.billingInterval)}` : ""}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-zinc-500 dark:text-zinc-400">Started</dt>
+              <dd className="mt-1 font-medium text-zinc-800 dark:text-zinc-200">{formatPlanDateTime(subscription.startsAt)}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-zinc-500 dark:text-zinc-400">{subscription.expired ? "Ended" : "Access ends"}</dt>
+              <dd className="mt-1 font-medium text-zinc-800 dark:text-zinc-200">{formatPlanDateTime(subscription.endsAt)}</dd>
+            </div>
+          </dl>
         </section>
 
         {cancellationDialogOpen && (
@@ -451,54 +415,54 @@ export default function MembershipsPage() {
           </div>
         )}
 
-        <section>
+        <section id="membership-plans" aria-labelledby="membership-plans-title" className="scroll-mt-24">
           <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h3 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-white">
-                Choose your plan
+              <h3 id="membership-plans-title" className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-white">
+                {subscription.active ? "Membership plans" : "Choose a Premium plan"}
               </h3>
               <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                Every paid schedule includes the same premium access.
+                All Premium plans include the same features. Choose the duration that suits you.
               </p>
             </div>
             <p className="text-xs font-medium text-zinc-400 dark:text-zinc-500">
-              Change or cancel your plan anytime
+              One-time payment. No automatic renewal.
             </p>
           </div>
 
-          {plans.length === 0 ? (
+          {availablePlans.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-zinc-300 bg-white/70 px-6 py-10 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900/70 dark:text-zinc-400">
               No membership plans are available yet.
             </div>
           ) : (
-            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-              {plans.flatMap((plan) => {
+            <div className={`grid gap-5 md:grid-cols-2 ${isPaidMembership ? "xl:grid-cols-3" : "xl:grid-cols-4"}`}>
+              {availablePlans.flatMap((plan) => {
                 if (plan.type === "free") {
-                  const isCurrent = plan.id === currentId;
-                  const isExpiredTrial = isCurrent && !subscription.active;
-                  const isSwitching = switchingKey === `${plan.id}:free`;
+                  const isCurrent = subscription.active;
+                  const isExpiredTrial = subscription.expired;
 
                   return (
                     <article
                       key={plan.id}
                       className="relative flex min-h-[29rem] flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_12px_28px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_16px_36px_rgba(0,0,0,0.08)] sm:p-7 dark:border-zinc-800 dark:bg-zinc-900"
                     >
-                      <div aria-hidden className="absolute inset-x-0 top-0 h-1 bg-emerald-500" />
+                      <div aria-hidden className={`absolute inset-x-0 top-0 h-1 ${isCurrent ? "bg-emerald-500" : "bg-zinc-300 dark:bg-zinc-700"}`} />
                       <div className="flex min-h-[6.5rem] items-start">
                         <div>
-                          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">
-                            15-day Trial
+                          <p className={`text-[11px] font-bold uppercase tracking-[0.16em] ${isCurrent ? "text-emerald-700 dark:text-emerald-300" : "text-zinc-500 dark:text-zinc-400"}`}>
+                            Included with your account
                           </p>
                           <h4 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">
-                            {plan.name}
+                            15-day Trial
                           </h4>
                         </div>
                       </div>
                       <p className="mt-3 min-h-[5.25rem] text-[15px] leading-6 text-zinc-500 dark:text-zinc-400">
                         {isExpiredTrial
-                          ? "Your free trial has ended. Upgrade to Premium to restore access."
-                          : plan.description ||
-                            "Try every Premium feature for 15 days, with no payment details required."}
+                          ? "You’ve used your complimentary trial. Choose a Premium plan to continue."
+                          : isCurrent
+                            ? "Your trial includes full Premium access for 15 days. No payment details required."
+                            : "Your trial details are unavailable. Refresh the page to check your access."}
                       </p>
                       <div className="my-6 flex min-h-[8.25rem] flex-col justify-center border-y border-zinc-100 py-5 dark:border-zinc-800">
                         <span className="text-4xl font-semibold tracking-[-0.04em] text-zinc-900 dark:text-white">৳0</span>
@@ -506,15 +470,17 @@ export default function MembershipsPage() {
                         <span className={`mt-2 w-fit rounded-full px-2.5 py-1 text-xs font-semibold ${
                           isExpiredTrial
                             ? "bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-200"
-                            : "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200"
-                        }`}>{isExpiredTrial ? "Trial ended" : "No card required"}</span>
+                            : isCurrent
+                              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200"
+                              : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+                        }`}>{isExpiredTrial ? "Trial used" : isCurrent ? "Trial active" : "Status unavailable"}</span>
                       </div>
                       <div className="mt-1 mb-6">
                         <p className="mb-3 text-xs font-semibold tracking-wide text-zinc-500 uppercase dark:text-zinc-400">
-                          Included features
+                          {isExpiredTrial ? "Trial included" : "Included features"}
                         </p>
                         <ul className="space-y-3 text-[15px] text-zinc-700 dark:text-zinc-300">
-                        {FREE_FEATURES.map((feature) => (
+                        {TRIAL_FEATURES.map((feature) => (
                           <li key={feature} className="flex items-center gap-2.5">
                             <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"><CheckIcon /></span>
                             {feature}
@@ -524,17 +490,14 @@ export default function MembershipsPage() {
                       </div>
                       <button
                         type="button"
-                        onClick={() => handleSelect(plan)}
-                        disabled={Boolean(switchingKey) || isCurrent}
+                        disabled
                         className={`mt-auto inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-default ${
-                          isExpiredTrial
-                            ? "bg-amber-50 text-amber-900 ring-1 ring-amber-300 dark:bg-amber-950/50 dark:text-amber-200 dark:ring-amber-800"
-                            : isCurrent
+                          isCurrent
                             ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:ring-emerald-900"
-                            : "bg-zinc-900 text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+                            : "bg-zinc-100 text-zinc-500 ring-1 ring-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:ring-zinc-700"
                         }`}
                       >
-                        {isSwitching ? <><SpinnerIcon className="animate-spin" /> Switching…</> : isExpiredTrial ? "Trial ended" : isCurrent ? <><CheckIcon /> Current plan</> : "Trial access"}
+                        {isExpiredTrial ? "Trial used" : isCurrent ? <><CheckIcon /> Current trial</> : "Trial unavailable"}
                       </button>
                     </article>
                   );
@@ -551,7 +514,7 @@ export default function MembershipsPage() {
                 ];
 
                 return billingOptions.map(({ interval, label, price }) => {
-                  const isCurrent = plan.id === currentId && user.billingInterval === interval;
+                  const isCurrent = subscription.active && plan.id === currentId && user.billingInterval === interval;
                   const actionKey = `${plan.id}:${interval}`;
                   const isSwitching = switchingKey === actionKey;
                   const isFeatured = interval === "yearly";
