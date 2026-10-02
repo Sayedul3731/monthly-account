@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useId, useState } from "react";
 import { googleOAuthUrl, loginUser } from "@/lib/api";
+import { signedInDestination } from "@/lib/auth";
 import { EyeIcon, EyeOffIcon, SpinnerIcon } from "./icons";
 
 function LoginFormInner() {
@@ -48,11 +49,11 @@ function LoginFormInner() {
     setSubmitting(true);
 
     try {
-      await loginUser({
+      const user = await loginUser({
         email: email.trim().toLowerCase(),
         password,
       });
-      router.replace("/");
+      router.replace(signedInDestination(user));
       router.refresh();
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Login failed");

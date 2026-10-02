@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { exchangeOAuthCode } from "@/lib/api";
+import { signedInDestination } from "@/lib/auth";
 
 function OAuthCallbackInner() {
   const router = useRouter();
@@ -24,9 +25,9 @@ function OAuthCallbackInner() {
 
     let active = true;
     void exchangePromise.current
-      .then(() => {
+      .then((user) => {
         if (active) {
-          router.replace("/");
+          router.replace(signedInDestination(user));
           router.refresh();
         }
       })

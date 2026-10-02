@@ -16,6 +16,7 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { RequestEmailChangeDto } from './dto/request-email-change.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { UpdateOnboardingDto } from './dto/update-onboarding.dto';
 import type { RefreshJwtPayload } from './jwt-payload.interface';
 import { SmtpMailerService } from './smtp-mailer.service';
 
@@ -44,11 +45,10 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto): Promise<AuthSession> {
-    const user = await this.usersService.create({
-      name: dto.name,
-      email: dto.email,
-      password: dto.password,
-    });
+    const user = await this.usersService.create(
+      { name: dto.name, email: dto.email, password: dto.password },
+      true,
+    );
 
     return this.buildAuthResponse(user);
   }
@@ -164,6 +164,15 @@ export class AuthService {
   async getProfile(userId: string): Promise<User> {
     const user = await this.usersService.findOne(userId);
     return this.toPublicUser(user);
+  }
+
+  async updateOnboarding(
+    userId: string,
+    dto: UpdateOnboardingDto,
+  ): Promise<User> {
+    return this.toPublicUser(
+      await this.usersService.updateOnboarding(userId, dto),
+    );
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto): Promise<User> {

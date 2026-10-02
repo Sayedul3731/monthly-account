@@ -20,6 +20,17 @@ export function googleOAuthUrl(): string {
   return `${API_URL}/auth/google`;
 }
 
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status?: number,
+    readonly kind: "http" | "network" = "http",
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 export type ApiCategory = {
   id: string;
   name: string;
@@ -251,6 +262,9 @@ function normalizeAuthUser(raw: AuthUser): AuthUser {
     id: raw.id,
     name: raw.name,
     email: raw.email,
+    onboardingStatus: raw.onboardingStatus,
+    onboardingStep: raw.onboardingStep,
+    onboardingPeriod: raw.onboardingPeriod,
     role: raw.role ? { id: raw.role.id, name: raw.role.name } : undefined,
     billingInterval: normalizeBillingInterval(raw.billingInterval),
     membership: normalizeMembership(raw.membership),
@@ -298,8 +312,10 @@ async function parseErrorMessage(response: Response): Promise<string> {
 
 function toApiError(err: unknown): Error {
   if (err instanceof TypeError) {
-    return new Error(
+    return new ApiError(
       `Cannot reach the API at ${API_URL}. Make sure it is running and NEXT_PUBLIC_API_URL is correct.`,
+      undefined,
+      "network",
     );
   }
   if (err instanceof Error) return err;
@@ -380,7 +396,7 @@ async function request<T>(
   }
 
   if (!response.ok) {
-    throw new Error(await parseErrorMessage(response));
+    throw new ApiError(await parseErrorMessage(response), response.status);
   }
 
   if (response.status === 204) {
@@ -461,6 +477,20 @@ export async function updateProfile(
   const data = await request<AuthUser>("/auth/me", {
     method: "PATCH",
     body: JSON.stringify(body),
+  });
+  const user = normalizeAuthUser(data);
+  updateStoredUser(user);
+  return user;
+}
+
+export async function updateOnboarding(input: {
+  step?: number;
+  period?: string;
+  status?: "completed" | "skipped";
+}): Promise<AuthUser> {
+  const data = await request<AuthUser>("/auth/me/onboarding", {
+    method: "PATCH",
+    body: JSON.stringify(input),
   });
   const user = normalizeAuthUser(data);
   updateStoredUser(user);
@@ -996,6 +1026,30 @@ export async function createTransaction(
       ...input,
       date: toCalendarDate(input.date),
     }),
+  });
+  return normalizeTransaction(data);
+}
+
+export async function fetchOnboardingEntries(): Promise<{
+  income: Transaction | null;
+  expense: Transaction | null;
+}> {
+  const data = await request<(RawTransaction & { onboardingKind?: "income" | "expense" })[]>("/transactions/onboarding");
+  const income = data.find((entry) => entry.onboardingKind === "income");
+  const expense = data.find((entry) => entry.onboardingKind === "expense");
+  return {
+    income: income ? normalizeTransaction(income) : null,
+    expense: expense ? normalizeTransaction(expense) : null,
+  };
+}
+
+export async function saveOnboardingEntry(
+  kind: TransactionType,
+  input: CreateTransactionInput,
+): Promise<Transaction> {
+  const data = await request<RawTransaction>(`/transactions/onboarding/${kind}`, {
+    method: "PUT",
+    body: JSON.stringify(input),
   });
   return normalizeTransaction(data);
 }

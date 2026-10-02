@@ -22,6 +22,21 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 
 ## Learn More
 
+### New-account setup
+
+New email and Google signups go to a Bengali `/onboarding` flow: welcome,
+monthly income, monthly budget, first expense, and a summary of actual income,
+budget, spending, and remaining budget. Amounts accept Bengali or English digits.
+Income and expense are real ledger entries; saving a step again updates the same
+entry. Steps can be skipped, and saved data remains in the account.
+
+Setup progress, its original month, and the completed/skipped outcome are saved
+through `PATCH /auth/me/onboarding`. Unfinished setup resumes after login, even
+across a month boundary. The dashboard opens the month that was set up. Existing
+and administrator-created accounts go directly to the dashboard.
+
+Run `npm test` for routing, session, Bengali input, and summary regression checks.
+
 To learn more about Next.js, take a look at the following resources:
 
 - [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.

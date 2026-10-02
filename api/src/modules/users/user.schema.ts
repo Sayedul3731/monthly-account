@@ -22,6 +22,24 @@ export class User {
   @Prop({ required: true, maxlength: 100 })
   name!: string;
 
+  // Existing and administrator-created accounts do not need first-run setup.
+  // Self-service registration explicitly opts new accounts into onboarding.
+  @ApiProperty({ enum: ['pending', 'completed', 'skipped'] })
+  @Prop({
+    type: String,
+    enum: ['pending', 'completed', 'skipped'],
+    default: 'completed',
+  })
+  onboardingStatus!: 'pending' | 'completed' | 'skipped';
+
+  @ApiProperty({ minimum: 0, maximum: 4 })
+  @Prop({ type: Number, min: 0, max: 4, default: 0 })
+  onboardingStep!: number;
+
+  @ApiPropertyOptional({ example: '2026-10', nullable: true })
+  @Prop({ type: String, default: null })
+  onboardingPeriod!: string | null;
+
   @ApiProperty({ example: 'jane@example.com' })
   @Prop({ required: true, maxlength: 255 })
   email!: string;

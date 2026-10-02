@@ -23,6 +23,7 @@ import { DefaultRole } from '../roles/app-role.schema';
 import { RolesService } from '../roles/roles.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateOnboardingDto } from '../../infrastructure/auth/dto/update-onboarding.dto';
 import { User, UserDocument } from './user.schema';
 
 const SALT_ROUNDS = 12;
@@ -67,6 +68,39 @@ export class UsersService implements OnModuleInit {
     }
 
     return user;
+  }
+
+  async updateOnboarding(
+    id: string,
+    dto: UpdateOnboardingDto,
+  ): Promise<UserDocument> {
+    if (dto.period !== undefined) {
+      // Keep the same month if setup is resumed after a month boundary or from
+      // another tab. A pending account with no period is the only write target.
+      await this.userModel.updateOne(
+        notDeleted({ _id: id, onboardingStatus: 'pending', onboardingPeriod: null }),
+        { $set: { onboardingPeriod: dto.period } },
+      ).exec();
+    }
+    const update: Record<string, unknown> = {};
+    if (dto.step !== undefined) update.$max = { onboardingStep: dto.step };
+    if (dto.status !== undefined) {
+      update.$set = { onboardingStatus: dto.status };
+    }
+    if (Object.keys(update).length === 0) return this.findOne(id);
+
+    // A delayed request from another tab must not reopen completed setup or
+    // move progress backwards. Only update the authenticated user's record.
+    const user = await this.userModel
+      .findOneAndUpdate(
+        notDeleted({ _id: id, onboardingStatus: 'pending' }),
+        update,
+        { new: true, runValidators: true },
+      )
+      .populate([...USER_POPULATE])
+      .exec();
+
+    return user ?? this.findOne(id);
   }
 
   /**
@@ -207,6 +241,7 @@ export class UsersService implements OnModuleInit {
       name: input.name.trim().slice(0, 100) || email,
       email,
       googleId: input.googleId,
+      onboardingStatus: 'pending',
       roleId: new Types.ObjectId(roleId),
       membershipId: new Types.ObjectId(membershipId),
       billingInterval: null,
@@ -249,7 +284,10 @@ export class UsersService implements OnModuleInit {
       .exec();
   }
 
-  async create(dto: CreateUserDto): Promise<UserDocument> {
+  async create(
+    dto: CreateUserDto,
+    needsOnboarding = false,
+  ): Promise<UserDocument> {
     await this.ensureEmailAvailable(dto.email);
     const roleId = dto.roleId ?? (await this.getDefaultRoleId());
     await this.rolesService.findOne(roleId);
@@ -268,6 +306,7 @@ export class UsersService implements OnModuleInit {
     const user = await this.userModel.create({
       name: dto.name,
       email: dto.email,
+      onboardingStatus: needsOnboarding ? 'pending' : 'completed',
       password: await bcrypt.hash(dto.password, SALT_ROUNDS),
       roleId: new Types.ObjectId(roleId),
       membershipId: new Types.ObjectId(membershipId),

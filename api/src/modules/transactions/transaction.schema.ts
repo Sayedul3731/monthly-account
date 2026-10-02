@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { HydratedDocument, Types } from 'mongoose';
 import { Category } from '../categories/category.schema';
 import { baseSchemaOptions } from '../../infrastructure/database/schema.helpers';
@@ -44,6 +44,11 @@ export class Transaction {
   /** YYYY-MM marker used to ensure one generated entry per schedule per month. */
   @Prop({ type: String, default: null })
   recurringPeriod?: string | null;
+
+  /** One editable first-run entry per kind and user; retries must not duplicate it. */
+  @ApiPropertyOptional({ enum: ['income', 'expense'], nullable: true })
+  @Prop({ type: String, enum: ['income', 'expense'], default: null })
+  onboardingKind?: 'income' | 'expense' | null;
 
   @ApiProperty({ example: 49.99 })
   @Prop({ required: true })
@@ -92,6 +97,13 @@ TransactionSchema.virtual('transactionType', {
 
 TransactionSchema.index({ userId: 1, date: -1 });
 TransactionSchema.index({ userId: 1, deletedAt: 1, date: -1 });
+TransactionSchema.index(
+  { userId: 1, onboardingKind: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { onboardingKind: { $type: 'string' } },
+  },
+);
 TransactionSchema.index(
   { recurringExpenseId: 1, recurringPeriod: 1 },
   {

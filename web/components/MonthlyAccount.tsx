@@ -10,7 +10,7 @@ import {
   logoutUser,
   type Budget,
 } from "@/lib/api";
-import { getAccessToken, getStoredUser, isAdmin } from "@/lib/auth";
+import { getAccessToken, getStoredUser, isAdmin, needsOnboarding } from "@/lib/auth";
 import {
   getOfflineAccount,
   saveOfflineAccount,
@@ -104,13 +104,30 @@ export default function MonthlyAccount() {
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
+      const user = getStoredUser();
+      if (getAccessToken() && needsOnboarding(user)) {
+        router.replace("/onboarding");
+        return;
+      }
+      const params = new URLSearchParams(window.location.search);
+      const requestedMonth = params.get("month");
+      if (requestedMonth && /^(20\d{2}|2100)-(0[1-9]|1[0-2])$/.test(requestedMonth)) {
+        setYear(Number(requestedMonth.slice(0, 4)));
+        setMonth(Number(requestedMonth.slice(5, 7)) - 1);
+        router.replace("/");
+      }
+      if (params.get("setup") === "transaction") {
+        setTab("transactions");
+        setFocusTransactionForm(true);
+        router.replace("/");
+      }
       setSignedIn(Boolean(getAccessToken()));
-      setSessionUser(getStoredUser());
+      setSessionUser(user);
       setAuthReady(true);
     }, 0);
 
     return () => window.clearTimeout(timeoutId);
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     let cancelled = false;
@@ -253,7 +270,8 @@ export default function MonthlyAccount() {
   }, [authReady, month, sessionUser?.id, showToast, signedIn, year]);
 
   useEffect(() => {
-    if (!focusTransactionForm || tab !== "transactions") return;
+    if (!focusTransactionForm || tab !== "transactions" || loading || !authReady)
+      return;
 
     const frameId = window.requestAnimationFrame(() => {
       transactionFormRef.current?.scrollIntoView({
@@ -266,7 +284,7 @@ export default function MonthlyAccount() {
     });
 
     return () => window.cancelAnimationFrame(frameId);
-  }, [focusTransactionForm, tab]);
+  }, [authReady, focusTransactionForm, loading, tab]);
 
   const stats = useMemo(() => summarize(transactions), [transactions]);
 

@@ -36,6 +36,7 @@ import { OAuthExchangeDto } from './dto/oauth-exchange.dto';
 import { RegisterDto } from './dto/register.dto';
 import { RequestEmailChangeDto } from './dto/request-email-change.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { UpdateOnboardingDto } from './dto/update-onboarding.dto';
 import type { AuthenticatedUser } from './jwt-payload.interface';
 import { readCookie } from './cookies';
 
@@ -210,6 +211,19 @@ export class AuthController {
     @Body() dto: UpdateProfileDto,
   ) {
     return this.authService.updateProfile(user.userId, dto);
+  }
+
+  @Patch('me/onboarding')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Save setup progress, complete setup, or skip setup',
+  })
+  @ApiOkResponse({ type: User })
+  updateOnboarding(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdateOnboardingDto,
+  ) {
+    return this.authService.updateOnboarding(user.userId, dto);
   }
 
   @Post('me/cancel-membership')

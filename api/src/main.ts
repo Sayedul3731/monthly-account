@@ -8,6 +8,7 @@ import { NestFactory, Reflector } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import type { NextFunction, Request, Response } from 'express';
 import { AppModule } from './app/app.module';
+import { API_CORS_METHODS } from './infrastructure/config/cors.config';
 import { requestTimingMiddleware } from './shared/middleware/request-timing.middleware';
 
 let applicationPromise: Promise<INestApplication> | undefined;
@@ -40,7 +41,7 @@ function createApplication(): Promise<INestApplication> {
     app.enableCors({
       origin: nodeEnv === 'production' ? productionOrigins : true,
       credentials: true,
-      methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+      methods: API_CORS_METHODS,
       allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
     });
 

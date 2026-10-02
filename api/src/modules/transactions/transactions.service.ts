@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -7,7 +8,10 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Category, CategoryDocument } from '../categories/category.schema';
 import { parseCalendarDate, utcMonthRange } from '../../shared/dates';
-import { asPlain, notDeleted } from '../../infrastructure/database/schema.helpers';
+import {
+  asPlain,
+  notDeleted,
+} from '../../infrastructure/database/schema.helpers';
 import {
   TransactionTypeDocument,
   TransactionTypeEntity,
@@ -79,6 +83,94 @@ export class TransactionsService {
       date: parseCalendarDate(dto.date),
     });
 
+    return this.findOne(transaction.id, userId);
+  }
+
+  async findOnboardingEntries(userId: string): Promise<Transaction[]> {
+    const entries = await this.transactionModel
+      .find(
+        notDeleted({
+          userId: new Types.ObjectId(userId),
+          onboardingKind: { $in: ['income', 'expense'] as const },
+        }),
+      )
+      .populate([...TRANSACTION_POPULATE])
+      .exec();
+    return entries.map((entry) => asPlain<Transaction>(entry));
+  }
+
+  async saveOnboardingEntry(
+    userId: string,
+    kind: TransactionType,
+    dto: CreateTransactionDto,
+  ): Promise<Transaction> {
+    const [user, category, transactionType] = await Promise.all([
+      this.findUser(userId),
+      this.findCategory(dto.categoryId),
+      this.findTransactionType(dto.transactionTypeId),
+    ]);
+    if (user.onboardingStatus !== 'pending') {
+      throw new ConflictException(
+        'Setup is already finished. Edit this entry from your transactions.',
+      );
+    }
+    const date = parseCalendarDate(dto.date);
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(dto.date) ||
+      Number.isNaN(date.getTime()) ||
+      date.toISOString().slice(0, 10) !== dto.date ||
+      !user.onboardingPeriod ||
+      dto.date.slice(0, 7) !== user.onboardingPeriod
+    ) {
+      throw new BadRequestException(
+        'Choose a valid date in the month being set up.',
+      );
+    }
+    if (String(transactionType.name) !== String(kind)) {
+      throw new BadRequestException(
+        'Transaction type does not match this setup step.',
+      );
+    }
+    this.ensureCategoryMatchesType(category, transactionType);
+
+    const filter = { userId: user._id, onboardingKind: kind };
+    const update = {
+      $set: {
+        categoryId: category._id,
+        transactionTypeId: transactionType._id,
+        amount: dto.amount,
+        description: dto.description?.trim() || null,
+        date,
+        deletedAt: null,
+      },
+    };
+    let transaction: TransactionDocument | null;
+    try {
+      transaction = await this.transactionModel
+        .findOneAndUpdate(filter, update, {
+          upsert: true,
+          new: true,
+          runValidators: true,
+        })
+        .exec();
+    } catch (error) {
+      // Two first submissions can race. The unique index permits one entry;
+      // apply the retry to that entry instead of inserting another transaction.
+      if (
+        !(
+          typeof error === 'object' &&
+          error !== null &&
+          'code' in error &&
+          error.code === 11000
+        )
+      )
+        throw error;
+      transaction = await this.transactionModel
+        .findOneAndUpdate(filter, update, { new: true, runValidators: true })
+        .exec();
+    }
+    if (!transaction)
+      throw new NotFoundException('Setup transaction not found');
     return this.findOne(transaction.id, userId);
   }
 

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 import { googleOAuthUrl, registerUser } from "@/lib/api";
+import { signedInDestination } from "@/lib/auth";
 import { EyeIcon, EyeOffIcon, SpinnerIcon } from "./icons";
 
 const MIN_PASSWORD_LENGTH = 8;
@@ -70,8 +71,8 @@ export default function RegisterForm() {
     if (Object.keys(errors).length > 0) return;
     setSubmitting(true);
     try {
-      await registerUser({ name: name.trim(), email: email.trim().toLowerCase(), password });
-      router.replace("/");
+      const user = await registerUser({ name: name.trim(), email: email.trim().toLowerCase(), password });
+      router.replace(signedInDestination(user));
       router.refresh();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Registration failed";

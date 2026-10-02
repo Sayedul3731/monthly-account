@@ -62,6 +62,31 @@ $ npm run test:cov
 
 ## Deployment
 
+### Account onboarding
+
+Self-service email registration and newly created Google accounts start with
+`onboardingStatus: pending` and `onboardingStep: 0`. Existing accounts and accounts
+created by an administrator retain direct dashboard access; no migration is needed.
+
+Authenticated users can save progress with `PATCH /auth/me/onboarding` using
+`{ "step": 1 }` (steps 0–4), or finish with `{ "status": "completed" }` or
+`{ "status": "skipped" }`. Progress cannot move backwards, and completed/skipped
+setup cannot be reopened by delayed requests. This endpoint is subscription
+exempt, so an expired trial can still exit setup; budget writes keep their normal
+subscription checks. Profile and authentication responses include setup state.
+
+Setup starts by saving `{ "period": "2026-10" }`; this month is set only once so
+resuming next month preserves the original account period. The Bengali web flow
+records monthly income, an overall budget, and a first expense, then reads the
+monthly dashboard to show actual spending and remaining budget.
+
+`GET /transactions/onboarding` retrieves the current user's setup entries.
+`PUT /transactions/onboarding/income` and `PUT /transactions/onboarding/expense`
+accept the normal transaction payload and update one ledger entry per user and
+kind. A unique partial index prevents duplicate entries on retries or concurrent
+first submissions. These writes require pending setup and a date in its saved
+month, and retain normal subscription and category/type validation.
+
 ### Security deployment checklist
 
 - Set `NODE_ENV=production`, HTTPS `FRONTEND_URL`/`API_URL`, and a production

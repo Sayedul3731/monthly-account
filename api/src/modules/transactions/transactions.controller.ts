@@ -7,8 +7,10 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseEnumPipe,
   Patch,
   Post,
+  Put,
   Query,
 } from '@nestjs/common';
 import {
@@ -27,6 +29,7 @@ import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { TransactionQueryDto } from './dto/transaction-query.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { Transaction } from './transaction.schema';
+import { TransactionType } from './transaction-type.enum';
 import { TransactionsService } from './transactions.service';
 
 @ApiTags('transactions')
@@ -73,6 +76,30 @@ export class TransactionsController {
     const month = query.month ?? new Date().getMonth();
 
     return this.transactionsService.getSummary(user.userId, year, month);
+  }
+
+  @Get('onboarding')
+  @ApiOperation({
+    summary: 'Get the current user’s first-run income and expense entries',
+  })
+  @ApiOkResponse({ type: Transaction, isArray: true })
+  onboardingEntries(@CurrentUser() user: AuthenticatedUser) {
+    return this.transactionsService.findOnboardingEntries(user.userId);
+  }
+
+  @Put('onboarding/:kind')
+  @ApiOperation({
+    summary:
+      'Save or update one first-run income or expense without duplicates',
+  })
+  @ApiParam({ name: 'kind', enum: TransactionType })
+  @ApiOkResponse({ type: Transaction })
+  saveOnboardingEntry(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('kind', new ParseEnumPipe(TransactionType)) kind: TransactionType,
+    @Body() dto: CreateTransactionDto,
+  ) {
+    return this.transactionsService.saveOnboardingEntry(user.userId, kind, dto);
   }
 
   @Get(':id')

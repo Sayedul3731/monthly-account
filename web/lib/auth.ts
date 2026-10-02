@@ -4,6 +4,9 @@ export type AuthUser = {
   id: string;
   name: string;
   email: string;
+  onboardingStatus?: "pending" | "completed" | "skipped";
+  onboardingStep?: number;
+  onboardingPeriod?: string | null;
   role?: { id: string; name: string };
   billingInterval?: BillingInterval | null;
   trialStartedAt?: string;
@@ -79,4 +82,12 @@ export function clearAuthSession(): void {
 
 export function isAdmin(user: AuthUser | null | undefined): boolean {
   return user?.role?.name?.toLowerCase() === "admin";
+}
+
+export function needsOnboarding(user: AuthUser | null | undefined): boolean {
+  return user?.onboardingStatus === "pending" && !isAdmin(user);
+}
+
+export function signedInDestination(user: AuthUser): string {
+  return needsOnboarding(user) ? "/onboarding" : "/";
 }
