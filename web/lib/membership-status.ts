@@ -29,8 +29,8 @@ export function subscriptionSummary(user: AuthUser, now = Date.now()) {
         : `${daysRemaining} day${daysRemaining === 1 ? "" : "s"} remaining in your 15-day trial.`
       : expired
         ? isPremium
-          ? "Your Premium access has ended. Choose a plan to continue using Protidiner Hisab."
-          : "Your 15-day trial has ended. Upgrade to Premium to continue using Protidiner Hisab."
+          ? "Your Premium access has ended. Choose a plan to continue using প্রতিদিনের হিসাব."
+          : "Your 15-day trial has ended. Upgrade to Premium to continue using প্রতিদিনের হিসাব."
         : "We couldn’t confirm your access period. Refresh the page to check your membership details.",
   };
 }

@@ -72,7 +72,7 @@ test("expired trials agree across summary and card even without matching plan ID
     assert.equal(summary.expired, true);
     const html = renderMembership(account);
     assert.match(html, /Trial ended/);
-    assert.match(html, /Upgrade to Premium to continue using Protidiner Hisab/);
+    assert.match(html, /Upgrade to Premium to continue using প্রতিদিনের হিসাব/);
     assert.match(html, /href="#membership-plans"/);
     assert.match(html, /id="membership-plans"/);
     const trialCard = html.match(/<article\b[\s\S]*?<\/article>/)[0];

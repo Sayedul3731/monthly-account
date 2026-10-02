@@ -44,8 +44,8 @@ export default function LoadingState({
             loading="eager"
           />
         </div>
-        <p className="mt-5 text-xl font-semibold tracking-tight text-brand dark:text-white">
-          Protidiner Hisab
+        <p lang="bn" className="mt-5 text-xl font-semibold tracking-normal text-brand dark:text-white">
+          প্রতিদিনের হিসাব
         </p>
         <p className="mt-1.5 text-xs leading-5 text-brand/60 dark:text-zinc-400">
           Personal finance, simplified

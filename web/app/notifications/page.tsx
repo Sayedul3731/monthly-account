@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import NotificationsPage from "@/components/NotificationsPage";
 
 export const metadata: Metadata = {
-  title: "Notifications · Protidiner Hisab",
+  title: "Notifications · প্রতিদিনের হিসাব",
   description: "View account and payment notifications.",
 };
 

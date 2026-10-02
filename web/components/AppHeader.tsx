@@ -206,8 +206,8 @@ export default function AppHeader({
             className="h-8 w-8 rounded-lg object-contain"
             priority
           />
-          <span className="truncate text-sm font-semibold tracking-tight text-brand dark:text-white">
-            Protidiner Hisab
+          <span lang="bn" className="truncate text-sm font-semibold tracking-normal text-brand dark:text-white">
+            প্রতিদিনের হিসাব
           </span>
         </Link>
 

@@ -94,15 +94,15 @@ function OAuthCallbackInner() {
         <div className="mx-auto flex w-fit items-center gap-2.5 text-left">
           <Image
             src="/doinik-hisab-logo.png"
-            alt="Protidiner Hisab"
+            alt="প্রতিদিনের হিসাব"
             width={40}
             height={40}
             className="h-10 w-10 rounded-xl bg-white object-contain p-1 shadow-sm ring-1 ring-zinc-100 dark:ring-zinc-700"
             priority
           />
           <div>
-            <p className="text-sm font-semibold tracking-tight text-brand dark:text-white">
-              Protidiner Hisab
+            <p lang="bn" className="text-sm font-semibold tracking-normal text-brand dark:text-white">
+              প্রতিদিনের হিসাব
             </p>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
               Personal finance, simplified

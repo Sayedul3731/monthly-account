@@ -3,7 +3,7 @@ import AuthLayout from "@/components/AuthLayout";
 import RegisterForm from "@/components/RegisterForm";
 
 export const metadata: Metadata = {
-  title: "Create your Protidiner Hisab",
+  title: "Create your প্রতিদিনের হিসাব",
   description:
     "আজ থেকেই আপনার টাকার হিসাব রাখুন।",
 };
