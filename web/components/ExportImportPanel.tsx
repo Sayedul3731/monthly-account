@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import {
   downloadFile,
   exportTransactionsCsv,
-  exportTransactionsJson,
   importTransactions,
   parseImportCsv,
   parseImportJson,
@@ -54,14 +53,6 @@ export default function ExportImportPanel({
 
   const monthKey = getMonthKey(year, month);
   const label = formatMonthLabel(year, month);
-
-  function exportJson() {
-    downloadFile(
-      exportTransactionsJson(transactions),
-      `transactions-${monthKey}.json`,
-      "application/json",
-    );
-  }
 
   function exportCsv() {
     downloadFile(
@@ -142,14 +133,6 @@ export default function ExportImportPanel({
           Download {label} transactions ({transactions.length} items).
         </p>
         <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={exportJson}
-            disabled={transactions.length === 0}
-            className="rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
-          >
-            Export JSON
-          </button>
           <button
             type="button"
             onClick={exportCsv}
