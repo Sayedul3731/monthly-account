@@ -36,6 +36,7 @@ export type ApiCategory = {
   name: string;
   type: TransactionType;
   icon: string;
+  userId?: string | null;
 };
 
 export type ApiTransactionType = {
@@ -592,6 +593,7 @@ function normalizeCategory(raw: unknown): ApiCategory {
     name: typeof record.name === "string" ? record.name : "",
     type: record.type === "income" ? "income" : "expense",
     icon: typeof record.icon === "string" ? record.icon : "",
+    userId: extractId(record.userId) || null,
   };
 }
 
@@ -877,6 +879,20 @@ export async function createCategory(
   return normalizeCategory(data);
 }
 
+export async function createPersonalCategory(
+  input: CategoryInput,
+): Promise<ApiCategory> {
+  const data = await request<unknown>("/categories/mine", {
+    method: "POST",
+    body: JSON.stringify({
+      name: input.name.trim(),
+      type: input.type,
+      icon: input.icon?.trim() || undefined,
+    }),
+  });
+  return normalizeCategory(data);
+}
+
 export async function updateCategory(
   id: string,
   input: Partial<CategoryInput>,
@@ -980,6 +996,13 @@ export async function fetchDashboard(
 }
 
 export async function fetchCategories(
+  type?: TransactionType,
+): Promise<ApiCategory[]> {
+  const params = type ? `?type=${type}` : "";
+  return request<ApiCategory[]>(`/categories/mine${params}`);
+}
+
+export async function fetchSharedCategories(
   type?: TransactionType,
 ): Promise<ApiCategory[]> {
   const params = type ? `?type=${type}` : "";

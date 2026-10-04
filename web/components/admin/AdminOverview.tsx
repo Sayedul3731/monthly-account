@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import {
-  fetchCategories,
+  fetchSharedCategories,
   fetchMemberships,
   fetchRoles,
   fetchTransactionTypes,
@@ -67,7 +67,7 @@ export default function AdminOverview({ onOpen, onError }: Props) {
             fetchUsers(),
             fetchRoles(),
             fetchMemberships(),
-            fetchCategories(),
+            fetchSharedCategories(),
             fetchTransactionTypes(),
           ]);
         if (cancelled) return;

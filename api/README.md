@@ -62,6 +62,25 @@ $ npm run test:cov
 
 ## Deployment
 
+### Personal categories
+
+Authenticated users (including admins) can create a private category using
+`POST /categories/mine` with `{ "name": "Pet care", "type": "expense", "icon": "🐾" }`.
+`GET /categories/mine?type=expense` returns shared defaults plus only the current
+user's categories. The type filter is optional. Names are trimmed, must be
+nonempty, and cannot duplicate a visible category of the same type.
+
+The existing public `GET /categories` and admin create/update/delete endpoints
+continue to operate on shared categories. Transactions, onboarding entries, and
+recurring expenses accept shared categories or categories owned by the caller.
+Another account's personal category ID is rejected as not found.
+
+On startup, the API creates the unique `(userId, type, name)` index before removing
+the old `type_1_name_1` index. Existing categories without `userId` remain shared;
+no documents are reassigned. Different users can independently create the same
+personal category name. The database account needs index-management permissions.
+Personal category creation and listing remain subscription exempt.
+
 ### Account onboarding
 
 Self-service email registration and newly created Google accounts start with

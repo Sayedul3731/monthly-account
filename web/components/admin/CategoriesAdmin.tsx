@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import {
   createCategory,
   deleteCategory,
-  fetchCategories,
+  fetchSharedCategories,
   updateCategory,
   type ApiCategory,
 } from "@/lib/api";
@@ -69,7 +69,7 @@ export default function CategoriesAdmin({ onError }: Props) {
 
     (async () => {
       try {
-        setCategories(await fetchCategories());
+        setCategories(await fetchSharedCategories());
       } catch (err) {
         if (!cancelled) {
           onError(

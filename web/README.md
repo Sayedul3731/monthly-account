@@ -22,6 +22,18 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 
 ## Learn More
 
+### Personal categories
+
+Use **Add category** beside the category picker in the transaction form,
+quick-expense form, or recurring-expense form. Enter a name and optional icon;
+the current income/expense type is used automatically. A successful creation
+selects the category immediately. Categories are private to the signed-in account
+and appear alongside shared defaults in all account category pickers and imports.
+
+Creating a category requires an internet connection. Once saved in the lookup
+catalog, personal categories can also be used for offline transaction entry.
+Admins continue managing shared categories from Admin → Categories.
+
 ### New-account setup
 
 New email and Google signups go to a Bengali `/onboarding` flow: welcome,

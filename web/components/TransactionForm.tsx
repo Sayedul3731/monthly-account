@@ -25,6 +25,7 @@ import {
 } from "@/lib/offline-ledger";
 import { getStoredUser } from "@/lib/auth";
 import { CloseIcon, TrendDownIcon, TrendUpIcon } from "./icons";
+import CategoryCreator, { CATEGORY_CREATED_EVENT } from "./CategoryCreator";
 
 type FormMode = "create" | "edit";
 
@@ -50,17 +51,23 @@ type LookupCatalogs = {
   transactionTypes: ApiTransactionType[];
 };
 
-let lookupRefresh: Promise<LookupCatalogs> | null = null;
+const lookupRefresh = new Map<string, Promise<LookupCatalogs>>();
 
 function refreshLookupCatalogs(): Promise<LookupCatalogs> {
-  if (!lookupRefresh) {
-    lookupRefresh = Promise.all([fetchCategories(), fetchTransactionTypes()])
-      .then(([categories, transactionTypes]) => ({ categories, transactionTypes }))
+  const userId = getStoredUser()?.id ?? "";
+  let refresh = lookupRefresh.get(userId);
+  if (!refresh) {
+    refresh = Promise.all([fetchCategories(), fetchTransactionTypes()])
+      .then(([categories, transactionTypes]) => ({
+        categories,
+        transactionTypes,
+      }))
       .finally(() => {
-        lookupRefresh = null;
+        lookupRefresh.delete(userId);
       });
+    lookupRefresh.set(userId, refresh);
   }
-  return lookupRefresh;
+  return refresh;
 }
 
 export default function TransactionForm({
@@ -85,19 +92,39 @@ export default function TransactionForm({
   const [type, setType] = useState<TransactionType>(
     quickExpense ? "expense" : (editing?.type ?? "expense"),
   );
-  const [amount, setAmount] = useState(
-    editing ? String(editing.amount) : "",
-  );
+  const [amount, setAmount] = useState(editing ? String(editing.amount) : "");
   const [description, setDescription] = useState(editing?.description ?? "");
   const [categoryId, setCategoryId] = useState(editing?.categoryId ?? "");
   const [date, setDate] = useState(defaultDate);
   const [submitting, setSubmitting] = useState(false);
+  const [creatingCategory, setCreatingCategory] = useState(false);
   const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [transactionTypes, setTransactionTypes] = useState<
     ApiTransactionType[]
   >([]);
   const [lookupsReady, setLookupsReady] = useState(false);
   const amountInputRef = useRef<HTMLInputElement>(null);
+  const createdCategoriesRef = useRef<ApiCategory[]>([]);
+
+  useEffect(() => {
+    function receiveCategory(event: Event) {
+      const category = (event as CustomEvent<ApiCategory>).detail;
+      if (category.userId !== getStoredUser()?.id) return;
+      createdCategoriesRef.current = [
+        ...createdCategoriesRef.current,
+        category,
+      ];
+      setCategories((previous) =>
+        [
+          ...previous.filter((entry) => entry.id !== category.id),
+          category,
+        ].sort((a, b) => a.name.localeCompare(b.name)),
+      );
+    }
+    window.addEventListener(CATEGORY_CREATED_EVENT, receiveCategory);
+    return () =>
+      window.removeEventListener(CATEGORY_CREATED_EVENT, receiveCategory);
+  }, []);
 
   useEffect(() => {
     if (!quickExpense) return;
@@ -109,8 +136,18 @@ export default function TransactionForm({
     const userId = getStoredUser()?.id ?? "";
     const cached = getOfflineLookups(userId);
 
-    const applyLookups = (nextCategories: ApiCategory[], nextTypes: ApiTransactionType[]) => {
-      setCategories(nextCategories);
+    const applyLookups = (
+      nextCategories: ApiCategory[],
+      nextTypes: ApiTransactionType[],
+    ) => {
+      const mergedCategories = [
+        ...nextCategories,
+        ...createdCategoriesRef.current.filter(
+          (category) =>
+            !nextCategories.some((entry) => entry.id === category.id),
+        ),
+      ];
+      setCategories(mergedCategories);
       setTransactionTypes(nextTypes);
       if (!editing && !quickExpense) {
         const firstExpense = nextCategories.find(
@@ -131,7 +168,18 @@ export default function TransactionForm({
       .then(({ categories: nextCategories, transactionTypes: nextTypes }) => {
         if (cancelled) return;
         applyLookups(nextCategories, nextTypes);
-        if (userId) saveOfflineLookups(userId, nextCategories, nextTypes);
+        if (userId)
+          saveOfflineLookups(
+            userId,
+            [
+              ...nextCategories,
+              ...createdCategoriesRef.current.filter(
+                (category) =>
+                  !nextCategories.some((entry) => entry.id === category.id),
+              ),
+            ],
+            nextTypes,
+          );
       })
       .catch((err) => {
         if (cancelled) return;
@@ -139,9 +187,7 @@ export default function TransactionForm({
           return;
         }
         onError(
-          err instanceof Error
-            ? err.message
-            : "Failed to load categories",
+          err instanceof Error ? err.message : "Failed to load categories",
         );
       });
 
@@ -161,8 +207,20 @@ export default function TransactionForm({
     setCategoryId(first?.id ?? "");
   }
 
+  function handleCategoryCreated(category: ApiCategory) {
+    const next = [
+      ...categories.filter((entry) => entry.id !== category.id),
+      category,
+    ].sort((a, b) => a.name.localeCompare(b.name));
+    setCategories(next);
+    setCategoryId(category.id);
+    const userId = getStoredUser()?.id;
+    if (userId) saveOfflineLookups(userId, next, transactionTypes);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (creatingCategory) return;
 
     const parsed = parseFloat(amount);
     if (!parsed || parsed <= 0) return;
@@ -193,7 +251,9 @@ export default function TransactionForm({
 
       if (mode === "create" && !navigator.onLine) {
         if (!userId || !selectedCategory) {
-          onError("Connect to the internet before adding your first offline transaction.");
+          onError(
+            "Connect to the internet before adding your first offline transaction.",
+          );
           return;
         }
 
@@ -265,7 +325,10 @@ export default function TransactionForm({
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-gold">
               দ্রুত এন্ট্রি
             </p>
-            <h2 id="quick-expense-title" className="mt-0.5 text-lg font-semibold text-brand dark:text-white">
+            <h2
+              id="quick-expense-title"
+              className="mt-0.5 text-lg font-semibold text-brand dark:text-white"
+            >
               খরচ যোগ করুন
             </h2>
           </div>
@@ -281,7 +344,10 @@ export default function TransactionForm({
 
         <form onSubmit={handleSubmit} className="space-y-5 p-5">
           <div>
-            <label htmlFor="quick-expense-amount" className="mb-2 block text-sm font-semibold text-zinc-800 dark:text-zinc-100">
+            <label
+              htmlFor="quick-expense-amount"
+              className="mb-2 block text-sm font-semibold text-zinc-800 dark:text-zinc-100"
+            >
               কত টাকা?
             </label>
             <div className="relative">
@@ -351,18 +417,28 @@ export default function TransactionForm({
                           : "border-brand/10 bg-paper/50 text-zinc-700 hover:border-brand/30 hover:bg-brand/5 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
                       }`}
                     >
-                      <span className="text-xl" aria-hidden="true">{category.icon || "📦"}</span>
+                      <span className="text-xl" aria-hidden="true">
+                        {category.icon || "📦"}
+                      </span>
                       <span className="min-w-0 truncate">{category.name}</span>
                     </button>
                   );
                 })
               )}
             </div>
+            <CategoryCreator
+              type="expense"
+              disabled={!lookupsReady || submitting}
+              onCreated={handleCategoryCreated}
+              onBusyChange={setCreatingCategory}
+            />
           </fieldset>
 
           <button
             type="submit"
-            disabled={submitting || !lookupsReady || !categoryId}
+            disabled={
+              submitting || creatingCategory || !lookupsReady || !categoryId
+            }
             className="w-full rounded-xl bg-rose-500 py-3.5 text-sm font-semibold text-white shadow-lg shadow-rose-500/20 transition hover:bg-rose-600 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting ? "সেভ হচ্ছে..." : "সেভ করুন"}
@@ -421,6 +497,7 @@ export default function TransactionForm({
                 key={option}
                 type="button"
                 onClick={() => handleTypeChange(option)}
+                disabled={creatingCategory}
                 className={`flex items-center justify-center gap-1.5 rounded-lg py-2.5 text-sm font-semibold capitalize transition ${
                   active
                     ? option === "income"
@@ -513,6 +590,13 @@ export default function TransactionForm({
                   ))
                 )}
               </select>
+              <CategoryCreator
+                key={type}
+                type={type}
+                disabled={!lookupsReady || submitting}
+                onCreated={handleCategoryCreated}
+                onBusyChange={setCreatingCategory}
+              />
             </div>
 
             <div>
@@ -535,7 +619,9 @@ export default function TransactionForm({
 
           <button
             type="submit"
-            disabled={submitting || !lookupsReady || !categoryId}
+            disabled={
+              submitting || creatingCategory || !lookupsReady || !categoryId
+            }
             className={`w-full rounded-xl py-3.5 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 ${
               type === "income"
                 ? "bg-brand shadow-brand/20 hover:bg-brand-deep"

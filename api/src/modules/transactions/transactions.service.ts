@@ -7,6 +7,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Category, CategoryDocument } from '../categories/category.schema';
+import { visibleCategories } from '../categories/category-access';
 import { parseCalendarDate, utcMonthRange } from '../../shared/dates';
 import {
   asPlain,
@@ -69,7 +70,7 @@ export class TransactionsService {
   ): Promise<Transaction> {
     const [user, category, transactionType] = await Promise.all([
       this.findUser(userId),
-      this.findCategory(dto.categoryId),
+      this.findCategory(dto.categoryId, userId),
       this.findTransactionType(dto.transactionTypeId),
     ]);
     this.ensureCategoryMatchesType(category, transactionType);
@@ -106,7 +107,7 @@ export class TransactionsService {
   ): Promise<Transaction> {
     const [user, category, transactionType] = await Promise.all([
       this.findUser(userId),
-      this.findCategory(dto.categoryId),
+      this.findCategory(dto.categoryId, userId),
       this.findTransactionType(dto.transactionTypeId),
     ]);
     if (user.onboardingStatus !== 'pending') {
@@ -153,7 +154,7 @@ export class TransactionsService {
           runValidators: true,
         })
         .exec();
-    } catch (error) {
+    } catch (error: unknown) {
       // Two first submissions can race. The unique index permits one entry;
       // apply the retry to that entry instead of inserting another transaction.
       if (
@@ -181,13 +182,10 @@ export class TransactionsService {
   ): Promise<Transaction> {
     const transaction = await this.getOwned(id, userId);
     const [category, transactionType] = await Promise.all([
-      dto.categoryId
-        ? this.findCategory(dto.categoryId)
-        : Promise.resolve(
-            transaction.category as CategoryDocument | undefined,
-          ).then(
-            (c) => c ?? this.findCategory(transaction.categoryId.toString()),
-          ),
+      this.findCategory(
+        dto.categoryId ?? transaction.categoryId.toString(),
+        userId,
+      ),
       dto.transactionTypeId
         ? this.findTransactionType(dto.transactionTypeId)
         : Promise.resolve(
@@ -353,9 +351,12 @@ export class TransactionsService {
     return user;
   }
 
-  private async findCategory(id: string): Promise<CategoryDocument> {
+  private async findCategory(
+    id: string,
+    userId: string,
+  ): Promise<CategoryDocument> {
     const category = await this.categoryModel
-      .findOne(notDeleted({ _id: id }))
+      .findOne(notDeleted({ _id: id, ...visibleCategories(userId) }))
       .exec();
     if (!category) throw new NotFoundException(`Category ${id} not found`);
     return category;

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   Logger,
@@ -15,6 +16,8 @@ import {
 import { TransactionType } from '../transactions/transaction-type.enum';
 import { Transaction } from '../transactions/transaction.schema';
 import { Category, CategoryDocument } from './category.schema';
+import { visibleCategories } from './category-access';
+import { ensureCategoryOwnershipIndex } from './category-index';
 import { DEFAULT_CATEGORIES } from './default-categories';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
@@ -34,6 +37,7 @@ export class CategoriesService implements OnModuleInit {
   ) {}
 
   async onModuleInit(): Promise<void> {
+    await ensureCategoryOwnershipIndex(this.categoryModel.collection);
     await this.ensureDefaultCategories();
   }
 
@@ -48,15 +52,45 @@ export class CategoriesService implements OnModuleInit {
     return asPlain<Category>(await this.getDocument(id));
   }
 
-  async create(dto: CreateCategoryDto): Promise<Category> {
-    const name = dto.name.trim();
-    await this.ensureNameAvailable(dto.type, name);
+  async findVisible(
+    userId: string,
+    type?: TransactionType,
+  ): Promise<Category[]> {
+    const docs = await this.categoryModel
+      .find(
+        notDeleted({ ...visibleCategories(userId), ...(type ? { type } : {}) }),
+      )
+      .sort({ name: 1 })
+      .exec();
+    return asPlainList<Category>(docs);
+  }
 
-    const category = await this.categoryModel.create({
-      name,
-      type: dto.type,
-      icon: dto.icon ?? '',
-    });
+  async create(dto: CreateCategoryDto, userId?: string): Promise<Category> {
+    const name = dto.name.trim();
+    if (!name) throw new BadRequestException('Enter a category name');
+    await this.ensureNameAvailable(dto.type, name, undefined, userId);
+
+    let category: CategoryDocument;
+    try {
+      category = await this.categoryModel.create({
+        name,
+        type: dto.type,
+        icon: dto.icon?.trim() ?? '',
+        userId: userId ? new Types.ObjectId(userId) : null,
+      });
+    } catch (error: unknown) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        error.code === 11000
+      ) {
+        throw new ConflictException(
+          'A category with this name and type already exists',
+        );
+      }
+      throw error;
+    }
 
     this.clearCache();
     return asPlain<Category>(category);
@@ -66,6 +100,7 @@ export class CategoriesService implements OnModuleInit {
     const category = await this.getDocument(id);
     const nextType = dto.type ?? category.type;
     const nextName = dto.name !== undefined ? dto.name.trim() : category.name;
+    if (!nextName) throw new BadRequestException('Enter a category name');
 
     if (nextType !== category.type || nextName !== category.name) {
       await this.ensureNameAvailable(nextType, nextName, id);
@@ -81,6 +116,7 @@ export class CategoriesService implements OnModuleInit {
   }
 
   async remove(id: string): Promise<void> {
+    await this.getDocument(id);
     const inUse = await this.transactionModel
       .exists({ categoryId: new Types.ObjectId(id) })
       .exec();
@@ -92,7 +128,9 @@ export class CategoriesService implements OnModuleInit {
     }
 
     const result = await this.categoryModel
-      .updateOne(notDeleted({ _id: id }), { deletedAt: new Date() })
+      .updateOne(notDeleted({ _id: id, userId: null }), {
+        deletedAt: new Date(),
+      })
       .exec();
 
     if (!result.matchedCount) {
@@ -103,7 +141,7 @@ export class CategoriesService implements OnModuleInit {
 
   private async getDocument(id: string): Promise<CategoryDocument> {
     const category = await this.categoryModel
-      .findOne(notDeleted({ _id: id }))
+      .findOne(notDeleted({ _id: id, userId: null }))
       .exec();
 
     if (!category) {
@@ -118,7 +156,7 @@ export class CategoriesService implements OnModuleInit {
     if (this.cache && this.cache.expiresAt > now) return this.cache.items;
 
     const docs = await this.categoryModel
-      .find(notDeleted())
+      .find(notDeleted({ userId: null }))
       .sort({ name: 1 })
       .exec();
     const items = asPlainList<Category>(docs);
@@ -134,12 +172,20 @@ export class CategoriesService implements OnModuleInit {
     type: TransactionType,
     name: string,
     excludeId?: string,
+    userId?: string,
   ): Promise<void> {
     const existing = await this.categoryModel
-      .findOne(notDeleted({ type, name }))
+      .findOne(
+        notDeleted({
+          type,
+          name,
+          ...(excludeId ? { _id: { $ne: excludeId } } : {}),
+          ...(userId ? visibleCategories(userId) : { userId: null }),
+        }),
+      )
       .exec();
 
-    if (existing && existing.id !== excludeId) {
+    if (existing) {
       throw new ConflictException(
         `Category "${name}" already exists for type "${type}"`,
       );
@@ -150,8 +196,12 @@ export class CategoriesService implements OnModuleInit {
     const result = await this.categoryModel.bulkWrite(
       DEFAULT_CATEGORIES.map((seed) => ({
         updateOne: {
-          filter: notDeleted({ type: seed.type, name: seed.name }),
-          update: { $setOnInsert: seed },
+          filter: notDeleted({
+            type: seed.type,
+            name: seed.name,
+            userId: null,
+          }),
+          update: { $setOnInsert: { ...seed, userId: null } },
           upsert: true,
         },
       })),

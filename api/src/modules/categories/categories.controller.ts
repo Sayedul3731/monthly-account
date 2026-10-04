@@ -21,6 +21,8 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Public } from '../../infrastructure/auth/decorators/public.decorator';
+import { CurrentUser } from '../../infrastructure/auth/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../../infrastructure/auth/jwt-payload.interface';
 import { Roles } from '../../infrastructure/auth/decorators/roles.decorator';
 import { SubscriptionExempt } from '../../infrastructure/auth/decorators/subscription-exempt.decorator';
 import { ParseObjectIdPipe } from '../../shared/pipes/parse-object-id.pipe';
@@ -44,6 +46,29 @@ export class CategoriesController {
   @ApiOkResponse({ type: Category, isArray: true })
   findAll(@Query() query: CategoryQueryDto) {
     return this.categoriesService.findAll(query.type);
+  }
+
+  @Get('mine')
+  @ApiOperation({
+    summary: 'List shared categories and your personal categories',
+  })
+  @ApiOkResponse({ type: Category, isArray: true })
+  findVisible(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: CategoryQueryDto,
+  ) {
+    return this.categoriesService.findVisible(user.userId, query.type);
+  }
+
+  @Post('mine')
+  @ApiOperation({ summary: 'Create a personal category for your account' })
+  @ApiOkResponse({ type: Category })
+  @ApiConflictResponse({ description: 'Category name already exists' })
+  createPersonal(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateCategoryDto,
+  ) {
+    return this.categoriesService.create(dto, user.userId);
   }
 
   @Get(':id')

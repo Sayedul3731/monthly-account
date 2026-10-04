@@ -12,6 +12,7 @@ import {
 } from '../../infrastructure/database/schema.helpers';
 import { parseCalendarDate } from '../../shared/dates';
 import { Category, CategoryDocument } from '../categories/category.schema';
+import { visibleCategories } from '../categories/category-access';
 import {
   TransactionTypeEntity,
   TransactionTypeDocument,
@@ -55,7 +56,11 @@ export class RecurringExpensesService {
     dto: CreateRecurringExpenseDto,
   ): Promise<RecurringExpense> {
     const [category, expenseType] = await Promise.all([
-      this.categoryModel.findOne(notDeleted({ _id: dto.categoryId })).exec(),
+      this.categoryModel
+        .findOne(
+          notDeleted({ _id: dto.categoryId, ...visibleCategories(userId) }),
+        )
+        .exec(),
       this.transactionTypeModel
         .findOne(notDeleted({ name: TransactionType.EXPENSE }))
         .exec(),
@@ -93,7 +98,9 @@ export class RecurringExpensesService {
     const schedule = await this.getOwned(id, userId);
     if (dto.categoryId) {
       const category = await this.categoryModel
-        .findOne(notDeleted({ _id: dto.categoryId }))
+        .findOne(
+          notDeleted({ _id: dto.categoryId, ...visibleCategories(userId) }),
+        )
         .exec();
       if (!category)
         throw new NotFoundException(`Category ${dto.categoryId} not found`);

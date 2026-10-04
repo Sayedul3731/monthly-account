@@ -11,6 +11,7 @@ import {
   type RecurringExpense,
 } from "@/lib/api";
 import { formatCurrency } from "@/lib/finance";
+import CategoryCreator from "./CategoryCreator";
 
 type Props = {
   onChanged: () => void;
@@ -33,6 +34,7 @@ export default function RecurringExpensesPanel({
   const [categoryId, setCategoryId] = useState("");
   const [dayOfMonth, setDayOfMonth] = useState("1");
   const [saving, setSaving] = useState(false);
+  const [creatingCategory, setCreatingCategory] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const expenseCategories = useMemo(
@@ -40,33 +42,38 @@ export default function RecurringExpensesPanel({
     [categories],
   );
 
-  async function load() {
-    setLoading(true);
-    try {
-      const [nextItems, nextCategories] = await Promise.all([
-        fetchRecurringExpenses(),
-        fetchCategories("expense"),
-      ]);
-      setItems(nextItems);
-      setCategories(nextCategories);
-      setCategoryId((current) => current || nextCategories[0]?.id || "");
-    } catch (err) {
-      onError(
-        err instanceof Error
-          ? err.message
-          : "Could not load recurring expenses.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
-
   useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const [nextItems, nextCategories] = await Promise.all([
+          fetchRecurringExpenses(),
+          fetchCategories("expense"),
+        ]);
+        if (cancelled) return;
+        setItems(nextItems);
+        setCategories(nextCategories);
+        setCategoryId((current) => current || nextCategories[0]?.id || "");
+      } catch (err) {
+        if (cancelled) return;
+        onError(
+          err instanceof Error
+            ? err.message
+            : "Could not load recurring expenses.",
+        );
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
     void load();
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [onError]);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (creatingCategory) return;
     const parsedAmount = Number(amount);
     const parsedDay = Number(dayOfMonth);
     if (!categoryId || !Number.isFinite(parsedAmount) || parsedAmount <= 0)
@@ -169,9 +176,15 @@ export default function RecurringExpensesPanel({
               required
             />
           </label>
-          <label className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
-            Category
+          <div>
+            <label
+              htmlFor="recurring-category"
+              className="text-sm font-medium text-zinc-600 dark:text-zinc-400"
+            >
+              Category
+            </label>
             <select
+              id="recurring-category"
               className={`${fieldClass} mt-1.5`}
               value={categoryId}
               onChange={(event) => setCategoryId(event.target.value)}
@@ -184,7 +197,20 @@ export default function RecurringExpensesPanel({
                 </option>
               ))}
             </select>
-          </label>
+            <CategoryCreator
+              type="expense"
+              disabled={loading || saving}
+              onBusyChange={setCreatingCategory}
+              onCreated={(category) => {
+                setCategories((previous) =>
+                  [...previous, category].sort((a, b) =>
+                    a.name.localeCompare(b.name),
+                  ),
+                );
+                setCategoryId(category.id);
+              }}
+            />
+          </div>
           <label className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
             Description
             <input
@@ -209,7 +235,7 @@ export default function RecurringExpensesPanel({
           </label>
           <button
             type="submit"
-            disabled={saving || loading || !categoryId}
+            disabled={saving || creatingCategory || loading || !categoryId}
             className="sm:col-span-2 rounded-xl bg-rose-500 px-4 py-3 text-sm font-semibold text-white shadow-sm shadow-rose-500/20 transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {saving ? "Saving..." : "Add recurring expense"}

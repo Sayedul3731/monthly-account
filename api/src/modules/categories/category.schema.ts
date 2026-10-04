@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { HydratedDocument } from 'mongoose';
+import { HydratedDocument, Types } from 'mongoose';
 import { baseSchemaOptions } from '../../infrastructure/database/schema.helpers';
 import { TransactionType } from '../transactions/transaction-type.enum';
 
@@ -11,12 +11,20 @@ export class Category {
   @ApiProperty()
   id!: string;
 
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Owner; null for shared categories',
+  })
+  @Prop({ type: Types.ObjectId, ref: 'User', default: null })
+  userId!: Types.ObjectId | null;
+
   @ApiProperty({ example: 'Food', maxLength: 100 })
   @Prop({ required: true, maxlength: 100 })
   name!: string;
 
   @ApiProperty({ enum: TransactionType, example: TransactionType.EXPENSE })
-  @Prop({ required: true, enum: TransactionType })
+  @Prop({ type: String, required: true, enum: TransactionType })
   type!: TransactionType;
 
   @ApiPropertyOptional({ example: '🍔', maxLength: 10 })
@@ -37,6 +45,6 @@ export class Category {
 export const CategorySchema = SchemaFactory.createForClass(Category);
 
 CategorySchema.index(
-  { type: 1, name: 1 },
+  { userId: 1, type: 1, name: 1 },
   { unique: true, partialFilterExpression: { deletedAt: null } },
 );
