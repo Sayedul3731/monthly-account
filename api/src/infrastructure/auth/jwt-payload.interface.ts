@@ -1,10 +1,12 @@
 export interface JwtPayload {
+  version?: number;
   sub: string;
   email: string;
   role: string;
 }
 
 export interface RefreshJwtPayload {
+  version?: number;
   sub: string;
   type: 'refresh';
 }

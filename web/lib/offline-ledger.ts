@@ -55,12 +55,13 @@ function readLedger(userId: string): OfflineLedger {
   }
 }
 
-function writeLedger(userId: string, ledger: OfflineLedger): void {
+function writeLedger(userId: string, ledger: OfflineLedger, requirePersistence = false): void {
   if (typeof window === "undefined" || !userId) return;
 
   try {
     localStorage.setItem(storageKey(userId), JSON.stringify(ledger));
   } catch {
+    if (requirePersistence) throw new Error("Could not save the offline transaction. Free browser storage or reconnect and try again.");
     // Offline storage is an enhancement. The current page can still use its
     // in-memory state if a browser blocks storage or it is out of space.
   }
@@ -148,22 +149,31 @@ export function queueOfflineTransaction(
   ];
   ledger.pendingTransactions = [
     ...ledger.pendingTransactions.filter((entry) => entry.localId !== transaction.id),
-    { localId: transaction.id, input },
+    { localId: transaction.id, input: { ...input, clientRequestId: input.clientRequestId ?? crypto.randomUUID() } },
   ];
-  writeLedger(userId, ledger);
+  writeLedger(userId, ledger, true);
 }
 
 async function flushPendingTransactions(userId: string): Promise<Transaction[]> {
   const synced: Transaction[] = [];
 
   for (const pending of readLedger(userId).pendingTransactions) {
+    if (!pending.input.clientRequestId) {
+      // Persist keys for legacy queued entries before their first request.
+      const ledger = readLedger(userId);
+      const entry = ledger.pendingTransactions.find((item) => item.localId === pending.localId);
+      if (!entry) continue;
+      entry.input.clientRequestId = crypto.randomUUID();
+      pending.input.clientRequestId = entry.input.clientRequestId;
+      writeLedger(userId, ledger, true);
+    }
     const created = await createTransaction(pending.input);
     const ledger = readLedger(userId);
     const { year, month } = calendarYearMonth(pending.input.date);
     const key = getMonthKey(year, month);
     ledger.transactionsByMonth[key] = (ledger.transactionsByMonth[key] ?? []).map(
       (transaction) => (transaction.id === pending.localId ? created : transaction),
-    );
+    ).filter((transaction, index, entries) => entries.findIndex((entry) => entry.id === transaction.id) === index);
     ledger.pendingTransactions = ledger.pendingTransactions.filter(
       (entry) => entry.localId !== pending.localId,
     );

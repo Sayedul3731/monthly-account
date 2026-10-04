@@ -15,6 +15,14 @@ export function documentToJson(
       : rawId;
   delete ret._id;
   delete ret.__v;
+  for (const key of [
+    'authenticationVersion',
+    'passwordResetTokenHash',
+    'passwordResetExpiresAt',
+    'passwordResetRequestedAt',
+  ]) {
+    delete ret[key];
+  }
 
   for (const key of [
     'roleId',

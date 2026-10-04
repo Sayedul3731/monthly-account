@@ -10,6 +10,12 @@ export type TransactionDocument = HydratedDocument<Transaction>;
 
 @Schema({ ...baseSchemaOptions, collection: 'transactions' })
 export class Transaction {
+  @Prop({ type: String })
+  clientRequestId?: string;
+
+  @Prop({ type: String, select: false })
+  requestHash?: string;
+
   @ApiProperty()
   id!: string;
 
@@ -96,6 +102,14 @@ TransactionSchema.virtual('transactionType', {
 });
 
 TransactionSchema.index({ userId: 1, date: -1 });
+// Keep the key reserved after deletion so delayed retries cannot recreate it.
+TransactionSchema.index(
+  { userId: 1, clientRequestId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { clientRequestId: { $type: 'string' } },
+  },
+);
 TransactionSchema.index({ userId: 1, deletedAt: 1, date: -1 });
 TransactionSchema.index(
   { userId: 1, onboardingKind: 1 },

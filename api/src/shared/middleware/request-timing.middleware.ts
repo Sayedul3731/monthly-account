@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
+import { randomUUID } from 'node:crypto';
 
 const colors = {
   reset: '\x1b[0m',
@@ -37,14 +38,29 @@ export function requestTimingMiddleware(
   next: NextFunction,
 ) {
   const startedAt = process.hrtime.bigint();
+  const requestId = randomUUID();
+  response.setHeader('X-Request-ID', requestId);
 
   response.once('finish', () => {
     const elapsedMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
-    const route = request.route?.path ?? request.path;
+    const matchedRoute = request.route as { path?: string } | undefined;
+    const route = matchedRoute?.path ?? request.path;
     const requestDetails = `[API] ${request.method} ${route}`;
     const status = String(response.statusCode);
     const duration = `${elapsedMs.toFixed(1)}ms`;
 
+    if (response.statusCode >= 500) {
+      console.error(
+        JSON.stringify({
+          event: 'http_server_error',
+          requestId,
+          method: request.method,
+          route,
+          status: response.statusCode,
+          durationMs: Math.round(elapsedMs),
+        }),
+      );
+    }
     console.log(
       `${colorize(requestDetails, 'cyan')} ${colorize(status, getStatusColor(response.statusCode))} ${colorize(duration, getDurationColor(elapsedMs))}`,
     );

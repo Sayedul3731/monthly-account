@@ -287,6 +287,58 @@ export async function downloadMonthlyStatementPdf({
 }: MonthlyStatementInput) {
   const { jsPDF } = await import("jspdf");
   const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const fontFamily = getComputedStyle(document.documentElement).getPropertyValue("--font-bengali").trim() || '"Nirmala UI", sans-serif';
+  await document.fonts.load(`16px ${fontFamily}`);
+  await document.fonts.ready;
+  const pixelsPerMm = (96 / 25.4) * 4;
+
+  function canvasContext() {
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Your browser cannot render this PDF. Try the Excel export.");
+    context.font = `${doc.getFont().fontStyle === "bold" ? "700" : "400"} ${doc.getFontSize() * (96 / 72) * 4}px ${fontFamily}`;
+    return { canvas, context };
+  }
+
+  function wrapText(value: string, width: number): string[] {
+    if (/^[\x20-\x7e\n\r]*$/.test(value)) return doc.splitTextToSize(value, width) as string[];
+    const { context } = canvasContext();
+    const lines: string[] = [];
+    const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+    for (const paragraph of value.split(/\r?\n/)) {
+      let line = "";
+      for (const { segment } of segmenter.segment(paragraph)) {
+        if (line && context.measureText(line + segment).width > width * pixelsPerMm) {
+          lines.push(line); line = "";
+        }
+        line += segment;
+      }
+      lines.push(line);
+    }
+    return lines;
+  }
+
+  function drawText(value: string | string[], x: number, baseline: number) {
+    const lines = Array.isArray(value) ? value : [value];
+    lines.forEach((line, index) => {
+      const lineY = baseline + index * 4;
+      if (!line) return;
+      if (/^[\x20-\x7e]*$/.test(line)) { doc.text(line, x, lineY); return; }
+      // Browser shaping preserves Bengali conjuncts and emoji; built-in PDF
+      // fonts cannot shape them. Rasterize only these lines at high resolution.
+      const { canvas, context } = canvasContext();
+      const metrics = context.measureText(line);
+      const ascent = Math.ceil(metrics.actualBoundingBoxAscent || doc.getFontSize() * 5);
+      const descent = Math.ceil(metrics.actualBoundingBoxDescent || doc.getFontSize() * 2);
+      const padding = 6;
+      canvas.width = Math.max(1, Math.ceil(metrics.width + padding * 2));
+      canvas.height = Math.max(1, ascent + descent + padding * 2);
+      context.font = `${doc.getFont().fontStyle === "bold" ? "700" : "400"} ${doc.getFontSize() * (96 / 72) * 4}px ${fontFamily}`;
+      context.fillStyle = doc.getTextColor();
+      context.fillText(line, padding, padding + ascent);
+      doc.addImage(canvas.toDataURL("image/png"), "PNG", x - padding / pixelsPerMm, lineY - (ascent + padding) / pixelsPerMm, canvas.width / pixelsPerMm, canvas.height / pixelsPerMm);
+    });
+  }
   const summary = summarize(transactions);
   const categories = categoryBreakdown(transactions);
   const overallBudget = budgets.find((budget) => !budget.category)?.amount ?? null;
@@ -328,17 +380,21 @@ export async function downloadMonthlyStatementPdf({
   }
 
   function summaryLine(label: string, value: string, accent = false) {
-    ensureSpace(8);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9.5);
+    const labelLines = wrapText(label, 80);
+    const height = Math.max(8, labelLines.length * 4 + 4);
+    ensureSpace(height);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9.5);
     doc.setTextColor(82, 82, 91);
-    doc.text(label, margin + 3, y);
+    drawText(labelLines, margin + 3, y);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(accent ? 12 : 20, accent ? 80 : 32, accent ? 65 : 45);
     doc.text(value, pageWidth - margin - 3, y, { align: "right" });
     doc.setDrawColor(228, 228, 231);
-    doc.line(margin, y + 3, pageWidth - margin, y + 3);
-    y += 8;
+    doc.line(margin, y + height - 5, pageWidth - margin, y + height - 5);
+    y += height;
   }
 
   function tableHeader() {
@@ -392,8 +448,11 @@ export async function downloadMonthlyStatementPdf({
   tableHeader();
   sortedTransactions(transactions).forEach((transaction) => {
     const description = transaction.description ?? "-";
-    const descriptionLines = doc.splitTextToSize(description, 58) as string[];
-    const rowHeight = Math.max(7, descriptionLines.length * 4 + 3);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.5);
+    const descriptionLines = wrapText(description, 58);
+    const categoryLines = wrapText(transaction.category, 31);
+    const rowHeight = Math.max(7, Math.max(descriptionLines.length, categoryLines.length) * 4 + 3);
     if (y + rowHeight > pageHeight - 18) {
       newPage();
       sectionHeading("Transactions (continued)");
@@ -404,8 +463,8 @@ export async function downloadMonthlyStatementPdf({
     doc.setTextColor(63, 63, 70);
     doc.text(toCalendarDate(transaction.date), margin + 2, y);
     doc.text(transaction.type === "income" ? "Income" : "Expense", margin + 29, y);
-    doc.text(transaction.category, margin + 49, y);
-    doc.text(descriptionLines, margin + 83, y);
+    drawText(categoryLines, margin + 49, y);
+    drawText(descriptionLines, margin + 83, y);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(transaction.type === "income" ? 5 : 190, transaction.type === "income" ? 115 : 24, transaction.type === "income" ? 85 : 93);
     doc.text(`${transaction.type === "income" ? "+" : "-"}${money(transaction.amount)}`, pageWidth - margin - 2, y, { align: "right" });

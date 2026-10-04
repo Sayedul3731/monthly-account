@@ -3,9 +3,11 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { createHash } from 'node:crypto';
 import { Category, CategoryDocument } from '../categories/category.schema';
 import { visibleCategories } from '../categories/category-access';
 import { parseCalendarDate, utcMonthRange } from '../../shared/dates';
@@ -37,7 +39,7 @@ type AggregateTransaction = Omit<
 };
 
 @Injectable()
-export class TransactionsService {
+export class TransactionsService implements OnModuleInit {
   constructor(
     @InjectModel(Transaction.name)
     private readonly transactionModel: Model<TransactionDocument>,
@@ -48,6 +50,16 @@ export class TransactionsService {
     @InjectModel(TransactionTypeEntity.name)
     private readonly transactionTypeModel: Model<TransactionTypeDocument>,
   ) {}
+
+  async onModuleInit(): Promise<void> {
+    await this.transactionModel.collection.createIndex(
+      { userId: 1, clientRequestId: 1 },
+      {
+        unique: true,
+        partialFilterExpression: { clientRequestId: { $type: 'string' } },
+      },
+    );
+  }
 
   async findAll(
     userId: string,
@@ -68,6 +80,25 @@ export class TransactionsService {
     userId: string,
     dto: CreateTransactionDto,
   ): Promise<Transaction> {
+    const requestHash = createHash('sha256')
+      .update(
+        JSON.stringify({
+          categoryId: dto.categoryId,
+          transactionTypeId: dto.transactionTypeId,
+          amount: dto.amount,
+          description: dto.description?.trim() || null,
+          date: parseCalendarDate(dto.date).toISOString(),
+        }),
+      )
+      .digest('hex');
+    if (dto.clientRequestId) {
+      const replay = await this.findCreationReplay(
+        userId,
+        dto.clientRequestId,
+        requestHash,
+      );
+      if (replay) return replay;
+    }
     const [user, category, transactionType] = await Promise.all([
       this.findUser(userId),
       this.findCategory(dto.categoryId, userId),
@@ -75,16 +106,67 @@ export class TransactionsService {
     ]);
     this.ensureCategoryMatchesType(category, transactionType);
 
-    const transaction = await this.transactionModel.create({
-      userId: user._id,
-      categoryId: category._id,
-      transactionTypeId: transactionType._id,
-      amount: dto.amount,
-      description: dto.description?.trim() || null,
-      date: parseCalendarDate(dto.date),
-    });
+    let transaction: TransactionDocument;
+    try {
+      transaction = await this.transactionModel.create({
+        userId: user._id,
+        categoryId: category._id,
+        transactionTypeId: transactionType._id,
+        amount: dto.amount,
+        description: dto.description?.trim() || null,
+        date: parseCalendarDate(dto.date),
+        ...(dto.clientRequestId
+          ? { clientRequestId: dto.clientRequestId, requestHash }
+          : {}),
+      });
+    } catch (error: unknown) {
+      if (
+        dto.clientRequestId &&
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        error.code === 11000
+      ) {
+        const replay = await this.findCreationReplay(
+          userId,
+          dto.clientRequestId,
+          requestHash,
+        );
+        if (replay) return replay;
+      }
+      throw error;
+    }
 
     return this.findOne(transaction.id, userId);
+  }
+
+  private async findCreationReplay(
+    userId: string,
+    clientRequestId: string,
+    requestHash: string,
+  ): Promise<Transaction | null> {
+    const existing = await this.transactionModel
+      .findOne({
+        userId: new Types.ObjectId(userId),
+        clientRequestId,
+      })
+      .select('+requestHash')
+      .populate([...TRANSACTION_POPULATE])
+      .exec();
+    if (!existing) return null;
+    if (existing.requestHash !== requestHash) {
+      throw new ConflictException(
+        'This request ID was already used for a different transaction',
+      );
+    }
+    if (existing.deletedAt) {
+      throw new ConflictException(
+        'This transaction was already deleted. Discard the pending retry.',
+      );
+    }
+    const result = asPlain<Transaction>(existing);
+    Reflect.deleteProperty(result, 'requestHash');
+    return result;
   }
 
   async findOnboardingEntries(userId: string): Promise<Transaction[]> {

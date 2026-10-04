@@ -115,6 +115,7 @@ function LoginFormInner() {
         </div>
       )}
 
+      <Link href="/forgot-password" className="mb-4 block text-right text-sm text-emerald-700 dark:text-emerald-400">Forgot password?</Link>
       <form onSubmit={handleSubmit} className="space-y-5" noValidate>
         <div>
           <label

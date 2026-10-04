@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { ClientSession, Model, Types } from 'mongoose';
@@ -34,7 +35,7 @@ const REVIEW_ORDER: Record<ManualPaymentStatus, number> = {
 };
 
 @Injectable()
-export class ManualPaymentsService {
+export class ManualPaymentsService implements OnModuleInit {
   constructor(
     @InjectModel(ManualPayment.name)
     private readonly manualPaymentModel: Model<ManualPaymentDocument>,
@@ -44,6 +45,22 @@ export class ManualPaymentsService {
     private readonly membershipModel: Model<MembershipDocument>,
     private readonly notificationsService: NotificationsService,
   ) {}
+
+  async onModuleInit(): Promise<void> {
+    // Fail startup rather than accept payments without the concurrency guard.
+    // Existing duplicates must be reviewed before installing this index.
+    await this.manualPaymentModel.collection.createIndex(
+      { userId: 1 },
+      {
+        name: 'one_pending_payment_per_user',
+        unique: true,
+        partialFilterExpression: {
+          status: ManualPaymentStatus.PENDING,
+          deletedAt: null,
+        },
+      },
+    );
+  }
 
   async findMine(userId: string): Promise<ManualPayment[]> {
     const payments = await this.manualPaymentModel
@@ -132,6 +149,19 @@ export class ManualPaymentsService {
       return this.findOne(payment.id);
     } catch (error) {
       if (this.isDuplicateKeyError(error)) {
+        const pending = await this.manualPaymentModel
+          .findOne(
+            notDeleted({
+              userId: user._id,
+              status: ManualPaymentStatus.PENDING,
+            }),
+          )
+          .exec();
+        if (pending) {
+          throw new ConflictException(
+            'You already have a payment awaiting review. Please wait for an admin decision.',
+          );
+        }
         throw new ConflictException(
           'This Nagad transaction ID has already been submitted',
         );

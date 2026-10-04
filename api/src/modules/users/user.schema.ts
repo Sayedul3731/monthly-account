@@ -61,6 +61,26 @@ export class User {
 
   @ApiHideProperty()
   @Exclude()
+  @Prop({ type: Number, default: 0 })
+  authenticationVersion!: number;
+
+  @ApiHideProperty()
+  @Exclude()
+  @Prop({ type: String, select: false, default: null })
+  passwordResetTokenHash?: string | null;
+
+  @ApiHideProperty()
+  @Exclude()
+  @Prop({ type: Date, select: false, default: null })
+  passwordResetExpiresAt?: Date | null;
+
+  @ApiHideProperty()
+  @Exclude()
+  @Prop({ type: Date, select: false, default: null })
+  passwordResetRequestedAt?: Date | null;
+
+  @ApiHideProperty()
+  @Exclude()
   @Prop({ type: String, select: false, default: null })
   pendingEmail?: string | null;
 
@@ -143,6 +163,10 @@ export class User {
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
+UserSchema.index(
+  { passwordResetTokenHash: 1 },
+  { partialFilterExpression: { passwordResetTokenHash: { $type: 'string' } } },
+);
 
 UserSchema.virtual('role', {
   ref: AppRole.name,

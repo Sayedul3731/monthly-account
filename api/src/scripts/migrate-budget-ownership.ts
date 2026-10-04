@@ -18,7 +18,10 @@ async function migrate() {
 
   await mongoose.connect(uri);
   const budgets = mongoose.connection.collection('budgets');
-  const missingOwner = await budgets.countDocuments({ userId: { $exists: false } });
+  const missingOwnerFilter = {
+    $or: [{ userId: { $exists: false } }, { userId: null }],
+  };
+  const missingOwner = await budgets.countDocuments(missingOwnerFilter);
 
   if (missingOwner > 0) {
     if (!ownerId || !Types.ObjectId.isValid(ownerId)) {
@@ -31,23 +34,23 @@ async function migrate() {
       .collection('users')
       .findOne({ _id: new Types.ObjectId(ownerId), deletedAt: null });
     if (!owner) {
-      throw new Error('LEGACY_BUDGET_OWNER_ID does not identify an active user.');
+      throw new Error(
+        'LEGACY_BUDGET_OWNER_ID does not identify an active user.',
+      );
     }
 
-    await budgets.updateMany(
-      { userId: { $exists: false } },
-      { $set: { userId: new Types.ObjectId(ownerId) } },
-    );
+    await budgets.updateMany(missingOwnerFilter, {
+      $set: { userId: new Types.ObjectId(ownerId) },
+    });
   }
 
   const indexes = await budgets.indexes();
   const legacyIndex = indexes.find(
     (index) =>
       index.name === 'year_1_month_1_category_1' &&
-      JSON.stringify(index.key) === JSON.stringify({ year: 1, month: 1, category: 1 }),
+      JSON.stringify(index.key) ===
+        JSON.stringify({ year: 1, month: 1, category: 1 }),
   );
-  if (legacyIndex?.name) await budgets.dropIndex(legacyIndex.name);
-
   await budgets.createIndex(
     { userId: 1, year: 1, month: 1, category: 1 },
     {
@@ -56,6 +59,7 @@ async function migrate() {
       name: 'userId_1_year_1_month_1_category_1',
     },
   );
+  if (legacyIndex?.name) await budgets.dropIndex(legacyIndex.name);
 
   console.log(
     missingOwner

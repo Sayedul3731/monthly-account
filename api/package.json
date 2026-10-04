@@ -7,6 +7,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
+    "typecheck": "tsc --noEmit --incremental false",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start --watch",
     "start:once": "nest start",
@@ -15,6 +16,9 @@
     "start:prod": "node dist/main",
     "migrate:budget-ownership": "ts-node -r tsconfig-paths/register src/scripts/migrate-budget-ownership.ts",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "lint:check": "eslint \"{src,test}/**/*.ts\" --rule \"prettier/prettier:off\"",
+    "bootstrap:admin": "ts-node -r tsconfig-paths/register src/scripts/bootstrap-admin.ts",
+    "check:launch": "ts-node -r tsconfig-paths/register src/scripts/check-launch.ts",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
@@ -60,6 +64,7 @@
     "eslint-plugin-prettier": "^5.2.2",
     "globals": "^16.0.0",
     "jest": "^30.0.0",
+    "mongodb-memory-server": "^10.4.3",
     "prettier": "^3.4.2",
     "source-map-support": "^0.5.21",
     "supertest": "^7.0.0",
@@ -70,6 +75,7 @@
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.20.0"
   },
+  "overrides": { "@nestjs/swagger": { "js-yaml": "^5.4.2" } },
   "jest": {
     "moduleFileExtensions": [
       "js",

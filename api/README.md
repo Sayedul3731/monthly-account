@@ -165,3 +165,92 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+## Launch preparation and progress
+
+| Launch item | Progress |
+| --- | --- |
+| Password recovery | Implemented: generic email responses, 30-minute single-use hashed tokens, 8–64 character passwords, and session revocation |
+| Safe transaction retries and offline sync | Implemented: per-user request IDs and database uniqueness; conflicting or deleted request IDs are rejected |
+| Import recovery | Implemented in web: full validation before writes, saved per-user retry batches, and partial-progress reporting |
+| Personal category management and budgets | Implemented: owner-only edit/delete, usage protection, custom budget categories, and concurrent budget upserts |
+| Payment concurrency | Implemented: one pending payment per user and atomic approval/plan activation |
+| Bengali PDF exports | Implemented in web using browser font shaping; non-ASCII lines are images in the PDF |
+| Production readiness and diagnostics | Implemented: `/health/ready`, request IDs, server-error logs, and cron completion/failure logs |
+| First-admin bootstrap and launch checks | Implemented: `bootstrap:admin` and read-only `check:launch` scripts |
+| Automated checks and dependency updates | Implemented: GitHub Actions for API/web and weekly Dependabot updates |
+| Production SMTP, Google OAuth, backups, alerts, and payment verification | Operator configuration and staging verification still required |
+| Public support and policy pages | Deferred at the project owner's request |
+
+### Verify locally
+
+Run in `api/` with Node.js 24 and the committed lockfile:
+
+```bash
+npm ci
+npm run lint:check
+npm run typecheck
+npm test -- --runInBand
+npm run test:e2e -- --runInBand
+npm run build
+npm audit --audit-level=high
+```
+
+Integration tests create and destroy an isolated MongoDB replica set and mock
+SMTP. They never use the application's database. The first run downloads a
+MongoDB test binary. On Windows, use `npm.cmd` if PowerShell blocks `npm.ps1`.
+After dependency updates, restart an already-running API watcher. The separate
+`typecheck` command checks every source and script file without incremental cache.
+
+### Prepare staging before public launch
+
+1. Create a separate staging database and take a restorable backup of any existing
+   data. Use a MongoDB replica set or sharded cluster; payment approval needs
+   transactions. Set production-mode environment variables from `.env.example`,
+   distinct random JWT secrets, a random `CRON_SECRET`, HTTPS URLs, SMTP credentials,
+   and the actual public Nagad collection number. Keep credentials out of Git.
+2. Rehearse `npm run migrate:budget-ownership` on the staging copy. Supply
+   `LEGACY_BUDGET_OWNER_ID` only when old ownerless budgets exist, including null
+   owners. Confirm the intended owner and budget counts afterward. The migration
+   creates the replacement index before dropping the old global index.
+3. Review old pending payments for duplicate submissions before starting the
+   updated API. Its required unique index will prevent startup if duplicates
+   remain. Resolve them with the operator's review process; the application does
+   not silently discard payment records. The database account needs permission
+   to create required indexes.
+4. Build and start the API, then register the intended administrator account.
+   Set `BOOTSTRAP_ADMIN_EMAIL` temporarily and run `npm run bootstrap:admin`.
+   It promotes that existing account, revokes its sessions, and refuses when an
+   active administrator already exists. Remove the temporary variable and sign
+   in again. Do not use default administrator credentials.
+5. Run `npm run check:launch` with the intended production-mode staging configuration.
+   It checks configuration, transaction support, legacy budgets, administrator
+   availability, required unique indexes, and duplicate pending payments. It
+   reads the configured database without changing its records. It does not prove
+   email delivery or external provider configuration.
+6. Verify SMTP delivery to a real mailbox: unknown email gets the same recovery
+   response, reset links expire and work once, old sessions stop working, and
+   email-change verification completes. For same-origin web proxy deployments,
+   register `https://your-web.example.com/api/auth/google/callback` with Google
+   and set `GOOGLE_CALLBACK_URL` to that exact URL. Use the API's own HTTPS origin
+   for `API_URL` (email-verification links), and the web origin for `FRONTEND_URL`.
+7. With two test accounts, verify category, transaction, budget, payment, and
+   notification isolation. Check trial expiry, payment submission, rejection,
+   approval, and renewal; confirm the amount and interval in the admin review.
+   Test offline entry followed by reconnect and safe retry of interrupted imports.
+8. Configure uptime monitoring for `/health` and `/health/ready`, alerting for
+   `http_server_error` and `monthly_summaries_failed`, and missing daily cron
+   completion. Forward the API logs to your hosting provider's log service.
+   Request IDs in `X-Request-ID` help correlate failures without logging bodies.
+   The cron route requires `Authorization: Bearer <CRON_SECRET>`; verify its
+   scheduled execution and rerun behavior on staging.
+9. Restore a managed database backup into a separate staging cluster. Compare
+   user, transaction, budget, and payment counts; confirm login and ledger access
+   with test accounts. Record the recovery steps and restore duration. Rehearse
+   rollback to the prior application release without dropping the new indexes.
+10. Deploy the verified builds, repeat readiness/login/payment smoke checks, and
+    watch errors and cron completion. Enable required CI checks before merging.
+
+Production credential setup, actual backup restoration, external alerts, and
+deployment must be performed in the operator's hosting accounts. None of these
+scripts deploys the project or sends test mail to real users.

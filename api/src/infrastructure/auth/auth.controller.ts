@@ -39,12 +39,39 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateOnboardingDto } from './dto/update-onboarding.dto';
 import type { AuthenticatedUser } from './jwt-payload.interface';
 import { readCookie } from './cookies';
+import { ForgotPasswordDto, ResetPasswordDto } from './dto/password-reset.dto';
 
 @ApiTags('auth')
 @Controller('auth')
 @SubscriptionExempt()
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  @Public()
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @Throttle({
+    default: { limit: 3, ttl: 60 * 60_000, blockDuration: 60 * 60_000 },
+  })
+  @ApiOperation({ summary: 'Request a single-use password reset email' })
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    await this.authService.requestPasswordReset(dto.email);
+    return {
+      message:
+        'If an account with a password exists, a reset link will be emailed to you.',
+    };
+  }
+
+  @Public()
+  @Post('reset-password')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Throttle({ default: { limit: 5, ttl: 60_000, blockDuration: 15 * 60_000 } })
+  @ApiOperation({
+    summary: 'Set a new password with an unexpired, single-use token',
+  })
+  async resetPassword(@Body() dto: ResetPasswordDto): Promise<void> {
+    await this.authService.resetPassword(dto.token, dto.password);
+  }
 
   @Public()
   @Post('register')
@@ -55,13 +82,18 @@ export class AuthController {
     @Body() dto: RegisterDto,
     @Res({ passthrough: true }) response: Response,
   ): Promise<AuthResponseDto> {
-    return this.respondWithSession(response, await this.authService.register(dto));
+    return this.respondWithSession(
+      response,
+      await this.authService.register(dto),
+    );
   }
 
   @Public()
   @Post('login')
   @Throttle({ default: { limit: 5, ttl: 60_000, blockDuration: 15 * 60_000 } })
-  @ApiOperation({ summary: 'Log in and receive an access token and refresh cookie' })
+  @ApiOperation({
+    summary: 'Log in and receive an access token and refresh cookie',
+  })
   @ApiOkResponse({ type: AuthResponseDto })
   @ApiUnauthorizedResponse({ description: 'Invalid email or password' })
   async login(
@@ -83,7 +115,7 @@ export class AuthController {
         sameSite: 'lax',
         secure: process.env.NODE_ENV === 'production',
         maxAge: 10 * 60 * 1000,
-        path: '/auth/google',
+        path: '/',
       })
       .redirect(authorizationUrl);
   }
@@ -104,11 +136,11 @@ export class AuthController {
         readCookie(request.headers.cookie, 'daily_hisab_google_oauth_state'),
       );
       response
-        .clearCookie('daily_hisab_google_oauth_state', { path: '/auth/google' })
+        .clearCookie('daily_hisab_google_oauth_state', { path: '/' })
         .redirect(this.authService.googleSuccessRedirectUrl(handoffCode));
     } catch {
       response
-        .clearCookie('daily_hisab_google_oauth_state', { path: '/auth/google' })
+        .clearCookie('daily_hisab_google_oauth_state', { path: '/' })
         .redirect(this.authService.googleFailureRedirectUrl());
     }
   }
@@ -118,7 +150,8 @@ export class AuthController {
   @Throttle({ default: { limit: 10, ttl: 60_000, blockDuration: 5 * 60_000 } })
   @HttpCode(200)
   @ApiOperation({
-    summary: 'Exchange a single-use OAuth sign-in code for an access token and refresh cookie',
+    summary:
+      'Exchange a single-use OAuth sign-in code for an access token and refresh cookie',
   })
   @ApiOkResponse({ type: AuthResponseDto })
   async exchangeOAuthCode(
@@ -162,19 +195,22 @@ export class AuthController {
   @Post('logout')
   @HttpCode(204)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Revoke the current refresh token' })
-  @ApiNoContentResponse({ description: 'Refresh token revoked' })
+  @ApiOperation({
+    summary: 'Revoke account sessions and clear authentication cookies',
+  })
+  @ApiNoContentResponse({ description: 'Account sessions revoked' })
   @ApiUnauthorizedResponse({ description: 'Missing or invalid access token' })
   async logout(
     @CurrentUser() user: AuthenticatedUser,
     @Res({ passthrough: true }) response: Response,
   ): Promise<void> {
     await this.authService.logout(user.userId);
+    response.clearCookie('daily_hisab_refresh_token', { path: '/auth' });
     response.clearCookie('daily_hisab_refresh_token', {
       httpOnly: true,
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
-      path: '/auth',
+      path: '/',
     });
     response.clearCookie('daily_hisab_access_token', {
       httpOnly: true,
@@ -237,7 +273,9 @@ export class AuthController {
   }
 
   @Post('me/email-change')
-  @Throttle({ default: { limit: 3, ttl: 60 * 60_000, blockDuration: 60 * 60_000 } })
+  @Throttle({
+    default: { limit: 3, ttl: 60 * 60_000, blockDuration: 60 * 60_000 },
+  })
   @HttpCode(HttpStatus.ACCEPTED)
   @ApiBearerAuth()
   @ApiOperation({
@@ -271,6 +309,7 @@ export class AuthController {
     session: AuthSession,
   ): AuthResponseDto {
     const csrfToken = randomBytes(32).toString('base64url');
+    response.clearCookie('daily_hisab_refresh_token', { path: '/auth' });
     response.cookie('daily_hisab_access_token', session.accessToken, {
       httpOnly: true,
       sameSite: 'lax',
@@ -283,7 +322,7 @@ export class AuthController {
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
       maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: '/auth',
+      path: '/',
     });
     response.cookie('daily_hisab_csrf_token', csrfToken, {
       sameSite: 'lax',

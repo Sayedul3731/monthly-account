@@ -71,6 +71,26 @@ export class CategoriesController {
     return this.categoriesService.create(dto, user.userId);
   }
 
+  @Patch('mine/:id')
+  @ApiOperation({ summary: 'Update one of your personal categories' })
+  updatePersonal(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseObjectIdPipe) id: string,
+    @Body() dto: UpdateCategoryDto,
+  ) {
+    return this.categoriesService.update(id, dto, user.userId);
+  }
+
+  @Delete('mine/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete an unused personal category' })
+  removePersonal(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseObjectIdPipe) id: string,
+  ) {
+    return this.categoriesService.remove(id, user.userId);
+  }
+
   @Get(':id')
   @Public()
   @ApiOperation({ summary: 'Get a category by ID' })

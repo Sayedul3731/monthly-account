@@ -1,9 +1,13 @@
 import type { Collection } from 'mongoose';
 
 /** Replace only the old global category index, after its replacement is ready. */
-export async function ensureCategoryOwnershipIndex(
-  collection: Pick<Collection, 'createIndex' | 'indexes' | 'dropIndex'>,
-): Promise<void> {
+export async function ensureCategoryOwnershipIndex(collection: {
+  createIndex: Collection['createIndex'];
+  indexes: () => Promise<
+    Array<{ name?: string; key: Record<string, unknown> }>
+  >;
+  dropIndex: Collection['dropIndex'];
+}): Promise<void> {
   await collection.createIndex(
     { userId: 1, type: 1, name: 1 },
     { unique: true, partialFilterExpression: { deletedAt: null } },

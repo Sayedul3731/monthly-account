@@ -5,6 +5,7 @@ import {
   HttpCode,
   HttpStatus,
   UnauthorizedException,
+  Logger,
 } from '@nestjs/common';
 import { ApiExcludeEndpoint, ApiTags } from '@nestjs/swagger';
 import { timingSafeEqual } from 'node:crypto';
@@ -14,6 +15,7 @@ import { MonthlySummariesService } from './monthly-summaries.service';
 @ApiTags('internal')
 @Controller('internal/monthly-summaries')
 export class MonthlySummariesController {
+  private readonly logger = new Logger(MonthlySummariesController.name);
   constructor(
     private readonly monthlySummariesService: MonthlySummariesService,
   ) {}
@@ -29,7 +31,22 @@ export class MonthlySummariesController {
     if (!secret || !token || !this.matchesSecret(token, secret)) {
       throw new UnauthorizedException('Invalid cron authorization');
     }
-    return this.monthlySummariesService.publishPreviousMonth();
+    const startedAt = Date.now();
+    try {
+      const result = await this.monthlySummariesService.publishPreviousMonth();
+      this.logger.log({
+        event: 'monthly_summaries_completed',
+        created: result.created,
+        durationMs: Date.now() - startedAt,
+      });
+      return result;
+    } catch (error: unknown) {
+      this.logger.error({
+        event: 'monthly_summaries_failed',
+        durationMs: Date.now() - startedAt,
+      });
+      throw error;
+    }
   }
 
   private matchesSecret(token: string, secret: string): boolean {

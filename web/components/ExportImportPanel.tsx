@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   downloadFile,
   exportTransactionsCsv,
@@ -8,6 +8,7 @@ import {
   importTransactions,
   parseImportCsv,
   parseImportJson,
+  type ImportTransactionInput,
 } from "@/lib/api";
 import {
   downloadMonthlyStatementExcel,
@@ -15,6 +16,7 @@ import {
 } from "@/lib/monthly-statement";
 import { formatMonthLabel, getMonthKey, type Transaction } from "@/lib/finance";
 import type { Budget } from "@/lib/api";
+import { clearImportBatch, loadImportBatch, saveImportBatch } from "@/lib/import-batch";
 
 type Props = {
   year: number;
@@ -35,6 +37,19 @@ export default function ExportImportPanel({
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
+  const [retryBatch, setRetryBatch] = useState<ImportTransactionInput[] | null>(null);
+  const [importMessage, setImportMessage] = useState("");
+  useEffect(() => {
+    let active = true;
+    Promise.resolve().then(() => {
+      const saved = loadImportBatch();
+      if (active && saved) {
+        setRetryBatch(saved);
+        setImportMessage("An unfinished import is saved on this device. Retry it to continue safely.");
+      }
+    });
+    return () => { active = false; };
+  }, []);
   const [exporting, setExporting] = useState<"excel" | "pdf" | null>(null);
 
   const monthKey = getMonthKey(year, month);
@@ -87,14 +102,33 @@ export default function ExportImportPanel({
         file.name.endsWith(".csv") || file.type === "text/csv"
           ? parseImportCsv(raw)
           : parseImportJson(raw);
-
-      await importTransactions(items);
-      onImported();
+      const prepared = saveImportBatch(items);
+      setRetryBatch(prepared);
+      await runImport(prepared);
     } catch (err) {
       onError(err instanceof Error ? err.message : "Import failed");
     } finally {
       setImporting(false);
       if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  async function runImport(items: ImportTransactionInput[]) {
+    setImporting(true);
+    setImportMessage("");
+    try {
+      const saved = await importTransactions(items);
+      clearImportBatch();
+      setImportMessage(`${saved.length} transactions imported.`);
+      setRetryBatch(null);
+      onImported();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Import failed";
+      setImportMessage(message);
+      onError(message);
+      onImported();
+    } finally {
+      setImporting(false);
     }
   }
 
@@ -163,11 +197,16 @@ export default function ExportImportPanel({
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
-          disabled={importing}
+          disabled={importing || retryBatch !== null}
           className="rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-deep disabled:opacity-60"
         >
           {importing ? "Importing..." : "Choose file to import"}
         </button>
+        {retryBatch && <div className="mt-3 flex flex-wrap gap-3">
+          <button type="button" disabled={importing} onClick={() => void runImport(retryBatch)} className="rounded-xl bg-brand px-4 py-2 text-sm text-white disabled:opacity-50">Retry this import</button>
+          <button type="button" disabled={importing} onClick={() => { clearImportBatch(); setRetryBatch(null); setImportMessage("Saved rows remain in your account. Importing the file again starts a new import."); }} className="rounded-xl border px-4 py-2 text-sm">Close import</button>
+        </div>}
+        {importMessage && <p role="status" className="mt-3 text-sm text-zinc-600 dark:text-zinc-300">{importMessage}</p>}
         <p className="mt-3 text-xs text-zinc-400">
           JSON: array of {"{ type, amount, description, category, date }"}.
           CSV columns: date, type, category, description, amount.

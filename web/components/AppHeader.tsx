@@ -355,7 +355,8 @@ export default function AppHeader({
                     >
                       Profile
                     </Link>
-                    {isAdmin && (
+                      <Link href="/categories" role="menuitem" className={menuItemClass(pathname.startsWith("/categories"))} onClick={() => setMenuOpen(false)}>Categories</Link>
+                      {isAdmin && (
                       <Link
                         href="/admin"
                         role="menuitem"

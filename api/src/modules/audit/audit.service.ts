@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { asPlain, asPlainList } from '../../infrastructure/database/schema.helpers';
+import { asPlainList } from '../../infrastructure/database/schema.helpers';
 import { AuditEvent, type AuditEventDocument } from './audit-event.schema';
 
 @Injectable()

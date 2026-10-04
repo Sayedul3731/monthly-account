@@ -1,4 +1,4 @@
-const CACHE_NAME = "protidiner-hisab-shell-v8";
+const CACHE_NAME = "protidiner-hisab-shell-v9";
 const OFFLINE_URL = "/offline";
 const PRECACHE_URLS = ["/", OFFLINE_URL, "/protidiner-hisab-logo.png"];
 
@@ -36,6 +36,9 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
+
+  // Recovery and OAuth URLs can contain single-use secrets. Never cache them.
+  if (url.pathname === "/reset-password" || url.pathname === "/login/oauth" || url.searchParams.has("token") || url.searchParams.has("code")) return;
 
   if (request.method !== "GET" || url.origin !== self.location.origin || url.pathname.startsWith("/api/")) {
     return;

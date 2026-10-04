@@ -21,6 +21,8 @@ import { ensureCategoryOwnershipIndex } from './category-index';
 import { DEFAULT_CATEGORIES } from './default-categories';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
+import { Budget } from '../budgets/budget.schema';
+import { RecurringExpense } from '../recurring-expenses/recurring-expense.schema';
 
 const CATALOG_CACHE_TTL_MS = 5 * 60 * 1000;
 
@@ -34,6 +36,10 @@ export class CategoriesService implements OnModuleInit {
     private readonly categoryModel: Model<CategoryDocument>,
     @InjectModel(Transaction.name)
     private readonly transactionModel: Model<Transaction>,
+    @InjectModel(Budget.name)
+    private readonly budgetModel: Model<Budget>,
+    @InjectModel(RecurringExpense.name)
+    private readonly recurringExpenseModel: Model<RecurringExpense>,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -96,41 +102,59 @@ export class CategoriesService implements OnModuleInit {
     return asPlain<Category>(category);
   }
 
-  async update(id: string, dto: UpdateCategoryDto): Promise<Category> {
-    const category = await this.getDocument(id);
+  async update(
+    id: string,
+    dto: UpdateCategoryDto,
+    userId?: string,
+  ): Promise<Category> {
+    const category = await this.getDocument(id, userId);
     const nextType = dto.type ?? category.type;
     const nextName = dto.name !== undefined ? dto.name.trim() : category.name;
     if (!nextName) throw new BadRequestException('Enter a category name');
 
     if (nextType !== category.type || nextName !== category.name) {
-      await this.ensureNameAvailable(nextType, nextName, id);
+      await this.ensureUnused(category, userId);
+      await this.ensureNameAvailable(nextType, nextName, id, userId);
     }
 
     category.type = nextType;
     category.name = nextName;
     if (dto.icon !== undefined) category.icon = dto.icon;
 
-    const updated = asPlain<Category>(await category.save());
+    let updated: Category;
+    try {
+      updated = asPlain<Category>(await category.save());
+    } catch (error: unknown) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        error.code === 11000
+      ) {
+        throw new ConflictException(
+          'A category with this name and type already exists',
+        );
+      }
+      throw error;
+    }
     this.clearCache();
     return updated;
   }
 
-  async remove(id: string): Promise<void> {
-    await this.getDocument(id);
-    const inUse = await this.transactionModel
-      .exists({ categoryId: new Types.ObjectId(id) })
-      .exec();
-
-    if (inUse) {
-      throw new ConflictException(
-        'Category is in use by transactions and cannot be deleted',
-      );
-    }
+  async remove(id: string, userId?: string): Promise<void> {
+    const category = await this.getDocument(id, userId);
+    await this.ensureUnused(category, userId);
 
     const result = await this.categoryModel
-      .updateOne(notDeleted({ _id: id, userId: null }), {
-        deletedAt: new Date(),
-      })
+      .updateOne(
+        notDeleted({
+          _id: id,
+          userId: userId ? new Types.ObjectId(userId) : null,
+        }),
+        {
+          deletedAt: new Date(),
+        },
+      )
       .exec();
 
     if (!result.matchedCount) {
@@ -139,9 +163,41 @@ export class CategoriesService implements OnModuleInit {
     this.clearCache();
   }
 
-  private async getDocument(id: string): Promise<CategoryDocument> {
+  private async ensureUnused(
+    category: CategoryDocument,
+    userId?: string,
+  ): Promise<void> {
+    const [transaction, recurring, budget] = await Promise.all([
+      this.transactionModel.exists({ categoryId: category._id }).exec(),
+      this.recurringExpenseModel.exists({ categoryId: category._id }).exec(),
+      category.type === TransactionType.EXPENSE
+        ? this.budgetModel
+            .exists(
+              notDeleted({
+                category: category.name,
+                ...(userId ? { userId: new Types.ObjectId(userId) } : {}),
+              }),
+            )
+            .exec()
+        : Promise.resolve(null),
+    ]);
+    if (transaction || recurring || budget)
+      throw new ConflictException(
+        'Category is in use by transactions, recurring expenses, or budgets. You can still change its icon.',
+      );
+  }
+
+  private async getDocument(
+    id: string,
+    userId?: string,
+  ): Promise<CategoryDocument> {
     const category = await this.categoryModel
-      .findOne(notDeleted({ _id: id, userId: null }))
+      .findOne(
+        notDeleted({
+          _id: id,
+          userId: userId ? new Types.ObjectId(userId) : null,
+        }),
+      )
       .exec();
 
     if (!category) {

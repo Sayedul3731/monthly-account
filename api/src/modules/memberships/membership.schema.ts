@@ -16,7 +16,7 @@ export class Membership {
   name!: string;
 
   @ApiProperty({ enum: MembershipType, example: MembershipType.FREE })
-  @Prop({ required: true, enum: MembershipType })
+  @Prop({ type: String, required: true, enum: MembershipType })
   type!: MembershipType;
 
   @ApiPropertyOptional({

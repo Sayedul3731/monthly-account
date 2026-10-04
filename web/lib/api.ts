@@ -47,6 +47,7 @@ export type ApiTransactionType = {
 };
 
 export type CreateTransactionInput = {
+  clientRequestId?: string;
   transactionTypeId: string;
   categoryId: string;
   amount: number;
@@ -54,9 +55,10 @@ export type CreateTransactionInput = {
   date: string;
 };
 
-type UpdateTransactionInput = Partial<CreateTransactionInput>;
+type UpdateTransactionInput = Partial<Omit<CreateTransactionInput, "clientRequestId">>;
 
 export type ImportTransactionInput = {
+  clientRequestId?: string;
   type: TransactionType;
   amount: number;
   description: string | null;
@@ -913,6 +915,21 @@ export async function deleteCategory(id: string): Promise<void> {
   await request<void>(`/categories/${id}`, { method: "DELETE" });
 }
 
+export async function updatePersonalCategory(id: string, input: Partial<CategoryInput>): Promise<ApiCategory> {
+  const data = await request<unknown>(`/categories/mine/${id}`, {
+    method: "PATCH", body: JSON.stringify({
+      ...(input.name !== undefined ? { name: input.name.trim() } : {}),
+      ...(input.icon !== undefined ? { icon: input.icon.trim() } : {}),
+      ...(input.type !== undefined ? { type: input.type } : {}),
+    }),
+  });
+  return normalizeCategory(data);
+}
+
+export async function deletePersonalCategory(id: string): Promise<void> {
+  await request<void>(`/categories/mine/${id}`, { method: "DELETE" });
+}
+
 export async function createTransactionType(
   input: TransactionTypeInput,
 ): Promise<ApiTransactionType> {
@@ -1047,6 +1064,7 @@ export async function createTransaction(
     method: "POST",
     body: JSON.stringify({
       ...input,
+      clientRequestId: input.clientRequestId ?? crypto.randomUUID(),
       date: toCalendarDate(input.date),
     }),
   });
@@ -1218,33 +1236,70 @@ export async function importTransactions(
     fetchCategories(),
   ]);
 
-  const results: Transaction[] = [];
-  for (const item of items) {
+  if (items.length === 0) throw new Error("The import contains no transactions.");
+  // Validate the entire file before making any writes.
+  const inputs = items.map((item, index): CreateTransactionInput => {
     const type = types.find((entry) => entry.name === item.type);
     const category = categories.find(
       (entry) => entry.name === item.category && entry.type === item.type,
     );
 
     if (!type) {
-      throw new Error(`Unknown transaction type "${item.type}"`);
+      throw new Error(`Row ${index + 1}: unknown transaction type "${item.type}"`);
     }
     if (!category) {
       throw new Error(
-        `Unknown category "${item.category}" for type "${item.type}"`,
+        `Row ${index + 1}: unknown category "${item.category}" for type "${item.type}"`,
       );
     }
 
-    results.push(
-      await createTransaction({
+    const date = toCalendarDate(item.date);
+    const parsedDate = new Date(`${date}T00:00:00.000Z`);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(parsedDate.getTime()) || parsedDate.toISOString().slice(0, 10) !== date) {
+      throw new Error(`Row ${index + 1}: enter a valid calendar date.`);
+    }
+    if (!Number.isFinite(item.amount) || item.amount < 0.01 || Math.abs(item.amount * 100 - Math.round(item.amount * 100)) > 0.00001) {
+      throw new Error(`Row ${index + 1}: amount must be positive with at most two decimal places.`);
+    }
+    if (item.description !== null && (typeof item.description !== "string" || item.description.length > 255)) {
+      throw new Error(`Row ${index + 1}: description must contain at most 255 characters.`);
+    }
+    // Mutating this prepared batch retains keys when the caller retries it.
+    item.clientRequestId ??= crypto.randomUUID();
+    return {
+        clientRequestId: item.clientRequestId,
         transactionTypeId: type.id,
         categoryId: category.id,
         amount: item.amount,
         description: item.description,
-        date: toCalendarDate(item.date),
-      }),
-    );
+        date,
+    };
+  });
+  const results: Transaction[] = [];
+  for (let index = 0; index < inputs.length; index++) {
+    try {
+      results.push(await createTransaction(inputs[index]));
+    } catch (error) {
+      throw new PartialImportError(results.length, inputs.length, index + 1, error);
+    }
   }
   return results;
+}
+
+export class PartialImportError extends Error {
+  constructor(public readonly completed: number, public readonly total: number, public readonly failedRow: number, cause: unknown) {
+    super(`Import stopped at row ${failedRow}. ${completed} of ${total} rows confirmed saved. Retry this import to continue safely. ${cause instanceof Error ? cause.message : "Request failed."}`);
+    this.name = "PartialImportError";
+  }
+}
+
+export async function requestPasswordReset(email: string): Promise<void> {
+  await request("/auth/forgot-password", { method: "POST", body: JSON.stringify({ email: email.trim().toLowerCase() }) }, false);
+}
+
+export async function resetPassword(token: string, password: string): Promise<void> {
+  await request("/auth/reset-password", { method: "POST", body: JSON.stringify({ token, password }) }, false);
+  clearAuthSession();
 }
 
 export function exportTransactionsJson(transactions: Transaction[]): string {
@@ -1255,8 +1310,8 @@ export function exportTransactionsCsv(transactions: Transaction[]): string {
   const header = "date,type,category,description,amount";
   const rows = transactions.map((t) => {
     const date = t.date.slice(0, 10);
-    const desc = `"${(t.description ?? "").replace(/"/g, '""')}"`;
-    return `${date},${t.type},${t.category},${desc},${t.amount}`;
+    const quote = (value: string) => `"${value.replace(/"/g, '""')}"`;
+    return `${date},${t.type},${quote(t.category)},${quote(t.description ?? "")},${t.amount}`;
   });
   return [header, ...rows].join("\n");
 }
@@ -1311,41 +1366,59 @@ export function parseImportJson(raw: string): ImportTransactionInput[] {
 }
 
 export function parseImportCsv(raw: string): ImportTransactionInput[] {
-  const lines = raw.trim().split(/\r?\n/);
-  if (lines.length < 2) {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = "";
+  let quoted = false;
+  let closed = false;
+  const text = raw.replace(/^\uFEFF/, "");
+  for (let index = 0; index <= text.length; index++) {
+    const character = text[index];
+    if (quoted) {
+      if (character === undefined) throw new Error("CSV contains an unclosed quoted field.");
+      if (character === '"') {
+        if (text[index + 1] === '"') { cell += '"'; index++; }
+        else { quoted = false; closed = true; }
+      } else cell += character;
+      continue;
+    }
+    if (character === '"') {
+      if (cell || closed) throw new Error("CSV contains an unexpected quote.");
+      quoted = true;
+    } else if (character === "," || character === "\n" || character === "\r" || character === undefined) {
+      row.push(cell); cell = ""; closed = false;
+      if (character !== ",") {
+        if (row.some((value) => value.trim())) rows.push(row);
+        row = [];
+        if (character === "\r" && text[index + 1] === "\n") index++;
+      }
+    } else if (closed) {
+      if (character.trim()) throw new Error("CSV contains text after a closing quote.");
+    } else cell += character;
+  }
+  if (rows.length < 2) {
     throw new Error(
       "CSV must include a header row and at least one transaction",
     );
   }
 
-  const header = lines[0].toLowerCase();
-  if (!header.includes("date") || !header.includes("amount")) {
+  const header = rows[0].map((value) => value.trim().toLowerCase());
+  const columns = ["date", "type", "category", "description", "amount"];
+  if (header.length !== columns.length || !columns.every((column) => header.includes(column))) {
     throw new Error(
       "CSV must include date, type, category, description, and amount columns",
     );
   }
 
-  return lines
-    .slice(1)
-    .filter(Boolean)
-    .map((line, index) => {
-      const match = line.match(
-        /^([^,]+),([^,]+),([^,]+),("(?:[^"]|"")*"|[^,]*),([^,]+)$/,
-      );
-      if (!match) {
-        throw new Error(`Invalid CSV row at line ${index + 2}`);
-      }
-
-      const [, date, type, category, description, amount] = match;
-      const cleanDescription = description.startsWith('"')
-        ? description.slice(1, -1).replace(/""/g, '"')
-        : description;
+  return rows.slice(1).map((values, index) => {
+      if (values.length !== header.length) throw new Error(`Invalid CSV row ${index + 2}`);
+      const [date, type, category, description, amount] = columns.map((column) => values[header.indexOf(column)]);
 
       return {
-        type: type as TransactionType,
-        amount: parseFloat(amount),
-        description: cleanDescription.trim() || null,
-        category,
+        type: type.trim() as TransactionType,
+        amount: Number(amount),
+        description: description.trim() || null,
+        category: category.trim(),
         date: toCalendarDate(date),
       };
     });

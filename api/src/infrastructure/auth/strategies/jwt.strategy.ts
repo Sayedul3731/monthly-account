@@ -1,5 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import type { Request } from 'express';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { UsersService } from '../../../modules/users/users.service';
@@ -15,7 +16,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
         ExtractJwt.fromAuthHeaderAsBearerToken(),
-        (request) => readCookie(request?.headers?.cookie, 'daily_hisab_access_token') ?? null,
+        (request: Request | undefined) =>
+          readCookie(request?.headers?.cookie, 'daily_hisab_access_token') ??
+          null,
       ]),
       ignoreExpiration: false,
       secretOrKey: config.get<string>('jwt.secret')!,
@@ -25,6 +28,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   async validate(payload: JwtPayload): Promise<AuthenticatedUser> {
     try {
       const user = await this.usersService.findOne(payload.sub);
+      if ((payload.version ?? 0) !== (user.authenticationVersion ?? 0)) {
+        throw new UnauthorizedException('Session revoked. Sign in again.');
+      }
       if (!user.role?.name) {
         throw new UnauthorizedException('User role is unavailable');
       }

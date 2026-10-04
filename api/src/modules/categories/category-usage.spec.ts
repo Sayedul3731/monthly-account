@@ -141,6 +141,7 @@ function fixture() {
     amount: 500,
     date: '2026-10-02',
     dayOfMonth: 2,
+    description: null,
   });
   return { transactions, recurring, record, entryModel, payload };
 }

@@ -19,6 +19,7 @@ import { TransactionsModule } from '../modules/transactions/transactions.module'
 import { UsersModule } from '../modules/users/users.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { ReadinessController } from './readiness.controller';
 
 @Module({
   imports: [
@@ -43,7 +44,7 @@ import { AppService } from './app.service';
     AuthModule,
     AuditModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, ReadinessController],
   providers: [AppService],
 })
 export class AppModule {}

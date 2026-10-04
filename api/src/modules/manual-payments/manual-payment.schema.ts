@@ -133,4 +133,15 @@ ManualPaymentSchema.index(
   { unique: true, partialFilterExpression: { deletedAt: null } },
 );
 ManualPaymentSchema.index({ userId: 1, status: 1, createdAt: -1 });
+ManualPaymentSchema.index(
+  { userId: 1 },
+  {
+    name: 'one_pending_payment_per_user',
+    unique: true,
+    partialFilterExpression: {
+      status: ManualPaymentStatus.PENDING,
+      deletedAt: null,
+    },
+  },
+);
 ManualPaymentSchema.index({ status: 1, createdAt: -1 });

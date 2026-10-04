@@ -124,6 +124,14 @@ function fixture() {
   const service = new CategoriesService(
     categoryModel as unknown as Model<CategoryDocument>,
     transactions as unknown as Model<Transaction>,
+    {
+      exists: () => ({ exec: () => Promise.resolve(null) }),
+    } as unknown as Model<import('../budgets/budget.schema').Budget>,
+    {
+      exists: () => ({ exec: () => Promise.resolve(null) }),
+    } as unknown as Model<
+      import('../recurring-expenses/recurring-expense.schema').RecurringExpense
+    >,
   );
   return { service, records, categoryModel, transactions };
 }
@@ -243,7 +251,9 @@ describe('Category index migration', () => {
     return {
       createIndex: jest.fn(() => Promise.resolve('userId_1_type_1_name_1')),
       indexes: jest.fn(() =>
-        Promise.resolve([
+        Promise.resolve<
+          Awaited<ReturnType<import('mongoose').Collection['indexes']>>
+        >([
           { name: '_id_', key: { _id: 1 } },
           { name: 'type_1_name_1', key: { type: 1, name: 1 } },
           {
@@ -252,7 +262,7 @@ describe('Category index migration', () => {
           },
         ]),
       ),
-      dropIndex: jest.fn(() => Promise.resolve()),
+      dropIndex: jest.fn(() => Promise.resolve({})),
     };
   }
 

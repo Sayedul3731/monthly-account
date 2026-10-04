@@ -1,4 +1,10 @@
-import { Injectable, Logger, type CallHandler, type ExecutionContext, type NestInterceptor } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  type CallHandler,
+  type ExecutionContext,
+  type NestInterceptor,
+} from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { Observable, mergeMap } from 'rxjs';
 import type { AuthenticatedUser } from '../../infrastructure/auth/jwt-payload.interface';
@@ -14,7 +20,10 @@ export class AuditInterceptor implements NestInterceptor {
 
   constructor(private readonly auditService: AuditService) {}
 
-  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
+  intercept(
+    context: ExecutionContext,
+    next: CallHandler<unknown>,
+  ): Observable<unknown> {
     if (context.getType() !== 'http') return next.handle();
 
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
@@ -23,8 +32,12 @@ export class AuditInterceptor implements NestInterceptor {
     const isWrite = ['POST', 'PATCH', 'PUT', 'DELETE'].includes(request.method);
     if (!isWrite || actor?.role !== DefaultRole.ADMIN) return next.handle();
 
-    const resource = `${request.method} ${request.baseUrl}${request.route?.path ?? request.path}`
-      .slice(0, 255);
+    const route = request.route as { path?: string } | undefined;
+    const resource =
+      `${request.method} ${request.baseUrl}${route?.path ?? request.path}`.slice(
+        0,
+        255,
+      );
     return next.handle().pipe(
       mergeMap(async (result) => {
         try {

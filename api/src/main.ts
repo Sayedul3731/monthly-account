@@ -6,7 +6,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { NestFactory, Reflector } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import type { NextFunction, Request, Response } from 'express';
+import type { Express, NextFunction, Request, Response } from 'express';
 import { AppModule } from './app/app.module';
 import { API_CORS_METHODS } from './infrastructure/config/cors.config';
 import { requestTimingMiddleware } from './shared/middleware/request-timing.middleware';
@@ -20,10 +20,8 @@ function createApplication(): Promise<INestApplication> {
     const app = await NestFactory.create(AppModule);
     // Vercel sits one trusted proxy hop in front of this serverless app. This
     // lets rate limiting use the client address instead of the platform proxy.
-    app
-      .getHttpAdapter()
-      .getInstance()
-      .set('trust proxy', process.env.VERCEL === '1' ? 1 : false);
+    const expressApp = app.getHttpAdapter().getInstance() as Express;
+    expressApp.set('trust proxy', process.env.VERCEL === '1' ? 1 : false);
     const config = app.get(ConfigService);
 
     const nodeEnv = config.get<string>('nodeEnv', 'development');

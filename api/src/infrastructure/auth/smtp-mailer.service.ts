@@ -6,6 +6,43 @@ import nodemailer from 'nodemailer';
 export class SmtpMailerService {
   constructor(private readonly config: ConfigService) {}
 
+  ensureConfigured(): void {
+    if (
+      !['smtp.host', 'smtp.user', 'smtp.pass', 'smtp.from'].every((key) =>
+        this.config.get<string>(key),
+      )
+    ) {
+      throw new ServiceUnavailableException(
+        'Email delivery is not configured. Contact support.',
+      );
+    }
+  }
+
+  async sendPasswordReset(recipient: string, resetUrl: string): Promise<void> {
+    this.ensureConfigured();
+    const transport = nodemailer.createTransport({
+      host: this.config.getOrThrow<string>('smtp.host'),
+      port: this.config.get<number>('smtp.port', 587),
+      secure: this.config.get<boolean>('smtp.secure', false),
+      auth: {
+        user: this.config.getOrThrow<string>('smtp.user'),
+        pass: this.config.getOrThrow<string>('smtp.pass'),
+      },
+    });
+    try {
+      await transport.sendMail({
+        from: this.config.getOrThrow<string>('smtp.from'),
+        to: recipient,
+        subject: 'Reset your Protidiner Hisab password',
+        text: `Open this link within 30 minutes to reset your password:\n${resetUrl}\n\nIf you did not request this, ignore this email.`,
+      });
+    } catch {
+      throw new ServiceUnavailableException(
+        'We could not send the reset email. Try again later.',
+      );
+    }
+  }
+
   async sendEmailChangeVerification(
     recipient: string,
     verificationUrl: string,

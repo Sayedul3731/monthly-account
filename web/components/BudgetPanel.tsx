@@ -1,9 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { deleteBudget, upsertBudget, type Budget } from "@/lib/api";
+import { useEffect, useMemo, useState } from "react";
+import { deleteBudget, fetchCategories, upsertBudget, type ApiCategory, type Budget } from "@/lib/api";
 import {
-  EXPENSE_CATEGORIES,
   CATEGORY_ICONS,
   formatCurrency,
   formatMonthLabel,
@@ -15,6 +14,9 @@ import {
   downloadTransactionWorkbook,
 } from "@/lib/monthly-statement";
 import { EditIcon, MoreHorizontalIcon, TrashIcon } from "./icons";
+import { getOfflineLookups } from "@/lib/offline-ledger";
+import { getStoredUser } from "@/lib/auth";
+import { CATEGORY_CREATED_EVENT } from "./CategoryCreator";
 
 type Props = {
   year: number;
@@ -33,6 +35,19 @@ export default function BudgetPanel({
   onBudgetsChange,
   onError,
 }: Props) {
+  const [categories, setCategories] = useState<ApiCategory[]>([]);
+  useEffect(() => {
+    let active = true;
+    function refresh() {
+      fetchCategories("expense").then((items) => { if (active) setCategories(items); }).catch(() => {
+        const cached = getOfflineLookups(getStoredUser()?.id ?? "");
+        if (active && cached) setCategories(cached.categories.filter((category) => category.type === "expense"));
+      });
+    }
+    refresh();
+    window.addEventListener(CATEGORY_CREATED_EVENT, refresh);
+    return () => { active = false; window.removeEventListener(CATEGORY_CREATED_EVENT, refresh); };
+  }, []);
   const [overallAmount, setOverallAmount] = useState("");
   const [categoryAmounts, setCategoryAmounts] = useState<
     Record<string, string>
@@ -44,6 +59,7 @@ export default function BudgetPanel({
 
   const overallBudget = budgets.find((b) => !b.category);
   const categoryBudgets = budgets.filter((b) => b.category);
+  const expenseCategoryNames = [...new Set([...categories.map((category) => category.name), ...categoryBudgets.map((budget) => budget.category)])];
   const totalCategoryBudget = categoryBudgets.reduce(
     (total, budget) => total + budget.amount,
     0,
@@ -404,7 +420,7 @@ export default function BudgetPanel({
         )}
 
         <ul className="space-y-3">
-          {EXPENSE_CATEGORIES.map((cat) => {
+          {expenseCategoryNames.map((cat) => {
             const budget = categoryBudgets.find((b) => b.category === cat);
             const spent = spendingByCategory[cat] ?? 0;
             const progress =
@@ -419,7 +435,7 @@ export default function BudgetPanel({
               >
                 <div className="mb-2 flex items-center justify-between">
                   <span className="flex items-center gap-1.5 text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                    {CATEGORY_ICONS[cat]} {cat}
+                    {categories.find((category) => category.name === cat)?.icon || CATEGORY_ICONS[cat]} {cat}
                   </span>
                   {budget ? (
                     <div className="flex items-center gap-3 text-sm">

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import {
@@ -32,40 +32,48 @@ export class BudgetsService {
   async upsert(userId: string, dto: UpsertBudgetDto): Promise<Budget> {
     const category = dto.category?.trim() ? dto.category.trim() : '';
     const ownerId = new Types.ObjectId(userId);
-
-    const existing = await this.budgetModel
-      .findOne(
-        notDeleted({
-          userId: ownerId,
-          year: dto.year,
-          month: dto.month,
-          category,
-        }),
-      )
-      .exec();
-
-    if (existing) {
-      existing.amount = dto.amount;
-      return asPlain<Budget>(await existing.save());
-    }
-
-    const budget = await this.budgetModel.create({
+    const filter = notDeleted({
       userId: ownerId,
       year: dto.year,
       month: dto.month,
       category,
-      amount: dto.amount,
     });
-
+    const update = { $set: { amount: dto.amount } };
+    let budget: BudgetDocument | null;
+    try {
+      budget = await this.budgetModel
+        .findOneAndUpdate(filter, update, {
+          upsert: true,
+          returnDocument: 'after',
+          runValidators: true,
+        })
+        .exec();
+    } catch (error: unknown) {
+      if (
+        !(
+          typeof error === 'object' &&
+          error !== null &&
+          'code' in error &&
+          error.code === 11000
+        )
+      )
+        throw error;
+      budget = await this.budgetModel
+        .findOneAndUpdate(filter, update, {
+          returnDocument: 'after',
+          runValidators: true,
+        })
+        .exec();
+    }
+    if (!budget) throw new NotFoundException('Budget could not be saved');
     return asPlain<Budget>(budget);
   }
 
   async remove(id: string, userId: string): Promise<void> {
     await this.budgetModel
-      .updateOne(
-        notDeleted({ _id: id, userId: new Types.ObjectId(userId) }),
-        { deletedAt: new Date() },
-      )
+      .updateOne(notDeleted({ _id: id, userId: new Types.ObjectId(userId) }), {
+        deletedAt: new Date(),
+      })
       .exec();
   }
 }

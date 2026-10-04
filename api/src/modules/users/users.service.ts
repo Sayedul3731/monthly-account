@@ -77,10 +77,16 @@ export class UsersService implements OnModuleInit {
     if (dto.period !== undefined) {
       // Keep the same month if setup is resumed after a month boundary or from
       // another tab. A pending account with no period is the only write target.
-      await this.userModel.updateOne(
-        notDeleted({ _id: id, onboardingStatus: 'pending', onboardingPeriod: null }),
-        { $set: { onboardingPeriod: dto.period } },
-      ).exec();
+      await this.userModel
+        .updateOne(
+          notDeleted({
+            _id: id,
+            onboardingStatus: 'pending',
+            onboardingPeriod: null,
+          }),
+          { $set: { onboardingPeriod: dto.period } },
+        )
+        .exec();
     }
     const update: Record<string, unknown> = {};
     if (dto.step !== undefined) update.$max = { onboardingStep: dto.step };
@@ -109,7 +115,7 @@ export class UsersService implements OnModuleInit {
    */
   findByEmail(email: string): Promise<UserDocument | null> {
     return this.userModel
-      .findOne(notDeleted({ email }))
+      .findOne(notDeleted({ email: email.trim().toLowerCase() }))
       .select('+password')
       .populate([...USER_POPULATE])
       .exec();
@@ -141,6 +147,78 @@ export class UsersService implements OnModuleInit {
       .select('+password')
       .populate([...USER_POPULATE])
       .exec();
+  }
+
+  createPasswordResetRequest(
+    email: string,
+    tokenHash: string,
+  ): Promise<UserDocument | null> {
+    const now = new Date();
+    return this.userModel
+      .findOneAndUpdate(
+        notDeleted({
+          email: email.trim().toLowerCase(),
+          password: { $type: 'string' },
+          $or: [
+            { passwordResetRequestedAt: null },
+            {
+              passwordResetRequestedAt: {
+                $lt: new Date(now.getTime() - 60_000),
+              },
+            },
+          ],
+        }),
+        {
+          $set: {
+            passwordResetTokenHash: tokenHash,
+            passwordResetExpiresAt: new Date(now.getTime() + 30 * 60_000),
+            passwordResetRequestedAt: now,
+          },
+        },
+        { new: true },
+      )
+      .exec();
+  }
+
+  async clearPasswordResetRequest(
+    id: string,
+    tokenHash: string,
+  ): Promise<void> {
+    await this.userModel
+      .updateOne(notDeleted({ _id: id, passwordResetTokenHash: tokenHash }), {
+        $set: { passwordResetTokenHash: null, passwordResetExpiresAt: null },
+      })
+      .exec();
+  }
+
+  async consumePasswordReset(
+    tokenHash: string,
+    password: string,
+  ): Promise<boolean> {
+    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+    const result = await this.userModel
+      .updateOne(
+        notDeleted({
+          passwordResetTokenHash: tokenHash,
+          passwordResetExpiresAt: { $gt: new Date() },
+        }),
+        {
+          $set: {
+            password: passwordHash,
+            refreshToken: null,
+            passwordResetTokenHash: null,
+            passwordResetExpiresAt: null,
+            oauthHandoffHash: null,
+            oauthHandoffExpiresAt: null,
+            pendingEmail: null,
+            emailChangeTokenHash: null,
+            emailChangeExpiresAt: null,
+          },
+          $inc: { authenticationVersion: 1 },
+        },
+      )
+      .exec();
+    return result.modifiedCount === 1;
   }
 
   async createEmailChangeRequest(
@@ -199,6 +277,7 @@ export class UsersService implements OnModuleInit {
     user.emailChangeTokenHash = null;
     user.emailChangeExpiresAt = null;
     user.refreshToken = null;
+    user.authenticationVersion = (user.authenticationVersion ?? 0) + 1;
     await user.save();
     return true;
   }
@@ -215,7 +294,10 @@ export class UsersService implements OnModuleInit {
 
   async clearRefreshToken(id: string): Promise<void> {
     await this.userModel
-      .updateOne(notDeleted({ _id: id }), { refreshToken: null })
+      .updateOne(notDeleted({ _id: id }), {
+        $set: { refreshToken: null },
+        $inc: { authenticationVersion: 1 },
+      })
       .exec();
   }
 
@@ -288,7 +370,8 @@ export class UsersService implements OnModuleInit {
     dto: CreateUserDto,
     needsOnboarding = false,
   ): Promise<UserDocument> {
-    await this.ensureEmailAvailable(dto.email);
+    const email = dto.email.trim().toLowerCase();
+    await this.ensureEmailAvailable(email);
     const roleId = dto.roleId ?? (await this.getDefaultRoleId());
     await this.rolesService.findOne(roleId);
     const membershipId =
@@ -305,7 +388,7 @@ export class UsersService implements OnModuleInit {
 
     const user = await this.userModel.create({
       name: dto.name,
-      email: dto.email,
+      email,
       onboardingStatus: needsOnboarding ? 'pending' : 'completed',
       password: await bcrypt.hash(dto.password, SALT_ROUNDS),
       roleId: new Types.ObjectId(roleId),
@@ -333,6 +416,9 @@ export class UsersService implements OnModuleInit {
     if (dto.password !== undefined) {
       user.password = await bcrypt.hash(dto.password, SALT_ROUNDS);
       user.refreshToken = null;
+      user.authenticationVersion = (user.authenticationVersion ?? 0) + 1;
+      user.passwordResetTokenHash = null;
+      user.passwordResetExpiresAt = null;
     }
     const roleChanged =
       dto.roleId !== undefined && dto.roleId !== user.roleId.toString();
@@ -341,9 +427,11 @@ export class UsersService implements OnModuleInit {
       if (
         actorId === user.id &&
         user.role?.name === DefaultRole.ADMIN &&
-        nextRole.name !== DefaultRole.ADMIN
+        nextRole.name !== String(DefaultRole.ADMIN)
       ) {
-        throw new BadRequestException('Administrators cannot remove their own admin access');
+        throw new BadRequestException(
+          'Administrators cannot remove their own admin access',
+        );
       }
       user.roleId = new Types.ObjectId(dto.roleId);
     }
@@ -428,14 +516,18 @@ export class UsersService implements OnModuleInit {
   async remove(id: string, actorId?: string): Promise<void> {
     const user = await this.findOne(id);
     if (actorId === user.id) {
-      throw new BadRequestException('Administrators cannot delete their own account');
+      throw new BadRequestException(
+        'Administrators cannot delete their own account',
+      );
     }
     if (user.role?.name === DefaultRole.ADMIN) {
       const activeAdminCount = await this.userModel
         .countDocuments(notDeleted({ roleId: user.roleId }))
         .exec();
       if (activeAdminCount <= 1) {
-        throw new BadRequestException('At least one administrator account must remain active');
+        throw new BadRequestException(
+          'At least one administrator account must remain active',
+        );
       }
     }
     const result = await this.userModel
@@ -566,7 +658,9 @@ export class UsersService implements OnModuleInit {
     const result = await this.userModel
       .updateMany(
         {
-          ...notDeleted({ membershipId: new Types.ObjectId(trialMembershipId) }),
+          ...notDeleted({
+            membershipId: new Types.ObjectId(trialMembershipId),
+          }),
           $or: [
             { trialStartedAt: { $exists: false } },
             { trialStartedAt: null },

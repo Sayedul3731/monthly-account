@@ -120,7 +120,12 @@ function fixture() {
         }
         if (collideOnce) {
           collideOnce = false;
-          return { exec: () => Promise.reject({ code: 11000 }) };
+          return {
+            exec: () =>
+              Promise.reject(
+                Object.assign(new Error('Duplicate key'), { code: 11000 }),
+              ),
+          };
         }
         if (record) Object.assign(record, update.$set);
         return query(document(record));

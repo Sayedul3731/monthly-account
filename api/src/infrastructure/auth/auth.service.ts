@@ -2,6 +2,7 @@ import {
   BadRequestException,
   BadGatewayException,
   Injectable,
+  Logger,
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -11,7 +12,6 @@ import * as bcrypt from 'bcryptjs';
 import { createHash, randomBytes } from 'crypto';
 import { User, UserDocument } from '../../modules/users/user.schema';
 import { UsersService } from '../../modules/users/users.service';
-import { AuthResponseDto } from './dto/auth-response.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { RequestEmailChangeDto } from './dto/request-email-change.dto';
@@ -37,12 +37,46 @@ export type AuthSession = {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
     private readonly smtpMailer: SmtpMailerService,
   ) {}
+
+  async requestPasswordReset(email: string): Promise<void> {
+    // Configuration errors have the same response for all email addresses.
+    this.smtpMailer.ensureConfigured();
+    const token = randomBytes(32).toString('hex');
+    const tokenHash = createHash('sha256').update(token).digest('hex');
+    const user = await this.usersService.createPasswordResetRequest(
+      email,
+      tokenHash,
+    );
+    if (!user) return;
+    try {
+      await this.smtpMailer.sendPasswordReset(
+        user.email,
+        this.frontendUrl('/reset-password', { token }),
+      );
+    } catch {
+      await this.usersService.clearPasswordResetRequest(user.id, tokenHash);
+      // Do not expose whether the recipient exists or log the token/email.
+      this.logger.error('Password reset email delivery failed');
+    }
+  }
+
+  async resetPassword(token: string, password: string): Promise<void> {
+    const consumed = await this.usersService.consumePasswordReset(
+      createHash('sha256').update(token).digest('hex'),
+      password,
+    );
+    if (!consumed)
+      throw new BadRequestException(
+        'Invalid or expired reset link. Request a new link.',
+      );
+  }
 
   async register(dto: RegisterDto): Promise<AuthSession> {
     const user = await this.usersService.create(
@@ -149,6 +183,7 @@ export class AuthService {
 
     if (
       !user?.refreshToken ||
+      (payload.version ?? 0) !== (user.authenticationVersion ?? 0) ||
       !this.matchesRefreshToken(refreshToken, user.refreshToken)
     ) {
       throw new UnauthorizedException('Invalid refresh token');
@@ -261,9 +296,7 @@ export class AuthService {
     return userJson;
   }
 
-  private async buildAuthResponse(
-    user: UserDocument,
-  ): Promise<AuthSession> {
+  private async buildAuthResponse(user: UserDocument): Promise<AuthSession> {
     if (!user.role?.name) {
       throw new UnauthorizedException('User role is not loaded');
     }
@@ -272,10 +305,15 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       role: user.role.name,
+      version: user.authenticationVersion ?? 0,
     });
 
     const refreshToken = this.jwtService.sign(
-      { sub: user.id, type: 'refresh' } satisfies RefreshJwtPayload,
+      {
+        sub: user.id,
+        type: 'refresh',
+        version: user.authenticationVersion ?? 0,
+      } satisfies RefreshJwtPayload,
       {
         secret: this.config.getOrThrow<string>('jwt.refreshSecret'),
         expiresIn: this.config.getOrThrow<string>(

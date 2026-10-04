@@ -79,6 +79,7 @@ export default function TransactionForm({
   onError,
   quickExpense = false,
 }: Props) {
+  const creationRequest = useRef<{ signature: string; id: string } | null>(null);
   const mode: FormMode = editing ? "edit" : "create";
   const bounds = monthDateBounds(year, month);
   const defaultDate =
@@ -243,6 +244,11 @@ export default function TransactionForm({
         description: description.trim() || null,
         date,
       };
+      const signature = JSON.stringify(payload);
+      if (mode === "create" && creationRequest.current?.signature !== signature) {
+        creationRequest.current = { signature, id: crypto.randomUUID() };
+      }
+      const createPayload = { ...payload, clientRequestId: creationRequest.current?.id };
 
       const selectedCategory = categories.find(
         (category) => category.id === categoryId,
@@ -269,7 +275,8 @@ export default function TransactionForm({
           date: toCalendarDate(date),
           pendingSync: true,
         };
-        queueOfflineTransaction(userId, payload, entry);
+        queueOfflineTransaction(userId, createPayload, entry);
+        creationRequest.current = null;
         const { year: txYear, month: txMonth } = calendarYearMonth(entry.date);
 
         setAmount("");
@@ -287,7 +294,8 @@ export default function TransactionForm({
       const entry =
         mode === "edit" && editing
           ? await updateTransaction(editing.id, payload)
-          : await createTransaction(payload);
+          : await createTransaction(createPayload);
+      creationRequest.current = null;
 
       const { year: txYear, month: txMonth } = calendarYearMonth(entry.date);
 
