@@ -21,6 +21,10 @@ import {
 
 const TYPE_ICONS = ["💰", "💸", "💳", "🏦", "📊", "📈", "📉", "📌"];
 
+function isBuiltInType(name: string): boolean {
+  return name === "income" || name === "expense";
+}
+
 type FormState = {
   name: string;
   label: string;
@@ -44,6 +48,7 @@ export default function TransactionTypesAdmin({ onError }: Props) {
   const [formError, setFormError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const editingBuiltIn = editing !== null && isBuiltInType(editing.name);
 
   useEffect(() => {
     let cancelled = false;
@@ -124,7 +129,7 @@ export default function TransactionTypesAdmin({ onError }: Props) {
     try {
       if (editing) {
         const updated = await updateTransactionType(editing.id, {
-          name,
+          ...(!editingBuiltIn ? { name } : {}),
           label,
           icon: form.icon,
         });
@@ -182,8 +187,8 @@ export default function TransactionTypesAdmin({ onError }: Props) {
             Transaction types
           </h2>
           <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
-            Names should stay stable (for example income or expense) so existing
-            data still matches.
+            Built-in income and expense names are protected. You can update
+            their labels and icons.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -232,11 +237,19 @@ export default function TransactionTypesAdmin({ onError }: Props) {
           )}
           <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              <label
+                htmlFor="transaction-type-name"
+                className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+              >
                 Name
               </label>
               <input
+                id="transaction-type-name"
                 value={form.name}
+                readOnly={editingBuiltIn}
+                aria-describedby={
+                  editingBuiltIn ? "transaction-type-name-help" : undefined
+                }
                 onChange={(e) => {
                   setForm((prev) => ({ ...prev, name: e.target.value }));
                   setNameError(null);
@@ -246,6 +259,15 @@ export default function TransactionTypesAdmin({ onError }: Props) {
                 placeholder="income"
                 required
               />
+              {editingBuiltIn && (
+                <p
+                  id="transaction-type-name-help"
+                  className="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400"
+                >
+                  This built-in name cannot be changed. Update the label
+                  instead.
+                </p>
+              )}
               {nameError && (
                 <p className="mt-1.5 text-xs text-rose-600 dark:text-rose-400">
                   {nameError}
@@ -253,10 +275,14 @@ export default function TransactionTypesAdmin({ onError }: Props) {
               )}
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              <label
+                htmlFor="transaction-type-label"
+                className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+              >
                 Label
               </label>
               <input
+                id="transaction-type-label"
                 value={form.label}
                 onChange={(e) => {
                   setForm((prev) => ({ ...prev, label: e.target.value }));
@@ -347,9 +373,11 @@ export default function TransactionTypesAdmin({ onError }: Props) {
                           <EditIcon />
                           Edit
                         </button>
-                        <ConfirmDeleteButton
-                          onDelete={() => handleDelete(type)}
-                        />
+                        {!isBuiltInType(type.name) && (
+                          <ConfirmDeleteButton
+                            onDelete={() => handleDelete(type)}
+                          />
+                        )}
                       </div>
                     </td>
                   </tr>

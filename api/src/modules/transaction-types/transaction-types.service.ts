@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   Logger,
@@ -26,7 +27,8 @@ const CATALOG_CACHE_TTL_MS = 5 * 60 * 1000;
 @Injectable()
 export class TransactionTypesService implements OnModuleInit {
   private readonly logger = new Logger(TransactionTypesService.name);
-  private cache: { expiresAt: number; items: TransactionTypeEntity[] } | null = null;
+  private cache: { expiresAt: number; items: TransactionTypeEntity[] } | null =
+    null;
 
   constructor(
     @InjectModel(TransactionTypeEntity.name)
@@ -77,6 +79,11 @@ export class TransactionTypesService implements OnModuleInit {
     const transactionType = await this.getDocument(id);
 
     if (dto.name !== undefined && dto.name.trim() !== transactionType.name) {
+      if (this.isBuiltIn(transactionType.name)) {
+        throw new BadRequestException(
+          'Built-in transaction types cannot be renamed. Change the label instead.',
+        );
+      }
       await this.ensureNameAvailable(dto.name.trim(), id);
       transactionType.name = dto.name.trim();
     }
@@ -84,12 +91,20 @@ export class TransactionTypesService implements OnModuleInit {
     if (dto.label !== undefined) transactionType.label = dto.label.trim();
     if (dto.icon !== undefined) transactionType.icon = dto.icon;
 
-    const updated = asPlain<TransactionTypeEntity>(await transactionType.save());
+    const updated = asPlain<TransactionTypeEntity>(
+      await transactionType.save(),
+    );
     this.clearCache();
     return updated;
   }
 
   async remove(id: string): Promise<void> {
+    const transactionType = await this.getDocument(id);
+    if (this.isBuiltIn(transactionType.name)) {
+      throw new BadRequestException(
+        'Built-in transaction types cannot be deleted',
+      );
+    }
     const inUse = await this.transactionModel
       .exists({ transactionTypeId: new Types.ObjectId(id) })
       .exec();
@@ -139,6 +154,10 @@ export class TransactionTypesService implements OnModuleInit {
     this.cache = null;
   }
 
+  private isBuiltIn(name: string): boolean {
+    return DEFAULT_TRANSACTION_TYPES.some((type) => String(type.name) === name);
+  }
+
   private async ensureDefaultTypes(): Promise<void> {
     const result = await this.transactionTypeModel.bulkWrite(
       DEFAULT_TRANSACTION_TYPES.map((seed) => ({
@@ -151,7 +170,9 @@ export class TransactionTypesService implements OnModuleInit {
     );
 
     if (result.upsertedCount) {
-      this.logger.log(`Seeded ${result.upsertedCount} default transaction type(s)`);
+      this.logger.log(
+        `Seeded ${result.upsertedCount} default transaction type(s)`,
+      );
     }
   }
 }

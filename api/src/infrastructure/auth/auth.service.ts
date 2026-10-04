@@ -20,7 +20,7 @@ import { UpdateOnboardingDto } from './dto/update-onboarding.dto';
 import type { RefreshJwtPayload } from './jwt-payload.interface';
 import { SmtpMailerService } from './smtp-mailer.service';
 
-type GoogleOAuthState = { purpose: 'google-oauth-state' };
+type GoogleOAuthState = { purpose: 'google-oauth-state'; nonce: string };
 
 type GoogleUserInfo = {
   sub: string;
@@ -103,7 +103,10 @@ export class AuthService {
   createGoogleAuthorization(): { authorizationUrl: string; state: string } {
     const google = this.getGoogleConfig();
     const state = this.jwtService.sign(
-      { purpose: 'google-oauth-state' } satisfies GoogleOAuthState,
+      {
+        purpose: 'google-oauth-state',
+        nonce: randomBytes(32).toString('hex'),
+      } satisfies GoogleOAuthState,
       {
         secret: this.config.getOrThrow<string>('jwt.secret'),
         expiresIn: '10m',
@@ -142,7 +145,11 @@ export class AuthService {
       const payload = this.jwtService.verify<GoogleOAuthState>(state, {
         secret: this.config.getOrThrow<string>('jwt.secret'),
       });
-      if (payload.purpose !== 'google-oauth-state') {
+      if (
+        payload.purpose !== 'google-oauth-state' ||
+        typeof payload.nonce !== 'string' ||
+        !/^[a-f0-9]{64}$/.test(payload.nonce)
+      ) {
         throw new UnauthorizedException('Invalid Google OAuth request');
       }
     } catch (error) {

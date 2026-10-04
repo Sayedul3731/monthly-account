@@ -276,15 +276,12 @@ describe('Launch flows on an isolated MongoDB replica set', () => {
       .expect(201);
     const repeatedBudgets = await Promise.all(
       Array.from({ length: 4 }, () =>
-        alice.agent
-          .post('/budgets')
-          .set('X-CSRF-Token', alice.csrf)
-          .send({
-            year: 2026,
-            month: 9,
-            category: 'Private groceries',
-            amount: 1000,
-          }),
+        alice.agent.post('/budgets').set('X-CSRF-Token', alice.csrf).send({
+          year: 2026,
+          month: 9,
+          category: 'Private groceries',
+          amount: 1000,
+        }),
       ),
     );
     expect(repeatedBudgets.map((result) => result.status)).toEqual([
@@ -399,6 +396,122 @@ describe('Launch flows on an isolated MongoDB replica set', () => {
     expect((state.headers['set-cookie'] as unknown as string[])[0]).toContain(
       'Path=/;',
     );
+  });
+
+  it('binds Google OAuth state to each browser and clears it after a failed callback', async () => {
+    const firstBrowser = request.agent(app.getHttpServer());
+    const secondBrowser = request.agent(app.getHttpServer());
+    const firstStart = await firstBrowser.get('/auth/google').expect(302);
+    const secondStart = await secondBrowser.get('/auth/google').expect(302);
+    const firstState = new URL(
+      String(firstStart.headers.location),
+    ).searchParams.get('state')!;
+    const secondState = new URL(
+      String(secondStart.headers.location),
+    ).searchParams.get('state')!;
+    expect(firstState).not.toBe(secondState);
+    const cookies = firstStart.headers['set-cookie'] as unknown as string[];
+    expect(cookies[0]).toContain('HttpOnly');
+    expect(cookies[0]).toContain('SameSite=Lax');
+    expect(cookies[0]).toContain('Path=/;');
+    const failedCallback = await secondBrowser
+      .get('/auth/google/callback')
+      .query({ code: 'untrusted-code', state: firstState })
+      .expect(302)
+      .expect('Location', 'http://localhost:3000/login?oauthError=google');
+    expect(
+      (failedCallback.headers['set-cookie'] as unknown as string[])[0],
+    ).toContain('daily_hisab_google_oauth_state=;');
+    await secondBrowser
+      .get('/auth/google/callback')
+      .query({ code: 'untrusted-code', state: secondState })
+      .expect(302)
+      .expect('Location', 'http://localhost:3000/login?oauthError=google');
+  });
+
+  it('protects built-in transaction types while allowing label/icon edits and preserving totals', async () => {
+    const transactionTypes = body<{ id: string; name: string }[]>(
+      await bob.agent.get('/transaction-types').expect(200),
+    );
+    const incomeTypeId = transactionTypes.find(
+      (type) => type.name === 'income',
+    )!.id;
+    const incomeCategories = body<{ id: string }[]>(
+      await bob.agent.get('/categories?type=income').expect(200),
+    );
+    for (const type of transactionTypes) {
+      await admin.agent
+        .delete('/transaction-types/' + type.id)
+        .set('X-CSRF-Token', admin.csrf)
+        .expect(400);
+    }
+    const income = {
+      clientRequestId: crypto.randomUUID(),
+      transactionTypeId: incomeTypeId,
+      categoryId: incomeCategories[0].id,
+      amount: 1000,
+      description: 'Income protection regression',
+      date: '2026-10-04',
+    };
+    await bob.agent
+      .post('/transactions')
+      .set('X-CSRF-Token', bob.csrf)
+      .send(income)
+      .expect(201);
+    const before = body<{ income: number; expenses: number }>(
+      await bob.agent
+        .get('/transactions/summary?year=2026&month=9')
+        .expect(200),
+    );
+    expect(before.income).toBe(1000);
+    for (const type of transactionTypes) {
+      await admin.agent
+        .patch('/transaction-types/' + type.id)
+        .set('X-CSRF-Token', admin.csrf)
+        .send({ name: type.name === 'income' ? 'deposit' : 'spending' })
+        .expect(400);
+      const updated = await admin.agent
+        .patch('/transaction-types/' + type.id)
+        .set('X-CSRF-Token', admin.csrf)
+        .send({
+          name: type.name + ' ',
+          label: 'Updated ' + type.name,
+          icon: '📌',
+        })
+        .expect(200);
+      expect(
+        body<{ name: string; label: string; icon: string }>(updated),
+      ).toMatchObject({
+        name: type.name,
+        label: 'Updated ' + type.name,
+        icon: '📌',
+      });
+    }
+    const after = body<{ income: number; expenses: number }>(
+      await bob.agent
+        .get('/transactions/summary?year=2026&month=9')
+        .expect(200),
+    );
+    expect(after).toEqual(before);
+    await bob.agent
+      .post('/transactions')
+      .set('X-CSRF-Token', bob.csrf)
+      .send({ ...income, clientRequestId: crypto.randomUUID(), amount: 500 })
+      .expect(201);
+    const custom = await admin.agent
+      .post('/transaction-types')
+      .set('X-CSRF-Token', admin.csrf)
+      .send({ name: 'custom', label: 'Custom', icon: '📌' })
+      .expect(201);
+    await admin.agent
+      .patch('/transaction-types/' + body(custom).id)
+      .set('X-CSRF-Token', admin.csrf)
+      .send({ name: 'custom-renamed' })
+      .expect(200);
+    await admin.agent
+      .delete('/transaction-types/' + body(custom).id)
+      .set('X-CSRF-Token', admin.csrf)
+      .expect(204);
   });
 
   it('requests generic reset responses and atomically consumes a single-use token, revoking old sessions', async () => {

@@ -3,13 +3,18 @@ import { readFile } from "node:fs/promises";
 
 const user = { id: "alice", name: "Alice", email: "alice@example.com", role: { id: "user-role", name: "user" }, onboardingStatus: "completed", trialEndsAt: "2099-01-01T00:00:00.000Z" };
 
-async function mockApi(page: Page, transactions: Record<string, unknown>[] = []) {
+async function mockApi(page: Page, transactions: Record<string, unknown>[] = [], account = user) {
   const requests: { path: string; method: string; body: Record<string, unknown> | null }[] = [];
   let categories = [
     { id: "shared", userId: null as string | null, name: "Food", type: "expense", icon: "🍎" },
     { id: "private", userId: "alice", name: "Pet care", type: "expense", icon: "🐾" },
   ];
   const budgets: Record<string, unknown>[] = [];
+  let transactionTypes = [
+    { id: "income-type", name: "income", label: "Income", icon: "💰" },
+    { id: "expense-type", name: "expense", label: "Expense", icon: "💸" },
+    { id: "custom-type", name: "custom", label: "Custom", icon: "📌" },
+  ];
   await page.route("**/*", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -20,8 +25,8 @@ async function mockApi(page: Page, transactions: Record<string, unknown>[] = [])
     requests.push({ path, method: request.method(), body });
     let json: unknown = [];
     let status = 200;
-    if (path === "/auth/login" || path === "/auth/refresh") json = { user, csrfToken: "mock-csrf" };
-    else if (path === "/auth/me") json = user;
+    if (path === "/auth/login" || path === "/auth/refresh") json = { user: account, csrfToken: "mock-csrf" };
+    else if (path === "/auth/me") json = account;
     else if (path === "/auth/forgot-password") { status = 202; json = { message: "If an account with a password exists, a reset link will be emailed to you." }; }
     else if (path === "/auth/reset-password") { status = 204; json = undefined; }
     else if (path === "/categories/mine" || path === "/categories") json = categories;
@@ -34,7 +39,15 @@ async function mockApi(page: Page, transactions: Record<string, unknown>[] = [])
       status = 204; json = undefined;
     } else if (path === "/dashboard") json = { transactions, budgets, unreadNotificationCount: 0 };
     else if (path === "/budgets" && request.method() === "POST") { json = { id: "new-budget", ...body }; budgets.push(json as Record<string, unknown>); status = 201; }
-    else if (path === "/transaction-types") json = [{ id: "expense-type", name: "expense", label: "Expense" }];
+    else if (path === "/transaction-types") json = transactionTypes;
+    else if (path.startsWith("/transaction-types/") && request.method() === "PATCH") {
+      const id = path.split("/").at(-1);
+      transactionTypes = transactionTypes.map((type) => type.id === id ? { ...type, ...body } : type);
+      json = transactionTypes.find((type) => type.id === id);
+    } else if (path.startsWith("/transaction-types/") && request.method() === "DELETE") {
+      transactionTypes = transactionTypes.filter((type) => type.id !== path.split("/").at(-1));
+      status = 204; json = undefined;
+    }
     else if (path === "/notifications") json = { items: [], unreadCount: 0 };
     await route.fulfill({ status, contentType: "application/json", body: status === 204 ? "" : JSON.stringify(json), headers: { "Access-Control-Allow-Origin": "http://127.0.0.1:3100", "Access-Control-Allow-Credentials": "true" } });
   });
@@ -122,4 +135,27 @@ test("Bengali category and description text render into a downloadable PDF", asy
   const contents = await readFile((await download.path())!);
   expect(contents.subarray(0, 5).toString()).toBe("%PDF-");
   expect(contents.toString("latin1")).toContain("/Subtype /Image");
+});
+
+test("admin can edit built-in labels while type names and deletion stay protected", async ({ page }) => {
+  const requests = await mockApi(page, [], { ...user, role: { id: "admin-role", name: "admin" } });
+  await signIn(page);
+  await page.goto("/admin");
+  await page.getByRole("button", { name: "Types", exact: true }).click();
+  const income = page.getByRole("row").filter({ hasText: "Income" });
+  const expense = page.getByRole("row").filter({ hasText: "Expense" });
+  await expect(income.getByRole("button", { name: "Delete", exact: true })).toHaveCount(0);
+  await expect(expense.getByRole("button", { name: "Delete", exact: true })).toHaveCount(0);
+  await income.getByRole("button", { name: "Edit", exact: true }).click();
+  await expect(page.getByLabel("Name", { exact: true })).toHaveAttribute("readonly", "");
+  await expect(page.getByText("This built-in name cannot be changed. Update the label instead.")).toBeVisible();
+  await page.getByLabel("Label", { exact: true }).fill("Monthly earnings");
+  await page.getByRole("button", { name: "Save type", exact: true }).click();
+  await expect(page.getByRole("row").filter({ hasText: "Monthly earnings" })).toBeVisible();
+  const update = requests.find((request) => request.path === "/transaction-types/income-type" && request.method === "PATCH");
+  expect(update?.body).toEqual({ label: "Monthly earnings", icon: "💰" });
+  const custom = page.getByRole("row").filter({ hasText: "Custom" });
+  await expect(custom.getByRole("button", { name: "Delete", exact: true })).toHaveCount(1);
+  await custom.getByRole("button", { name: "Edit", exact: true }).click();
+  await expect(page.getByLabel("Name", { exact: true })).toBeEditable();
 });
