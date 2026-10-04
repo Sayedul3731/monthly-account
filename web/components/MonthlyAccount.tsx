@@ -41,19 +41,15 @@ const CalendarView = dynamic(() => import("./CalendarView"));
 const ExportImportPanel = dynamic(() => import("./ExportImportPanel"));
 const TransactionForm = dynamic(() => import("./TransactionForm"));
 const TransactionList = dynamic(() => import("./TransactionList"));
-const RecurringExpensesPanel = dynamic(
-  () => import("./RecurringExpensesPanel"),
-);
 
 const today = new Date();
 const banglaNumber = new Intl.NumberFormat("bn-BD", { maximumFractionDigits: 0 });
 
-type Tab = "overview" | "transactions" | "recurring" | "calendar" | "budgets";
+type Tab = "overview" | "transactions" | "calendar" | "budgets";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "overview", label: "Overview" },
   { id: "transactions", label: "Transactions" },
-  { id: "recurring", label: "Recurring" },
   { id: "calendar", label: "Calendar View" },
   { id: "budgets", label: "Budgets" },
 ];
@@ -466,26 +462,6 @@ export default function MonthlyAccount() {
       );
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function handleRecurringChanged() {
-    try {
-      const dashboard = await fetchDashboard(year, month);
-      setTransactions(dashboard.transactions);
-      setBudgets(dashboard.budgets);
-      if (sessionUser?.id) {
-        saveOfflineAccount(
-          sessionUser.id,
-          year,
-          month,
-          dashboard.transactions,
-          dashboard.budgets,
-        );
-      }
-    } catch {
-      // The schedule itself has already been saved; the normal dashboard
-      // refresh will generate and display its transaction on the next load.
     }
   }
 
@@ -937,24 +913,6 @@ export default function MonthlyAccount() {
               </h2>
               <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
                 Sign in to add and manage your transactions.
-              </p>
-            </section>
-          ))}
-
-        {tab === "recurring" &&
-          (signedIn ? (
-            <RecurringExpensesPanel
-              onChanged={() => void handleRecurringChanged()}
-              onError={(message) => showToast(message, { kind: "error" })}
-              onSuccess={(message) => showToast(message, { kind: "success" })}
-            />
-          ) : (
-            <section className="rounded-2xl border border-brand/10 bg-white p-5 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-              <h2 className="text-base font-semibold text-brand dark:text-white">
-                Recurring expenses
-              </h2>
-              <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                Sign in to set expenses that repeat every month.
               </p>
             </section>
           ))}

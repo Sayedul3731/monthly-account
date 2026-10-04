@@ -68,7 +68,7 @@ export default function PersonalCategoriesPage() {
     <main className="mx-auto max-w-3xl space-y-5 px-4 py-6">
       <Link href="/" className="text-sm text-brand dark:text-gold">Back to dashboard</Link>
       <h1 className="text-2xl font-semibold">Categories</h1>
-      <p className="text-sm text-zinc-500">Your personal categories are private. Shared categories are managed by administrators. Categories used in transactions, recurring expenses, or budgets keep their name and type; you can change their icon.</p>
+      <p className="text-sm text-zinc-500">Your personal categories are private. Shared categories are managed by administrators. Categories used by saved records or budgets keep their name and type; you can change their icon.</p>
       {error && <p role="alert" className="rounded-xl bg-rose-50 p-4 text-sm text-rose-700 dark:bg-rose-950">{error}</p>}
       {!user && !error && <LoadingState label="Loading categories" />}
       {user && <>
