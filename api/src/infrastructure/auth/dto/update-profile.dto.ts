@@ -32,12 +32,11 @@ export class UpdateProfileDto {
   @ApiPropertyOptional({
     description: 'Required when changing the password.',
     minLength: 8,
-    maxLength: 72,
+    maxLength: 64,
   })
   @ValidateIf((dto: UpdateProfileDto) => dto.password !== undefined)
   @IsString()
   @MinLength(8)
-  @MaxLength(72)
+  @MaxLength(64)
   currentPassword?: string;
-
 }

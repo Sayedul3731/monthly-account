@@ -8,7 +8,7 @@ import { signedInDestination } from "@/lib/auth";
 import { EyeIcon, EyeOffIcon, SpinnerIcon } from "./icons";
 
 const MIN_PASSWORD_LENGTH = 8;
-const MAX_PASSWORD_LENGTH = 72;
+const MAX_PASSWORD_LENGTH = 64;
 
 type FieldErrors = { name?: string; email?: string; password?: string };
 

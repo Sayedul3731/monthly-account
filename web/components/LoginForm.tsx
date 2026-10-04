@@ -167,7 +167,7 @@ function LoginFormInner() {
               id={`${formId}-password`}
               type={showPassword ? "text" : "password"}
               autoComplete="current-password"
-              maxLength={72}
+              maxLength={64}
               placeholder="Your password"
               value={password}
               onChange={(e) => {

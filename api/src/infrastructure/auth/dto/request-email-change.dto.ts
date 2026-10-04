@@ -11,10 +11,10 @@ export class RequestEmailChangeDto {
     description:
       'Current password, required before changing the email address.',
     minLength: 8,
-    maxLength: 72,
+    maxLength: 64,
   })
   @IsString()
   @MinLength(8)
-  @MaxLength(72)
+  @MaxLength(64)
   currentPassword: string;
 }

@@ -20,7 +20,7 @@ import LoadingState from "./LoadingState";
 import { ChevronLeft, EyeIcon, EyeOffIcon, SpinnerIcon } from "./icons";
 
 const MIN_PASSWORD_LENGTH = 8;
-const MAX_PASSWORD_LENGTH = 72;
+const MAX_PASSWORD_LENGTH = 64;
 
 type ProfileErrors = {
   name?: string;

@@ -26,7 +26,7 @@ import {
 } from "./ui";
 
 const MIN_PASSWORD_LENGTH = 8;
-const MAX_PASSWORD_LENGTH = 72;
+const MAX_PASSWORD_LENGTH = 64;
 
 type FormState = {
   name: string;
